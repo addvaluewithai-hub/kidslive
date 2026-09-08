@@ -22,6 +22,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          package-manager-cache: false
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm test
       - run: pnpm build
@@ -38,6 +39,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          package-manager-cache: false
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm build
