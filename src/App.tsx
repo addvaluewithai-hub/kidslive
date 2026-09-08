@@ -13,6 +13,7 @@ const EMPTY_METRICS: WorldMetrics = {
   objects: 0,
   activeParticles: 0,
   animatedObjects: 0,
+  renderer: 'WEBGL',
   benchmarkLoad: 'steady',
   benchmarkLabel: 'PRODUCTION STEADY',
 };
@@ -59,9 +60,9 @@ export function App() {
 
       <header className="topbar">
         <div className="brand-block">
-          <span className="eyebrow">KIDSLIVE / ARCHITECTURE SPIKE 001C</span>
-          <h1>Production Density</h1>
-          <p>Realistic world load, not a synthetic sprite torture test.</p>
+          <span className="eyebrow">KIDSLIVE / ARCHITECTURE SPIKE 001D</span>
+          <h1>Final Phaser Gate</h1>
+          <p>Same product idea, rebuilt with production-friendly rendering patterns.</p>
         </div>
 
         <div className="metrics" aria-label="performance metrics">
@@ -72,6 +73,7 @@ export function App() {
           <span><b>{metrics.longFrames}</b> long</span>
           <span><b>{metrics.animatedObjects || '—'}</b> animated</span>
           <span><b>{metrics.activeParticles}</b> active FX</span>
+          <span><b>{metrics.renderer}</b> renderer</span>
           <span className={ready ? 'ready' : ''} data-testid="benchmark-mode">
             {ready ? metrics.benchmarkLabel : 'Booting…'}
           </span>
@@ -118,7 +120,7 @@ export function App() {
             <button onClick={() => worldBus.emit('reset-metrics')}>Reset sample</button>
           </div>
           <small>
-            Busy lesson keeps extra ambient animation, pooled effects, actor speech motion and repeated portal activity running continuously.
+            Final gate uses baked world/actor textures, pooled local ambience, off-screen world sleeping, pooled FX and no mobile backdrop blur.
           </small>
         </div>
       </aside>
@@ -133,9 +135,9 @@ export function App() {
       </section>
 
       <section className="benchmark-note">
-        <span>Goal</span>
-        <strong>Stay smooth here with headroom.</strong>
-        <p>The ×4 / ×10 test found the failure wall. This scene approximates the density we actually intend to ship.</p>
+        <span>Decision gate</span>
+        <strong>50–60 steady / 45+ busy.</strong>
+        <p>If the same Android device still misses this after normal production optimizations, we stop investing in Phaser and move to Godot.</p>
       </section>
     </main>
   );
