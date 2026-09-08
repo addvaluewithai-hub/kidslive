@@ -5,16 +5,23 @@ Statuses: `DONE`, `IN PROGRESS`, `NEXT`, `PLANNED`, `BLOCKED`.
 Each item is intentionally a meaningful deliverable, not a list of tiny implementation chores. Implementation details live in PRs/issues when needed.
 
 ## A0 — Architecture & performance spike
-**Status: IN PROGRESS — production-density physical Android gate**
+**Status: IN PROGRESS — final Phaser optimization gate**
 
-Validate Phaser as the rendering/runtime direction under React using browser CI, a synthetic failure-boundary test, and a realistic production-density world benchmark on representative Android hardware.
+Validate the world/runtime direction on representative Android hardware before locking the stack.
 
-**Done when:** browser CI is green; desktop/mobile browser smoke passes; the synthetic failure wall is documented; the production-density scene is smooth in steady mode and acceptably smooth in busy mode on representative Android hardware; repeated runtime use shows no obvious unbounded behavior; the decision log records PASS → Phaser or FAIL → Godot.
+Evidence so far:
+- Browser CI/build/unit smoke is green.
+- Synthetic Phaser stress test found the failure wall: ×4 janks badly and ×10 effectively freezes.
+- First realistic production-density Phaser benchmark measured ~24 FPS steady and ~13 FPS busy on the physical Android test device. Subjective jank was light, but these numbers are below the required budget and leave insufficient headroom.
+
+**Next:** run one production-pattern optimization pass (texture baking, off-camera culling/sleeping, bounded pooled effects, less live vector/container overhead) without reducing the intended product density.
+
+**Done when:** the same Android device either (a) reaches a credible production budget — approximately 50–60 FPS steady and 45+ FPS busy with stable pacing — and D-002 is locked to Phaser, or (b) fails that fair optimized gate and D-002 is closed in favor of the Godot fallback.
 
 ## A1 — Repository and development foundation
-**Status: NEXT after A0 passes**
+**Status: NEXT after A0 engine decision**
 
-Turn the spike into the maintainable project skeleton: package boundaries, formatting/linting, environment handling, typed event contracts, test helpers, PR conventions, build artifacts, and developer scripts.
+Turn the winning spike into the maintainable project skeleton: package boundaries, formatting/linting, environment handling, typed event contracts, test helpers, PR conventions, build artifacts, and developer scripts.
 
 **Done when:** a clean checkout reaches running app + complete CI with one documented command path and no hidden local setup.
 
@@ -58,7 +65,7 @@ Build one small but complete English learning environment from planet entry to l
 
 Create reusable interaction primitives for choices, sorting/matching, text/voice responses where appropriate, hints, retry feedback, answer normalization, and deterministic scoring.
 
-**Done when:** experiences can compose assessed interactions without embedding assessment truth in React, Phaser, or AI prompts.
+**Done when:** experiences can compose assessed interactions without embedding assessment truth in UI, renderer, or AI prompts.
 
 ## A8 — Progression, XP, streaks, and unlocks
 **Status: PLANNED**
@@ -81,12 +88,12 @@ Choose and implement the minimal production backend based on proven product need
 
 **Done when:** progress is resilient across reinstall/device changes and offline/duplicate writes converge safely.
 
-## A11 — Mobile shell with Capacitor
+## A11 — Mobile packaging
 **Status: PLANNED**
 
-Package the validated web runtime as iOS/Android apps, solve safe areas, lifecycle/backgrounding, audio focus, microphone permissions, keyboard/input, deep links, native storage, and build configuration.
+Package the validated runtime for iOS/Android using the mobile path selected by A0, then solve safe areas, lifecycle/backgrounding, audio focus, microphone permissions, keyboard/input, deep links, native storage, and build configuration.
 
-**Done when:** internal builds on both platforms can complete the English vertical slice with parity to browser behavior.
+**Done when:** internal builds on both platforms can complete the English vertical slice with parity to the development runtime.
 
 ## A12 — Offline and asset delivery
 **Status: PLANNED**
