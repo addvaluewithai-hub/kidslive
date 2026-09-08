@@ -2,10 +2,13 @@ import Phaser from 'phaser';
 import { PLACES, WORLD_SIZE, type PlaceDefinition } from './worldConfig';
 import { worldBus, type BenchmarkLoad } from './worldBus';
 
-const MAX_FRAME_SAMPLES = 600;
-const STEADY_AMBIENT = 90;
-const BUSY_AMBIENT = 170;
-const PARTICLE_POOL_SIZE = 140;
+const MAX_FRAME_SAMPLES = 360;
+const METRICS_INTERVAL_MS = 1000;
+const STEADY_AMBIENT = 36;
+const BUSY_AMBIENT = 72;
+const AMBIENT_POOL_SIZE = BUSY_AMBIENT;
+const PARTICLE_POOL_SIZE = 96;
+const CULL_INTERVAL_MS = 180;
 
 type AmbientMote = {
   sprite: Phaser.GameObjects.Image;
@@ -26,10 +29,12 @@ type FxParticle = {
   maxLife: number;
 };
 
-type PortalVisual = {
+type WorldVisual = {
+  place: PlaceDefinition;
   root: Phaser.GameObjects.Container;
-  ring: Phaser.GameObjects.Arc;
-  halo: Phaser.GameObjects.Arc;
+  portal: Phaser.GameObjects.Image;
+  orbiter: Phaser.GameObjects.Image;
+  phase: number;
 };
 
 const SCRIPTED_WORLD_LINES: Record<string, string> = {
@@ -44,16 +49,21 @@ const SCRIPTED_WORLD_LINES: Record<string, string> = {
 export class ProductionBenchmarkScene extends Phaser.Scene {
   private actor!: Phaser.GameObjects.Container;
   private actorVisual!: Phaser.GameObjects.Container;
-  private actorMouth!: Phaser.GameObjects.Rectangle;
+  private actorMouth!: Phaser.GameObjects.Image;
+  private actorThruster!: Phaser.GameObjects.Image;
   private ambientMotes: AmbientMote[] = [];
+  private ambientCount = STEADY_AMBIENT;
   private particles: FxParticle[] = [];
-  private portals = new Map<string, PortalVisual>();
+  private worlds = new Map<string, WorldVisual>();
   private selectedPlace = PLACES[0];
   private benchmarkLoad: BenchmarkLoad = 'steady';
   private metricsTimer = 0;
+  private cullTimer = 0;
   private busyEmissionTimer = 0;
   private tourIndex = 0;
-  private frameSamples: number[] = [];
+  private frameSamples = new Array<number>(MAX_FRAME_SAMPLES);
+  private frameSampleCount = 0;
+  private frameSampleIndex = 0;
 
   constructor() {
     super('production-benchmark');
@@ -70,7 +80,7 @@ export class ProductionBenchmarkScene extends Phaser.Scene {
     this.createBackdrop();
     this.createRoutes();
     PLACES.forEach((place, index) => this.createWorldIsland(place, index));
-    this.createAmbientMotes(STEADY_AMBIENT);
+    this.createAmbientPool();
     this.createParticlePool();
     this.actor = this.createActor(WORLD_SIZE.width / 2, WORLD_SIZE.height / 2);
     this.setupInput();
@@ -87,47 +97,37 @@ export class ProductionBenchmarkScene extends Phaser.Scene {
       worldBus.off('reset-metrics', this.resetMetrics, this);
     });
 
-    this.time.addEvent({
-      delay: 2500,
-      loop: true,
-      callback: () => {
-        this.tweens.add({
-          targets: this.actorVisual,
-          scaleY: 0.985,
-          yoyo: true,
-          duration: 90,
-        });
-      },
-    });
-
+    this.setAmbientCount(STEADY_AMBIENT);
     this.time.delayedCall(300, () => worldBus.emit('ready'));
     this.visit(this.selectedPlace, false);
+    this.updateWorldVisibility();
   }
 
   update(time: number, delta: number) {
     const seconds = time / 1000;
 
-    for (const mote of this.ambientMotes) {
-      const phase = seconds * mote.speed + mote.phase;
-      mote.sprite.x = mote.originX + Math.cos(phase) * mote.radiusX;
-      mote.sprite.y = mote.originY + Math.sin(phase * 0.82) * mote.radiusY;
-    }
-
+    this.updateActor(seconds);
+    this.updateWorldAnimations(seconds);
+    this.updateAmbient(seconds);
     this.updateParticles(delta);
 
     if (this.benchmarkLoad === 'busy') {
       this.busyEmissionTimer += delta;
-      if (this.busyEmissionTimer >= 120) {
+      if (this.busyEmissionTimer >= 180) {
         this.busyEmissionTimer = 0;
-        this.emitParticles(this.selectedPlace.x, this.selectedPlace.y - 40, 8, 0.75);
+        this.emitParticles(this.selectedPlace.x, this.selectedPlace.y - 48, 5, 0.72);
       }
     }
 
-    this.frameSamples.push(delta);
-    if (this.frameSamples.length > MAX_FRAME_SAMPLES) this.frameSamples.shift();
+    this.cullTimer += delta;
+    if (this.cullTimer >= CULL_INTERVAL_MS) {
+      this.cullTimer = 0;
+      this.updateWorldVisibility();
+    }
 
+    this.addFrameSample(delta);
     this.metricsTimer += delta;
-    if (this.metricsTimer >= 500) {
+    if (this.metricsTimer >= METRICS_INTERVAL_MS) {
       this.metricsTimer = 0;
       this.emitMetrics();
     }
@@ -149,45 +149,130 @@ export class ProductionBenchmarkScene extends Phaser.Scene {
       graphics.generateTexture('spark', 12, 12);
       graphics.destroy();
     }
+
+    if (!this.textures.exists('glow')) {
+      const graphics = this.add.graphics();
+      graphics.fillStyle(0xffffff, 0.08).fillCircle(64, 64, 62);
+      graphics.fillStyle(0xffffff, 0.12).fillCircle(64, 64, 44);
+      graphics.fillStyle(0xffffff, 0.18).fillCircle(64, 64, 24);
+      graphics.generateTexture('glow', 128, 128);
+      graphics.destroy();
+    }
+
+    if (!this.textures.exists('starfield')) {
+      const graphics = this.add.graphics();
+      for (let i = 0; i < 48; i += 1) {
+        const x = (i * 47 + 19) % 256;
+        const y = (i * 83 + 31) % 256;
+        const radius = 1 + (i % 3) * 0.55;
+        const alpha = 0.22 + (i % 5) * 0.09;
+        graphics.fillStyle(0xffffff, alpha).fillCircle(x, y, radius);
+      }
+      graphics.generateTexture('starfield', 256, 256);
+      graphics.destroy();
+    }
+
+    for (let index = 0; index < PLACES.length; index += 1) {
+      const place = PLACES[index];
+      const islandKey = `island-${place.id}`;
+      const portalKey = `portal-${place.id}`;
+
+      if (!this.textures.exists(islandKey)) {
+        const graphics = this.add.graphics();
+        graphics.fillStyle(0x030511, 0.42).fillEllipse(130, 132, 214, 54);
+        graphics.fillStyle(0x151a3b, 1).fillEllipse(130, 102, 190, 98);
+        graphics.lineStyle(2, place.accent, 0.16).strokeEllipse(130, 102, 190, 98);
+        graphics.fillStyle(0x202854, 1).fillEllipse(130, 73, 212, 94);
+        graphics.lineStyle(3, place.accent, 0.34).strokeEllipse(130, 73, 212, 94);
+        graphics.fillStyle(place.accent, 0.08).fillEllipse(130, 63, 170, 60);
+
+        const offsets = [-58, -29, 28, 58];
+        offsets.forEach((offset, decorIndex) => {
+          const height = 22 + ((index + decorIndex) % 3) * 9;
+          graphics.fillStyle(0x3a4372, 0.95).fillRect(126 + offset, 62 - height, 8, height);
+          graphics.fillStyle(place.accent, 0.58).fillCircle(130 + offset, 60 - height, 9 + ((decorIndex + index) % 2) * 4);
+        });
+
+        graphics.generateTexture(islandKey, 260, 170);
+        graphics.destroy();
+      }
+
+      if (!this.textures.exists(portalKey)) {
+        const graphics = this.add.graphics();
+        graphics.fillStyle(place.accent, 0.08).fillCircle(58, 58, 56);
+        graphics.fillStyle(0x0e1535, 0.96).fillCircle(58, 58, 39);
+        graphics.lineStyle(4, place.accent, 0.9).strokeCircle(58, 58, 39);
+        graphics.fillStyle(place.accent, 0.2).fillCircle(58, 58, 25);
+        graphics.fillStyle(place.accent, 0.95);
+        graphics.fillRect(55, 8, 6, 13);
+        graphics.fillRect(55, 95, 6, 13);
+        graphics.fillRect(8, 55, 13, 6);
+        graphics.fillRect(95, 55, 13, 6);
+        graphics.generateTexture(portalKey, 116, 116);
+        graphics.destroy();
+      }
+    }
+
+    if (!this.textures.exists('actor-core')) {
+      const graphics = this.add.graphics();
+      graphics.fillStyle(0x4c43b2, 0.96).fillTriangle(15, 89, 45, 79, 39, 121);
+      graphics.fillStyle(0x4c43b2, 0.96).fillTriangle(113, 89, 83, 79, 89, 121);
+      graphics.fillStyle(0x6959e8, 1).fillEllipse(64, 83, 82, 96);
+      graphics.lineStyle(3, 0xa79bff, 0.92).strokeEllipse(64, 83, 82, 96);
+      graphics.fillStyle(0x101733, 1).fillEllipse(64, 71, 62, 50);
+      graphics.lineStyle(2, 0x54e6f4, 0.38).strokeEllipse(64, 71, 62, 50);
+      graphics.fillStyle(0xd7fbff, 1).fillCircle(50, 68, 6);
+      graphics.fillStyle(0xd7fbff, 1).fillCircle(78, 68, 6);
+      graphics.lineStyle(4, 0xb0a6ff, 1).lineBetween(64, 42, 64, 18);
+      graphics.fillStyle(0x6eeaf5, 1).fillCircle(64, 10, 8);
+      graphics.generateTexture('actor-core', 128, 144);
+      graphics.destroy();
+    }
+
+    if (!this.textures.exists('mouth')) {
+      const graphics = this.add.graphics();
+      graphics.fillStyle(0x89f3ff, 1).fillRoundedRect(1, 1, 18, 5, 2);
+      graphics.generateTexture('mouth', 20, 7);
+      graphics.destroy();
+    }
   }
 
   private createBackdrop() {
     this.cameras.main.setBackgroundColor('#080b22');
 
-    const nebula = this.add.graphics().setScrollFactor(0.22);
-    nebula.fillStyle(0x33236b, 0.22).fillCircle(720, 470, 520);
-    nebula.fillStyle(0x0f5870, 0.17).fillCircle(1920, 980, 620);
-    nebula.fillStyle(0x661f62, 0.1).fillCircle(1640, 250, 410);
+    const nebulae = [
+      { x: 720, y: 470, tint: 0x6b55d7, alpha: 0.13, scale: 7.8, scroll: 0.2 },
+      { x: 1920, y: 980, tint: 0x24a5c3, alpha: 0.1, scale: 8.6, scroll: 0.22 },
+      { x: 1640, y: 250, tint: 0xb14898, alpha: 0.08, scale: 5.7, scroll: 0.25 },
+    ];
+
+    nebulae.forEach((item) => {
+      this.add.image(item.x, item.y, 'glow')
+        .setTint(item.tint)
+        .setAlpha(item.alpha)
+        .setScale(item.scale)
+        .setScrollFactor(item.scroll);
+    });
 
     for (let layer = 0; layer < 3; layer += 1) {
-      const stars = this.add.container(0, 0).setScrollFactor(0.08 + layer * 0.12);
-      const count = 54 + layer * 22;
-      for (let i = 0; i < count; i += 1) {
-        const star = this.add.image(
-          Phaser.Math.Between(0, WORLD_SIZE.width),
-          Phaser.Math.Between(0, WORLD_SIZE.height),
-          'mote',
-        );
-        star
-          .setScale(Phaser.Math.FloatBetween(0.2, 0.72) * (1 + layer * 0.3))
-          .setAlpha(0.14 + layer * 0.11);
-        stars.add(star);
-      }
+      const stars = this.add.tileSprite(
+        WORLD_SIZE.width / 2,
+        WORLD_SIZE.height / 2,
+        WORLD_SIZE.width,
+        WORLD_SIZE.height,
+        'starfield',
+      );
+      stars.setScrollFactor(0.08 + layer * 0.12);
+      stars.setAlpha(0.16 + layer * 0.11);
+      stars.tileScaleX = 0.82 + layer * 0.32;
+      stars.tileScaleY = stars.tileScaleX;
     }
 
-    const moon = this.add.container(2260, 180).setScrollFactor(0.4);
-    const moonGlow = this.add.circle(0, 0, 118, 0x8f8cff, 0.08);
-    const moonCore = this.add.circle(0, 0, 68, 0x24295b, 0.75).setStrokeStyle(2, 0xb7b7ff, 0.18);
-    moon.add([moonGlow, moonCore]);
-    this.tweens.add({
-      targets: moonGlow,
-      scale: { from: 0.92, to: 1.08 },
-      alpha: { from: 0.05, to: 0.12 },
-      yoyo: true,
-      repeat: -1,
-      duration: 3200,
-      ease: 'Sine.inOut',
-    });
+    this.add.image(2260, 180, 'glow')
+      .setTint(0x8f8cff)
+      .setAlpha(0.13)
+      .setScale(1.8)
+      .setScrollFactor(0.4);
   }
 
   private createRoutes() {
@@ -197,109 +282,81 @@ export class ProductionBenchmarkScene extends Phaser.Scene {
     for (let i = 0; i < ordered.length - 1; i += 1) {
       graphics.lineBetween(ordered[i].x, ordered[i].y, ordered[i + 1].x, ordered[i + 1].y);
     }
-
-    for (const place of PLACES) {
-      graphics.fillStyle(place.accent, 0.18).fillCircle(place.x, place.y, 5);
-    }
   }
 
   private createWorldIsland(place: PlaceDefinition, index: number) {
     const root = this.add.container(place.x, place.y);
-    const shadow = this.add.ellipse(0, 66, 210, 54, 0x030511, 0.4);
-    const underside = this.add.ellipse(0, 34, 184, 96, 0x151a3b, 1).setStrokeStyle(2, place.accent, 0.12);
-    const ground = this.add.ellipse(0, 5, 208, 94, 0x202854, 1).setStrokeStyle(3, place.accent, 0.35);
-    const rim = this.add.ellipse(0, -5, 168, 60, place.accent, 0.08);
-
-    const decor = this.add.container(0, 0);
-    const offsets = [-58, -29, 28, 58];
-    offsets.forEach((x, decorIndex) => {
-      const height = 22 + ((index + decorIndex) % 3) * 9;
-      const stem = this.add.rectangle(x, 0, 8, height, 0x3a4372, 0.95).setOrigin(0.5, 1);
-      const crown = this.add.circle(x, -height, 9 + ((decorIndex + index) % 2) * 4, place.accent, 0.6);
-      decor.add([stem, crown]);
-    });
-
-    const halo = this.add.circle(0, -52, 58, place.accent, 0.07);
-    const ring = this.add.circle(0, -52, 39, 0x0e1535, 0.9).setStrokeStyle(4, place.accent, 0.9);
-    const portalCore = this.add.circle(0, -52, 26, place.accent, 0.18);
-    const portalMark = this.add.star(0, -52, 5, 7, 16, place.accent, 0.95);
-
-    const orbiterRoot = this.add.container(0, -52);
-    const orbiter = this.add.image(0, -50, 'spark').setTint(place.accent).setScale(0.75).setAlpha(0.8);
-    orbiterRoot.add(orbiter);
-
-    const label = this.add.text(0, 94, place.name, {
+    const base = this.add.image(0, 8, `island-${place.id}`);
+    const portal = this.add.image(0, -52, `portal-${place.id}`);
+    const orbiter = this.add.image(0, -102, 'spark').setTint(place.accent).setScale(0.78).setAlpha(0.85);
+    const label = this.add.text(0, 102, place.name, {
       fontFamily: 'Inter, system-ui, sans-serif',
       fontSize: '23px',
       color: '#ffffff',
       fontStyle: 'bold',
       align: 'center',
     }).setOrigin(0.5);
-    const subtitle = this.add.text(0, 122, place.subtitle, {
+    const subtitle = this.add.text(0, 130, place.subtitle, {
       fontFamily: 'Inter, system-ui, sans-serif',
       fontSize: '14px',
       color: '#aeb8df',
     }).setOrigin(0.5);
 
-    root.add([
-      shadow,
-      underside,
-      ground,
-      rim,
-      decor,
-      halo,
-      ring,
-      portalCore,
-      portalMark,
-      orbiterRoot,
-      label,
-      subtitle,
-    ]);
-    root.setSize(230, 210).setInteractive({ useHandCursor: true });
+    root.add([base, portal, orbiter, label, subtitle]);
+    root.setSize(250, 220).setInteractive({ useHandCursor: true });
     root.on('pointerdown', () => this.visit(place));
 
-    this.tweens.add({
-      targets: [halo, portalCore],
-      scale: { from: 0.94, to: 1.1 },
-      alpha: { from: 0.06, to: 0.22 },
-      yoyo: true,
-      repeat: -1,
-      duration: 1750 + index * 90,
-      ease: 'Sine.inOut',
+    this.worlds.set(place.id, {
+      place,
+      root,
+      portal,
+      orbiter,
+      phase: index * 0.83,
     });
-    this.tweens.add({
-      targets: orbiterRoot,
-      angle: 360,
-      repeat: -1,
-      duration: 4200 + index * 180,
-      ease: 'Linear',
-    });
-
-    this.portals.set(place.id, { root, ring, halo });
   }
 
-  private createAmbientMotes(count: number) {
-    while (this.ambientMotes.length < count) {
-      const x = Phaser.Math.Between(80, WORLD_SIZE.width - 80);
-      const y = Phaser.Math.Between(70, WORLD_SIZE.height - 70);
-      const sprite = this.add.image(x, y, 'mote')
-        .setScale(Phaser.Math.FloatBetween(0.35, 1.05))
-        .setAlpha(Phaser.Math.FloatBetween(0.1, 0.42));
-      if (this.ambientMotes.length % 8 === 0) sprite.setBlendMode(Phaser.BlendModes.ADD);
+  private createAmbientPool() {
+    for (let i = 0; i < AMBIENT_POOL_SIZE; i += 1) {
+      const sprite = this.add.image(0, 0, 'mote')
+        .setDepth(5)
+        .setVisible(false)
+        .setActive(false);
+      if (i % 9 === 0) sprite.setBlendMode(Phaser.BlendModes.ADD);
 
       this.ambientMotes.push({
         sprite,
-        originX: x,
-        originY: y,
-        phase: Phaser.Math.FloatBetween(0, Math.PI * 2),
-        speed: Phaser.Math.FloatBetween(0.35, 0.95),
-        radiusX: Phaser.Math.FloatBetween(5, 18),
-        radiusY: Phaser.Math.FloatBetween(8, 24),
+        originX: 0,
+        originY: 0,
+        phase: i * 0.71,
+        speed: 0.4 + (i % 7) * 0.07,
+        radiusX: 5 + (i % 5) * 3,
+        radiusY: 8 + (i % 6) * 3,
       });
     }
+  }
 
-    while (this.ambientMotes.length > count) {
-      this.ambientMotes.pop()?.sprite.destroy();
+  private setAmbientCount(count: number) {
+    this.ambientCount = count;
+    for (let i = 0; i < this.ambientMotes.length; i += 1) {
+      const enabled = i < count;
+      this.ambientMotes[i].sprite.setVisible(enabled).setActive(enabled);
+    }
+    this.reseedAmbient();
+  }
+
+  private reseedAmbient() {
+    const accent = this.selectedPlace.accent;
+    for (let i = 0; i < this.ambientCount; i += 1) {
+      const mote = this.ambientMotes[i];
+      const angle = i * 2.399963 + this.selectedPlace.x * 0.0007;
+      const distance = 120 + (i % 12) * 38;
+      mote.originX = this.selectedPlace.x + Math.cos(angle) * distance;
+      mote.originY = this.selectedPlace.y + Math.sin(angle) * distance * 0.68;
+      mote.sprite
+        .setPosition(mote.originX, mote.originY)
+        .setTint(accent)
+        .setScale(0.35 + (i % 6) * 0.1)
+        .setAlpha(0.13 + (i % 5) * 0.055);
     }
   }
 
@@ -309,7 +366,7 @@ export class ProductionBenchmarkScene extends Phaser.Scene {
         .setVisible(false)
         .setActive(false)
         .setDepth(24);
-      if (i % 4 === 0) sprite.setBlendMode(Phaser.BlendModes.ADD);
+      if (i % 5 === 0) sprite.setBlendMode(Phaser.BlendModes.ADD);
       this.particles.push({ sprite, active: false, vx: 0, vy: 0, life: 0, maxLife: 0 });
     }
   }
@@ -317,55 +374,63 @@ export class ProductionBenchmarkScene extends Phaser.Scene {
   private createActor(x: number, y: number) {
     const actor = this.add.container(x, y).setDepth(40);
     const visual = this.add.container(0, 0);
-    const shadow = this.add.ellipse(0, 49, 82, 23, 0x02040f, 0.38);
-    const thruster = this.add.ellipse(0, 39, 32, 26, 0x5ce4ff, 0.14);
-    const body = this.add.ellipse(0, 0, 82, 96, 0x6959e8, 1).setStrokeStyle(3, 0xa79bff, 0.92);
-    const face = this.add.ellipse(0, -12, 62, 50, 0x101733, 1).setStrokeStyle(2, 0x54e6f4, 0.38);
-    const leftEye = this.add.circle(-14, -15, 6, 0xd7fbff, 1);
-    const rightEye = this.add.circle(14, -15, 6, 0xd7fbff, 1);
-    const mouth = this.add.rectangle(0, 3, 16, 3, 0x89f3ff, 0.9);
-    const antenna = this.add.line(0, -57, 0, 0, 0, -23, 0xb0a6ff, 1).setLineWidth(4);
-    const antennaGlow = this.add.circle(0, -82, 8, 0x6eeaf5, 1);
-    const leftFin = this.add.triangle(-48, 7, 10, 0, 34, 18, 30, 42, 0x4c43b2, 0.95);
-    const rightFin = this.add.triangle(48, 7, 34, 0, 10, 18, 14, 42, 0x4c43b2, 0.95);
-
-    visual.add([
-      shadow,
-      thruster,
-      leftFin,
-      rightFin,
-      body,
-      face,
-      leftEye,
-      rightEye,
-      mouth,
-      antenna,
-      antennaGlow,
-    ]);
+    const thruster = this.add.image(0, 48, 'glow').setTint(0x5ce4ff).setScale(0.28).setAlpha(0.22);
+    const core = this.add.image(0, -4, 'actor-core');
+    const mouth = this.add.image(0, 1, 'mouth').setScale(0.82, 0.62);
+    visual.add([thruster, core, mouth]);
     actor.add(visual);
 
     this.actorVisual = visual;
     this.actorMouth = mouth;
-
-    this.tweens.add({
-      targets: visual,
-      y: -12,
-      yoyo: true,
-      repeat: -1,
-      duration: 1450,
-      ease: 'Sine.inOut',
-    });
-    this.tweens.add({
-      targets: [antennaGlow, thruster],
-      alpha: { from: 0.18, to: 0.75 },
-      scale: { from: 0.9, to: 1.2 },
-      yoyo: true,
-      repeat: -1,
-      duration: 850,
-      ease: 'Sine.inOut',
-    });
-
+    this.actorThruster = thruster;
     return actor;
+  }
+
+  private updateActor(seconds: number) {
+    this.actorVisual.y = -8 + Math.sin(seconds * 2.2) * 6;
+    this.actorThruster.alpha = 0.18 + (Math.sin(seconds * 5.1) + 1) * 0.11;
+    this.actorThruster.setScale(0.25 + (Math.sin(seconds * 4.3) + 1) * 0.025);
+
+    if (this.benchmarkLoad === 'busy') {
+      this.actorMouth.scaleY = 0.55 + Math.abs(Math.sin(seconds * 12.5)) * 1.65;
+    } else {
+      this.actorMouth.scaleY = 0.62;
+    }
+  }
+
+  private updateWorldAnimations(seconds: number) {
+    for (const visual of this.worlds.values()) {
+      if (!visual.root.visible) continue;
+      const phase = seconds * 1.6 + visual.phase;
+      visual.portal.setScale(0.98 + Math.sin(phase) * 0.045);
+      visual.portal.alpha = 0.86 + Math.sin(phase * 0.73) * 0.1;
+      const orbit = seconds * (0.82 + visual.phase * 0.015) + visual.phase;
+      visual.orbiter.x = Math.cos(orbit) * 51;
+      visual.orbiter.y = -52 + Math.sin(orbit) * 51;
+    }
+  }
+
+  private updateAmbient(seconds: number) {
+    for (let i = 0; i < this.ambientCount; i += 1) {
+      const mote = this.ambientMotes[i];
+      const phase = seconds * mote.speed + mote.phase;
+      mote.sprite.x = mote.originX + Math.cos(phase) * mote.radiusX;
+      mote.sprite.y = mote.originY + Math.sin(phase * 0.82) * mote.radiusY;
+    }
+  }
+
+  private updateWorldVisibility() {
+    const view = this.cameras.main.worldView;
+    const padding = 360;
+    for (const visual of this.worlds.values()) {
+      const x = visual.place.x;
+      const y = visual.place.y;
+      const visible = x >= view.left - padding
+        && x <= view.right + padding
+        && y >= view.top - padding
+        && y <= view.bottom + padding;
+      visual.root.setVisible(visible).setActive(visible);
+    }
   }
 
   private setupInput() {
@@ -388,6 +453,7 @@ export class ProductionBenchmarkScene extends Phaser.Scene {
 
   private visit(place: PlaceDefinition, animate = true) {
     this.selectedPlace = place;
+    this.reseedAmbient();
     worldBus.emit('selected', place.id);
     worldBus.emit('tutor-line', SCRIPTED_WORLD_LINES[place.id] ?? 'Let’s explore this place together.');
 
@@ -405,43 +471,28 @@ export class ProductionBenchmarkScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    const portal = this.portals.get(place.id);
-    if (portal) {
+    const world = this.worlds.get(place.id);
+    if (world) {
+      this.tweens.killTweensOf(world.root);
       this.tweens.add({
-        targets: portal.root,
-        scale: 1.07,
+        targets: world.root,
+        scale: 1.055,
         yoyo: true,
-        duration: 420,
-        ease: 'Back.Out',
-      });
-      this.tweens.add({
-        targets: [portal.ring, portal.halo],
-        alpha: { from: 0.2, to: 0.75 },
-        yoyo: true,
-        duration: 520,
+        duration: 360,
+        ease: 'Sine.easeOut',
       });
     }
 
-    this.emitParticles(place.x, place.y - 45, this.benchmarkLoad === 'busy' ? 54 : 34, 1);
+    this.emitParticles(place.x, place.y - 45, this.benchmarkLoad === 'busy' ? 38 : 24, 1);
   }
 
   private setBenchmarkLoad(load: BenchmarkLoad) {
     this.benchmarkLoad = load;
-    this.createAmbientMotes(load === 'busy' ? BUSY_AMBIENT : STEADY_AMBIENT);
+    this.setAmbientCount(load === 'busy' ? BUSY_AMBIENT : STEADY_AMBIENT);
     this.busyEmissionTimer = 0;
 
     if (load === 'busy') {
-      this.tweens.add({
-        targets: this.actorMouth,
-        scaleY: 3.2,
-        yoyo: true,
-        repeat: -1,
-        duration: 150,
-      });
-      this.emitParticles(this.selectedPlace.x, this.selectedPlace.y - 40, 70, 1.15);
-    } else {
-      this.tweens.killTweensOf(this.actorMouth);
-      this.actorMouth.setScale(1);
+      this.emitParticles(this.selectedPlace.x, this.selectedPlace.y - 40, 52, 1.05);
     }
 
     this.resetMetrics();
@@ -456,18 +507,18 @@ export class ProductionBenchmarkScene extends Phaser.Scene {
       if (particle.active) continue;
 
       const angle = Phaser.Math.FloatBetween(-Math.PI, Math.PI);
-      const speed = Phaser.Math.FloatBetween(32, 105) * energy;
-      const life = Phaser.Math.Between(650, 1250);
+      const speed = Phaser.Math.FloatBetween(32, 96) * energy;
+      const life = Phaser.Math.Between(600, 1050);
       particle.active = true;
       particle.vx = Math.cos(angle) * speed;
-      particle.vy = Math.sin(angle) * speed - 18 * energy;
+      particle.vy = Math.sin(angle) * speed - 16 * energy;
       particle.life = life;
       particle.maxLife = life;
       particle.sprite
-        .setPosition(x + Phaser.Math.Between(-34, 34), y + Phaser.Math.Between(-28, 28))
+        .setPosition(x + Phaser.Math.Between(-30, 30), y + Phaser.Math.Between(-24, 24))
         .setTint(this.selectedPlace.accent)
-        .setScale(Phaser.Math.FloatBetween(0.45, 1.25))
-        .setAlpha(Phaser.Math.FloatBetween(0.35, 0.9))
+        .setScale(Phaser.Math.FloatBetween(0.42, 1.05))
+        .setAlpha(Phaser.Math.FloatBetween(0.35, 0.82))
         .setVisible(true)
         .setActive(true);
       remaining -= 1;
@@ -486,29 +537,39 @@ export class ProductionBenchmarkScene extends Phaser.Scene {
         continue;
       }
 
-      particle.vy += 22 * dt;
+      particle.vy += 20 * dt;
       particle.sprite.x += particle.vx * dt;
       particle.sprite.y += particle.vy * dt;
-      particle.sprite.rotation += dt * 1.8;
+      particle.sprite.rotation += dt * 1.5;
       particle.sprite.alpha = Math.max(0, particle.life / particle.maxLife);
     }
   }
 
+  private addFrameSample(delta: number) {
+    this.frameSamples[this.frameSampleIndex] = delta;
+    this.frameSampleIndex = (this.frameSampleIndex + 1) % MAX_FRAME_SAMPLES;
+    this.frameSampleCount = Math.min(MAX_FRAME_SAMPLES, this.frameSampleCount + 1);
+  }
+
   private resetMetrics() {
-    this.frameSamples = [];
+    this.frameSampleCount = 0;
+    this.frameSampleIndex = 0;
     this.metricsTimer = 0;
   }
 
   private emitMetrics() {
-    const samples = this.frameSamples.length ? this.frameSamples : [16.67];
+    const samples = this.frameSampleCount > 0
+      ? this.frameSamples.slice(0, this.frameSampleCount)
+      : [16.67];
     const sorted = [...samples].sort((a, b) => a - b);
     const averageFrameMs = samples.reduce((sum, sample) => sum + sample, 0) / samples.length;
     const p99Index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.99));
     const p99FrameMs = sorted[p99Index] || averageFrameMs;
     const worstFrameMs = sorted[sorted.length - 1] || averageFrameMs;
     const longFrames = samples.filter((sample) => sample > 32).length;
-    const activeParticles = this.particles.filter((particle) => particle.active).length;
-    const animatedObjects = this.ambientMotes.length + activeParticles + this.portals.size * 3 + 5;
+    const activeParticles = this.particles.reduce((sum, particle) => sum + (particle.active ? 1 : 0), 0);
+    const visibleWorlds = [...this.worlds.values()].reduce((sum, visual) => sum + (visual.root.visible ? 1 : 0), 0);
+    const animatedObjects = this.ambientCount + activeParticles + visibleWorlds * 2 + 3;
 
     worldBus.emit('metrics', {
       fps: Math.round(this.game.loop.actualFps || 0),
@@ -520,6 +581,7 @@ export class ProductionBenchmarkScene extends Phaser.Scene {
       objects: this.children.length,
       activeParticles,
       animatedObjects,
+      renderer: this.game.renderer.type === Phaser.WEBGL ? 'WEBGL' : 'CANVAS',
       benchmarkLoad: this.benchmarkLoad,
       benchmarkLabel: this.benchmarkLoad === 'busy' ? 'BUSY LESSON' : 'PRODUCTION STEADY',
     });
