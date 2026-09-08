@@ -87,22 +87,22 @@ jobs:
             -keyalg RSA \
             -keysize 2048 \
             -validity 30 \
-            -dname "CN=KidsLive Benchmark,O=AddValueWithAI,C=DE"
+            -dname "CN=Orbit One,O=AddValueWithAI,C=DE"
 
-          "$build_tools/zipalign" -f -p 4 "$unsigned_apk" kidslive-phaser-aligned.apk
+          "$build_tools/zipalign" -f -p 4 "$unsigned_apk" orbit-one-aligned.apk
           "$build_tools/apksigner" sign \
             --ks benchmark.keystore \
             --ks-pass pass:benchmark123 \
             --key-pass pass:benchmark123 \
             --ks-key-alias benchmark \
-            --out kidslive-phaser-benchmark.apk \
-            kidslive-phaser-aligned.apk
-          "$build_tools/apksigner" verify --verbose kidslive-phaser-benchmark.apk
-          test -s kidslive-phaser-benchmark.apk
+            --out orbit-one.apk \
+            orbit-one-aligned.apk
+          "$build_tools/apksigner" verify --verbose orbit-one.apk
+          test -s orbit-one.apk
 
-      - name: Upload Phaser benchmark APK
+      - name: Upload Orbit One APK
         uses: actions/upload-artifact@v4
         with:
-          name: kidslive-phaser-benchmark-apk
-          path: kidslive-phaser-benchmark.apk
+          name: orbit-one-apk
+          path: orbit-one.apk
           retention-days: 14
