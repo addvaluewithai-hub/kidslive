@@ -1,6 +1,6 @@
 {
-  "appId": "com.addvaluewithai.kidslive.phaserbenchmark",
-  "appName": "KidsLive Phaser Benchmark",
+  "appId": "com.addvaluewithai.orbit.one",
+  "appName": "Orbit One",
   "webDir": "dist",
   "server": {
     "androidScheme": "https"
