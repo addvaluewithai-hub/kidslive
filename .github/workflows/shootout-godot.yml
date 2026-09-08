@@ -82,24 +82,24 @@ jobs:
           mkdir -p benchmarks/godot/build
           keytool -genkeypair -noprompt \
             -keystore benchmarks/godot/build/benchmark.keystore \
-            -alias kidslivebench \
+            -alias orbitwo \
             -keyalg RSA -keysize 2048 -validity 3650 \
             -storepass benchmark123 -keypass benchmark123 \
-            -dname 'CN=KidsLive Benchmark,O=KidsLive,C=US'
+            -dname 'CN=Orbit Two,O=AddValueWithAI,C=US'
 
       - name: Export optimized Android APK
         shell: bash
         env:
           GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ github.workspace }}/benchmarks/godot/build/benchmark.keystore
-          GODOT_ANDROID_KEYSTORE_RELEASE_USER: kidslivebench
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: orbitwo
           GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: benchmark123
         run: |
-          godot --headless --path benchmarks/godot --export-release Android build/kidslive-godot-benchmark.apk
-          test -s benchmarks/godot/build/kidslive-godot-benchmark.apk
+          godot --headless --path benchmarks/godot --export-release Android build/orbit-two.apk
+          test -s benchmarks/godot/build/orbit-two.apk
 
-      - name: Upload Godot benchmark APK
+      - name: Upload Orbit Two APK
         uses: actions/upload-artifact@v4
         with:
-          name: kidslive-godot-benchmark-apk
-          path: benchmarks/godot/build/kidslive-godot-benchmark.apk
+          name: orbit-two-apk
+          path: benchmarks/godot/build/orbit-two.apk
           retention-days: 14
