@@ -5,18 +5,20 @@ Statuses: `DONE`, `IN PROGRESS`, `NEXT`, `PLANNED`, `BLOCKED`.
 Each item is intentionally a meaningful deliverable, not a list of tiny implementation chores. Implementation details live in PRs/issues when needed.
 
 ## A0 — Architecture & performance spike
-**Status: IN PROGRESS — final Phaser optimization gate**
+**Status: IN PROGRESS — Phaser vs Godot vs React Native Skia shootout**
 
-Validate the world/runtime direction on representative Android hardware before locking the stack.
+Choose the world/runtime direction using the same physical Android device and approximately the same production-density scene. See `SHOOTOUT.md` for the protocol and scorecard.
 
 Evidence so far:
-- Browser CI/build/unit smoke is green.
+- Browser CI/build/unit smoke for the Phaser path is green.
 - Synthetic Phaser stress test found the failure wall: ×4 janks badly and ×10 effectively freezes.
-- First realistic production-density Phaser benchmark measured ~24 FPS steady and ~13 FPS busy on the physical Android test device. Subjective jank was light, but these numbers are below the required budget and leave insufficient headroom.
+- First realistic production-density Phaser benchmark measured ~24 FPS steady and ~13 FPS busy on the physical Android test device.
+- A production-pattern Phaser optimization pass materially improved performance, but the resulting non-antialiased visual output looked too pixelated to accept as the product quality bar.
+- The fair final comparison therefore restores smooth sampling for Phaser and builds native Godot + native React Native Skia challengers from code with GitHub Actions APK artifacts.
 
-**Next:** run one production-pattern optimization pass (texture baking, off-camera culling/sleeping, bounded pooled effects, less live vector/container overhead) without reducing the intended product density.
+**Next:** run all three candidates on the same Android device in steady and busy modes, record frame pacing + visual sharpness + touch feel, then choose one runtime. Do not keep multiple world engines after the decision.
 
-**Done when:** the same Android device either (a) reaches a credible production budget — approximately 50–60 FPS steady and 45+ FPS busy with stable pacing — and D-002 is locked to Phaser, or (b) fails that fair optimized gate and D-002 is closed in favor of the Godot fallback.
+**Done when:** `project/SHOOTOUT.md` has physical results for all three candidates, one option is selected, the result is recorded in `DECISIONS.md`, and the losing benchmark implementations are explicitly treated as disposable evidence rather than production architecture.
 
 ## A1 — Repository and development foundation
 **Status: NEXT after A0 engine decision**
