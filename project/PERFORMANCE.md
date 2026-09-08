@@ -5,33 +5,44 @@ Performance is a product requirement and an architecture gate.
 ## Spike 001 goal
 Prove that the intended visual density and React/Phaser integration can remain smooth on representative weak/medium Android hardware before committing to the stack.
 
-The original stress toggle was too conservative: 140 baseline motes versus 420 stress motes produced no visible difference on the first physical Android check. That is encouraging, but it is not enough evidence to lock the architecture.
+The original stress toggle was too conservative: 140 baseline motes versus 420 stress motes produced no visible difference on the first physical Android check. That was encouraging, but not enough evidence to lock the architecture.
 
-## Spike 001B — stress ladder
-The benchmark now has four explicit load levels:
+## Spike 001B — synthetic failure boundary
+The second benchmark intentionally pushed pathological independent per-frame sprite work:
 - **NORMAL** — baseline world.
 - **BUSY ×4** — ~1,200 extra independently animated sprites.
 - **HEAVY ×10** — ~3,600 extra independently animated sprites.
 - **TORTURE ×20** — ~9,000 extra animated sprites plus additive blending and dynamic geometry redrawn every frame.
 
-Metrics are reported over a rolling frame window: current FPS, average FPS, approximate 1% low FPS, average frame time, worst frame time, long frames (>32 ms), and active object count. The purpose is to find the device's failure boundary, not to claim TORTURE resembles production content.
+Physical Android result: BUSY ×4 already showed serious jank; HEAVY ×10 effectively froze the experience before TORTURE could be selected. This successfully found a synthetic failure wall. It is not evidence that a production Phaser scene will behave the same way, because shipping content should not update thousands of independent sprites every frame.
 
-Actor travel was also separated from the actor's idle bob and camera pixel rounding was enabled after the first Android check showed visible actor micro-jitter during camera travel.
+## Spike 001C — production-density benchmark
+The current architecture gate is a realistic scene rather than a torture scene. It keeps the kinds of work we actually expect to ship active at the same time:
+- Six richer floating worlds with animated portals and orbiters.
+- Multi-layer parallax/star background and static world decoration.
+- A code-drawn flying actor with idle, glow, blink/speech-state motion.
+- Camera travel and portal celebration effects.
+- A preallocated/pool-based particle system with no per-effect object allocation.
+- React product UI, simulated live tutor/subtitle overlay, and continuously updating metrics.
+- **PRODUCTION STEADY** for normal hub density.
+- **BUSY LESSON** for sustained extra ambient motion, speech animation and recurring pooled effects.
 
-### First physical Android result — 2026-09-08
-- **NORMAL:** remained usable/smooth enough for the baseline product spike.
-- **BUSY ×4:** severe visible slowdown / effectively hung.
-- **HEAVY ×10:** page effectively froze.
-- **TORTURE ×20:** could not be reached because interaction was already unusable at ×10.
-- Device model/Android/Chrome versions still need to be recorded.
+Metrics use a rolling frame window: current FPS, average FPS, approximate 1% low FPS, average/worst frame time, long frames (>32 ms), active effects, and animated-object count.
 
-**Interpretation:** this successfully found a real browser-runtime failure boundary. It does **not** by itself fail Phaser: BUSY and above are deliberately pathological, with 1,200+ independently updated sprites rather than a realistic production scene. The next architecture gate is a production-density simulation that uses the rendering patterns we would actually ship (bounded active objects, pooled/batched effects, culling, representative character/UI/audio work). Phaser passes only if that representative scene remains smooth with meaningful headroom.
+### Physical test procedure
+1. Open the deployed `main` URL on Chrome on the target Android device.
+2. Leave **Steady world** selected for 15–20 seconds and travel through several worlds.
+3. Record average FPS, 1% low, worst frame time, long-frame count, and whether movement visibly hitches.
+4. Tap **Reset sample**.
+5. Enable **Busy lesson**, leave it running for 20–30 seconds, and travel through several worlds.
+6. Record the same metrics and subjective jank.
+7. Repeat once after the page has been open for a few minutes to catch obvious thermal/memory problems.
 
 ## Initial target behavior
 These are starting budgets, not promises carved in stone:
 - Normal navigation and actor flight should feel 60 FPS on target mid-range devices.
-- Expected production density should keep strong headroom below the device's measured stress failure boundary.
-- No repeatable visible frame hitch on camera movement, portal selection, UI overlay interaction, or actor movement.
+- Production steady should remain near display refresh with no repeatable visible hitch.
+- Busy lesson should retain comfortable headroom for real audio/AI/network work that is not yet wired.
 - No unbounded memory growth after repeated scene/app lifecycle cycles.
 - World boot and transitions should be measurable and later given explicit time budgets.
 
@@ -43,9 +54,9 @@ These are starting budgets, not promises carved in stone:
 5. Hosted GitHub runner — deterministic checks only, not FPS truth.
 
 ## PASS / FAIL rule for Phaser
-**PASS:** representative device runs expected production-density scenes smoothly and shows a comfortable failure boundary above that density, leaving headroom for audio/AI/UI.
+**PASS:** the representative device runs the production-density scene smoothly in steady mode and remains acceptably smooth in busy mode, with enough margin to add audio/AI without renderer hacks.
 
-**FAIL:** acceptable behavior requires invasive renderer hacks, removing core product visuals, or repeatedly fighting WebView/browser constraints. If this happens early, move to the Godot fallback rather than building a permanent hybrid workaround.
+**FAIL:** realistic production density itself requires invasive renderer hacks, removing core product visuals, or repeatedly fighting browser/WebView constraints. If this happens early, move to the Godot fallback rather than building a permanent hybrid workaround.
 
 ## Future automated budgets
 - JS bundle and route/chunk sizes.

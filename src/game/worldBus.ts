@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-export type StressLevel = 0 | 1 | 2 | 3;
+export type BenchmarkLoad = 'steady' | 'busy';
 
 export type WorldMetrics = {
   fps: number;
@@ -10,8 +10,10 @@ export type WorldMetrics = {
   worstFrameMs: number;
   longFrames: number;
   objects: number;
-  stressLevel: StressLevel;
-  stressLabel: string;
+  activeParticles: number;
+  animatedObjects: number;
+  benchmarkLoad: BenchmarkLoad;
+  benchmarkLabel: string;
 };
 
 export const worldBus = new Phaser.Events.EventEmitter();
