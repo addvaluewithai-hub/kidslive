@@ -1,60 +1,61 @@
 extends Node2D
 
-const STEADY_MOTES := 36
-const BUSY_MOTES := 72
-const PARTICLE_POOL := 96
-const WORLD_CULL_DISTANCE := 720.0
+const STEADY_MOTES: int = 36
+const BUSY_MOTES: int = 72
+const PARTICLE_POOL: int = 96
+const STAR_COUNT: int = 120
+const WORLD_CULL_DISTANCE: float = 720.0
+const WORLD_ZOOM: float = 0.84
 
-const PLACES := [
-	{"id": "english", "name": "English Grove", "subtitle": "Stories & words", "pos": Vector2(220, 210), "accent": Color("73ddff")},
-	{"id": "german", "name": "German Harbor", "subtitle": "Tiny missions", "pos": Vector2(600, 165), "accent": Color("8fa7ff")},
-	{"id": "chess", "name": "Chess Citadel", "subtitle": "Think ahead", "pos": Vector2(950, 300), "accent": Color("ffd166")},
-	{"id": "knowledge", "name": "Knowledge Observatory", "subtitle": "How do we know?", "pos": Vector2(860, 650), "accent": Color("d493ff")},
-	{"id": "habits", "name": "Habits Garden", "subtitle": "Tiny wins", "pos": Vector2(505, 720), "accent": Color("7ff0b8")},
-	{"id": "lab", "name": "Curiosity Lab", "subtitle": "Try & discover", "pos": Vector2(160, 590), "accent": Color("ff8fb9")},
+const PLACES: Array[Dictionary] = [
+	{"id": "english", "name": "English Grove", "subtitle": "Stories & words", "pos": Vector2(220.0, 210.0), "accent": Color("73ddff")},
+	{"id": "german", "name": "German Harbor", "subtitle": "Tiny missions", "pos": Vector2(600.0, 165.0), "accent": Color("8fa7ff")},
+	{"id": "chess", "name": "Chess Citadel", "subtitle": "Think ahead", "pos": Vector2(950.0, 300.0), "accent": Color("ffd166")},
+	{"id": "knowledge", "name": "Knowledge Observatory", "subtitle": "How do we know?", "pos": Vector2(860.0, 650.0), "accent": Color("d493ff")},
+	{"id": "habits", "name": "Habits Garden", "subtitle": "Tiny wins", "pos": Vector2(505.0, 720.0), "accent": Color("7ff0b8")},
+	{"id": "lab", "name": "Curiosity Lab", "subtitle": "Try & discover", "pos": Vector2(160.0, 590.0), "accent": Color("ff8fb9")},
 ]
 
-var camera: Camera2D
-var actor: Node2D
-var actor_visual: Node2D
-var actor_mouth: Polygon2D
-var actor_thruster: Polygon2D
-var world_nodes: Array[Node2D] = []
-var portal_nodes: Array[Node2D] = []
-var orbiter_nodes: Array[Polygon2D] = []
-var motes: Array[Polygon2D] = []
-var mote_origins: Array[Vector2] = []
-var particles: Array = []
+var selected_index: int = 0
+var busy: bool = false
+var elapsed: float = 0.0
+var busy_timer: float = 0.0
+var metrics_elapsed: float = 0.0
+var camera_pos: Vector2 = Vector2.ZERO
+var camera_target: Vector2 = Vector2.ZERO
+var actor_pos: Vector2 = Vector2.ZERO
+var actor_target: Vector2 = Vector2.ZERO
 
-var selected_index := 0
-var busy := false
-var busy_timer := 0.0
-var elapsed := 0.0
-var metrics_elapsed := 0.0
-var frame_samples: Array[float] = []
+var star_positions: PackedVector2Array = PackedVector2Array()
+var star_sizes: PackedFloat32Array = PackedFloat32Array()
+var star_alphas: PackedFloat32Array = PackedFloat32Array()
+var mote_origins: PackedVector2Array = PackedVector2Array()
+var mote_phases: PackedFloat32Array = PackedFloat32Array()
+var mote_speeds: PackedFloat32Array = PackedFloat32Array()
+var particle_positions: PackedVector2Array = PackedVector2Array()
+var particle_velocities: PackedVector2Array = PackedVector2Array()
+var particle_life: PackedFloat32Array = PackedFloat32Array()
+var particle_max_life: PackedFloat32Array = PackedFloat32Array()
+var frame_samples: PackedFloat32Array = PackedFloat32Array()
+
 var metrics_label: Label
 var mode_label: Label
 var selected_label: Label
+var fallback_font: Font
 
 func _ready() -> void:
-	create_backdrop()
-	create_routes()
-	for i in range(PLACES.size()):
-		create_world(i)
-	create_motes()
-	create_particles()
-	create_actor()
-	create_camera()
+	fallback_font = ThemeDB.fallback_font
+	initialize_stars()
+	initialize_motes()
+	initialize_particles()
 	create_ui()
 	visit_world(0, false)
+	set_process(true)
 
 func _process(delta: float) -> void:
 	elapsed += delta
-	update_actor()
-	update_worlds()
-	update_motes()
-	update_particles(delta)
-	update_culling()
+	camera_pos = camera_pos.lerp(camera_target, min(1.0, delta * 6.2))
+	actor_pos = actor_pos.lerp(actor_target, min(1.0, delta * 7.0))
 
 	if busy:
 		busy_timer += delta
@@ -62,307 +63,210 @@ func _process(delta: float) -> void:
 			busy_timer = 0.0
 			emit_particles(5, 0.72)
 
+	update_particles(delta)
 	frame_samples.append(delta * 1000.0)
+	if frame_samples.size() > 600:
+		frame_samples.remove_at(0)
+
 	metrics_elapsed += delta
 	if metrics_elapsed >= 1.0:
 		metrics_elapsed = 0.0
 		refresh_metrics()
 
-func create_camera() -> void:
-	camera = Camera2D.new()
-	camera.enabled = true
-	camera.position = PLACES[0]["pos"]
-	camera.zoom = Vector2(0.84, 0.84)
-	add_child(camera)
+	queue_redraw()
 
-func create_backdrop() -> void:
-	var rng := RandomNumberGenerator.new()
+func _draw() -> void:
+	draw_backdrop()
+	draw_routes()
+	draw_worlds()
+	draw_motes()
+	draw_particles()
+	draw_actor()
+
+func screen_center() -> Vector2:
+	return get_viewport_rect().size * 0.5
+
+func world_to_screen(point: Vector2) -> Vector2:
+	return screen_center() + (point - camera_pos) * WORLD_ZOOM
+
+func initialize_stars() -> void:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = 20260908
+	for _i: int in range(STAR_COUNT):
+		star_positions.append(Vector2(rng.randf_range(-100.0, 1220.0), rng.randf_range(-80.0, 920.0)))
+		star_sizes.append(rng.randf_range(0.8, 2.4))
+		star_alphas.append(rng.randf_range(0.15, 0.55))
 
-	for nebula in [
-		{"pos": Vector2(330, 260), "radius": 330.0, "color": Color(0.39, 0.28, 0.78, 0.11)},
-		{"pos": Vector2(850, 590), "radius": 390.0, "color": Color(0.11, 0.62, 0.72, 0.09)},
-		{"pos": Vector2(760, 120), "radius": 260.0, "color": Color(0.72, 0.24, 0.59, 0.07)},
-	]:
-		var p := Polygon2D.new()
-		p.polygon = ellipse_points(nebula["radius"], nebula["radius"] * 0.72, 40)
-		p.color = nebula["color"]
-		p.position = nebula["pos"]
-		p.z_index = -20
-		add_child(p)
-
-	for i in range(120):
-		var star := Polygon2D.new()
-		var r := rng.randf_range(0.8, 2.4)
-		star.polygon = circle_points(r, 8)
-		star.color = Color(1, 1, 1, rng.randf_range(0.15, 0.55))
-		star.position = Vector2(rng.randf_range(-100, 1220), rng.randf_range(-80, 920))
-		star.z_index = -15
-		add_child(star)
-
-func create_routes() -> void:
-	var route := Line2D.new()
-	route.width = 4.0
-	route.default_color = Color(0.5, 0.6, 1.0, 0.11)
-	var pts := PackedVector2Array()
-	for place in PLACES:
-		pts.append(place["pos"])
-	pts.append(PLACES[0]["pos"])
-	route.points = pts
-	route.z_index = -5
-	add_child(route)
-
-func create_world(index: int) -> void:
-	var place: Dictionary = PLACES[index]
-	var root := Node2D.new()
-	root.position = place["pos"]
-	root.z_index = 5
-	add_child(root)
-	world_nodes.append(root)
-
-	var shadow := Polygon2D.new()
-	shadow.polygon = ellipse_points(108, 27, 30)
-	shadow.color = Color(0.01, 0.015, 0.06, 0.42)
-	shadow.position = Vector2(0, 65)
-	root.add_child(shadow)
-
-	var underside := Polygon2D.new()
-	underside.polygon = ellipse_points(95, 48, 30)
-	underside.color = Color("151a3b")
-	underside.position = Vector2(0, 36)
-	root.add_child(underside)
-
-	var ground := Polygon2D.new()
-	ground.polygon = ellipse_points(108, 48, 32)
-	ground.color = Color("202854")
-	ground.position = Vector2(0, 5)
-	root.add_child(ground)
-
-	var rim := Line2D.new()
-	rim.width = 3.0
-	rim.default_color = Color(place["accent"], 0.56)
-	rim.points = closed_points(ellipse_points(108, 48, 32))
-	rim.position = Vector2(0, 5)
-	root.add_child(rim)
-
-	for j in range(4):
-		var x_values := [-58.0, -29.0, 28.0, 58.0]
-		var x: float = x_values[j]
-		var h := 22.0 + float((index + j) % 3) * 9.0
-		var stem := Polygon2D.new()
-		stem.polygon = PackedVector2Array([Vector2(-4, 0), Vector2(4, 0), Vector2(4, -h), Vector2(-4, -h)])
-		stem.color = Color("3a4372")
-		stem.position = Vector2(x, 4)
-		root.add_child(stem)
-
-		var crown := Polygon2D.new()
-		crown.polygon = circle_points(9.0 + float((j + index) % 2) * 4.0, 16)
-		crown.color = Color(place["accent"], 0.72)
-		crown.position = Vector2(x, 2 - h)
-		root.add_child(crown)
-
-	var portal := Node2D.new()
-	portal.position = Vector2(0, -53)
-	root.add_child(portal)
-	portal_nodes.append(portal)
-
-	var halo := Polygon2D.new()
-	halo.polygon = circle_points(56, 32)
-	halo.color = Color(place["accent"], 0.08)
-	portal.add_child(halo)
-
-	var core := Polygon2D.new()
-	core.polygon = circle_points(38, 32)
-	core.color = Color("0e1535")
-	portal.add_child(core)
-
-	var ring := Line2D.new()
-	ring.width = 4.0
-	ring.default_color = Color(place["accent"], 0.95)
-	ring.points = closed_points(circle_points(38, 32))
-	portal.add_child(ring)
-
-	var inner := Polygon2D.new()
-	inner.polygon = circle_points(24, 24)
-	inner.color = Color(place["accent"], 0.20)
-	portal.add_child(inner)
-
-	var orbiter := Polygon2D.new()
-	orbiter.polygon = diamond_points(7)
-	orbiter.color = Color(place["accent"], 0.95)
-	root.add_child(orbiter)
-	orbiter_nodes.append(orbiter)
-
-	var title := Label.new()
-	title.text = place["name"]
-	title.position = Vector2(-130, 98)
-	title.size = Vector2(260, 30)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 22)
-	title.add_theme_color_override("font_color", Color.WHITE)
-	root.add_child(title)
-
-	var subtitle := Label.new()
-	subtitle.text = place["subtitle"]
-	subtitle.position = Vector2(-130, 127)
-	subtitle.size = Vector2(260, 22)
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_font_size_override("font_size", 13)
-	subtitle.add_theme_color_override("font_color", Color("aeb8df"))
-	root.add_child(subtitle)
-
-func create_motes() -> void:
-	for i in range(BUSY_MOTES):
-		var mote := Polygon2D.new()
-		mote.polygon = circle_points(2.6 + float(i % 3) * 0.45, 8)
-		mote.visible = i < STEADY_MOTES
-		mote.z_index = 2
-		add_child(mote)
-		motes.append(mote)
+func initialize_motes() -> void:
+	for i: int in range(BUSY_MOTES):
 		mote_origins.append(Vector2.ZERO)
+		mote_phases.append(float(i) * 0.71)
+		mote_speeds.append(0.38 + float(i % 7) * 0.07)
 
-func create_particles() -> void:
-	for i in range(PARTICLE_POOL):
-		var p := Polygon2D.new()
-		p.polygon = diamond_points(3.2 + float(i % 3) * 0.7) if i % 3 == 0 else circle_points(2.5 + float(i % 2), 8)
-		p.visible = false
-		p.z_index = 24
-		add_child(p)
-		particles.append({"node": p, "active": false, "velocity": Vector2.ZERO, "life": 0.0, "max_life": 0.0})
+func initialize_particles() -> void:
+	for _i: int in range(PARTICLE_POOL):
+		particle_positions.append(Vector2.ZERO)
+		particle_velocities.append(Vector2.ZERO)
+		particle_life.append(0.0)
+		particle_max_life.append(0.0)
 
-func create_actor() -> void:
-	actor = Node2D.new()
-	actor.z_index = 40
-	add_child(actor)
-	actor_visual = Node2D.new()
-	actor.add_child(actor_visual)
+func draw_backdrop() -> void:
+	draw_circle(world_to_screen(Vector2(330.0, 260.0)), 330.0 * WORLD_ZOOM, Color(0.39, 0.28, 0.78, 0.11))
+	draw_circle(world_to_screen(Vector2(850.0, 590.0)), 390.0 * WORLD_ZOOM, Color(0.11, 0.62, 0.72, 0.09))
+	draw_circle(world_to_screen(Vector2(760.0, 120.0)), 260.0 * WORLD_ZOOM, Color(0.72, 0.24, 0.59, 0.07))
+	for i: int in range(STAR_COUNT):
+		var p: Vector2 = world_to_screen(star_positions[i])
+		draw_circle(p, star_sizes[i], Color(1.0, 1.0, 1.0, star_alphas[i]))
 
-	actor_thruster = Polygon2D.new()
-	actor_thruster.polygon = ellipse_points(22, 16, 20)
-	actor_thruster.color = Color(0.36, 0.89, 1.0, 0.22)
-	actor_thruster.position = Vector2(0, 45)
-	actor_visual.add_child(actor_thruster)
+func draw_routes() -> void:
+	for i: int in range(PLACES.size()):
+		var a: Vector2 = world_to_screen(PLACES[i]["pos"] as Vector2)
+		var b: Vector2 = world_to_screen(PLACES[(i + 1) % PLACES.size()]["pos"] as Vector2)
+		draw_line(a, b, Color(0.5, 0.6, 1.0, 0.11), 4.0)
 
-	var left_fin := Polygon2D.new()
-	left_fin.polygon = PackedVector2Array([Vector2(-42, -2), Vector2(-20, 8), Vector2(-26, 34)])
-	left_fin.color = Color("4c43b2")
-	actor_visual.add_child(left_fin)
+func draw_worlds() -> void:
+	for i: int in range(PLACES.size()):
+		var place: Dictionary = PLACES[i]
+		var world_pos: Vector2 = place["pos"] as Vector2
+		if world_pos.distance_to(camera_pos) > WORLD_CULL_DISTANCE:
+			continue
+		var p: Vector2 = world_to_screen(world_pos)
+		var accent: Color = place["accent"] as Color
+		var s: float = WORLD_ZOOM
 
-	var right_fin := Polygon2D.new()
-	right_fin.polygon = PackedVector2Array([Vector2(42, -2), Vector2(20, 8), Vector2(26, 34)])
-	right_fin.color = Color("4c43b2")
-	actor_visual.add_child(right_fin)
+		draw_circle(p + Vector2(0.0, 57.0 * s), 70.0 * s, Color(0.01, 0.015, 0.06, 0.26))
+		draw_set_transform(p + Vector2(0.0, 25.0 * s), 0.0, Vector2(1.0, 0.44))
+		draw_circle(Vector2.ZERO, 105.0 * s, Color("151a3b"))
+		draw_set_transform(p, 0.0, Vector2(1.0, 0.44))
+		draw_circle(Vector2.ZERO, 108.0 * s, Color("202854"))
+		draw_arc(Vector2.ZERO, 108.0 * s, 0.0, TAU, 48, Color(accent, 0.55), 3.0, true)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-	var body := Polygon2D.new()
-	body.polygon = ellipse_points(42, 49, 32)
-	body.color = Color("6959e8")
-	actor_visual.add_child(body)
+		var decor_x: Array[float] = [-58.0, -29.0, 28.0, 58.0]
+		for j: int in range(4):
+			var h: float = 22.0 + float((i + j) % 3) * 9.0
+			var dx: float = decor_x[j] * s
+			draw_rect(Rect2(p.x + dx - 4.0 * s, p.y - h * s, 8.0 * s, h * s), Color("3a4372"))
+			draw_circle(Vector2(p.x + dx, p.y - (h + 2.0) * s), (9.0 + float((j + i) % 2) * 4.0) * s, Color(accent, 0.72))
 
-	var face := Polygon2D.new()
-	face.polygon = ellipse_points(31, 25, 30)
-	face.color = Color("101733")
-	face.position = Vector2(0, -12)
-	actor_visual.add_child(face)
+		var portal_center: Vector2 = p + Vector2(0.0, -53.0 * s)
+		var pulse: float = 0.98 + sin(elapsed * 1.6 + float(i) * 0.83) * 0.045
+		draw_circle(portal_center, 56.0 * s * pulse, Color(accent, 0.08))
+		draw_circle(portal_center, 38.0 * s * pulse, Color("0e1535"))
+		draw_arc(portal_center, 38.0 * s * pulse, 0.0, TAU, 36, accent, 4.0, true)
+		draw_circle(portal_center, 24.0 * s * pulse, Color(accent, 0.20))
 
-	for eye_x in [-14.0, 14.0]:
-		var eye := Polygon2D.new()
-		eye.polygon = circle_points(5.5, 16)
-		eye.color = Color("d7fbff")
-		eye.position = Vector2(eye_x, -15)
-		actor_visual.add_child(eye)
+		var orbit: float = elapsed * (0.82 + float(i) * 0.012) + float(i) * 0.83
+		var orbiter: Vector2 = portal_center + Vector2(cos(orbit), sin(orbit)) * 51.0 * s
+		draw_circle(orbiter, 6.0 * s, accent)
 
-	actor_mouth = Polygon2D.new()
-	actor_mouth.polygon = PackedVector2Array([Vector2(-8, -2), Vector2(8, -2), Vector2(8, 2), Vector2(-8, 2)])
-	actor_mouth.color = Color("89f3ff")
-	actor_mouth.position = Vector2(0, 3)
-	actor_visual.add_child(actor_mouth)
+		draw_string(fallback_font, p + Vector2(-120.0 * s, 116.0 * s), str(place["name"]), HORIZONTAL_ALIGNMENT_CENTER, 240.0 * s, int(22.0 * s), Color.WHITE)
+		draw_string(fallback_font, p + Vector2(-120.0 * s, 140.0 * s), str(place["subtitle"]), HORIZONTAL_ALIGNMENT_CENTER, 240.0 * s, int(13.0 * s), Color("aeb8df"))
 
-	var antenna := Line2D.new()
-	antenna.width = 4.0
-	antenna.default_color = Color("b0a6ff")
-	antenna.points = PackedVector2Array([Vector2(0, -49), Vector2(0, -70)])
-	actor_visual.add_child(antenna)
+func draw_motes() -> void:
+	var count: int = BUSY_MOTES if busy else STEADY_MOTES
+	var accent: Color = PLACES[selected_index]["accent"] as Color
+	for i: int in range(count):
+		var phase: float = elapsed * mote_speeds[i] + mote_phases[i]
+		var offset: Vector2 = Vector2(cos(phase) * (5.0 + float(i % 5) * 3.0), sin(phase * 0.82) * (8.0 + float(i % 6) * 3.0))
+		var alpha: float = 0.16 + float(i % 5) * 0.05
+		draw_circle(world_to_screen(mote_origins[i] + offset), 2.1 + float(i % 3) * 0.45, Color(accent, alpha))
 
-	var glow := Polygon2D.new()
-	glow.polygon = circle_points(7, 16)
-	glow.color = Color("6eeaf5")
-	glow.position = Vector2(0, -78)
-	actor_visual.add_child(glow)
+func draw_particles() -> void:
+	var accent: Color = PLACES[selected_index]["accent"] as Color
+	for i: int in range(PARTICLE_POOL):
+		if particle_life[i] <= 0.0:
+			continue
+		var ratio: float = particle_life[i] / max(0.001, particle_max_life[i])
+		var p: Vector2 = world_to_screen(particle_positions[i])
+		var radius: float = (2.4 + float(i % 3) * 0.7) * ratio
+		draw_circle(p, radius, Color(accent, 0.82 * ratio))
+
+func draw_actor() -> void:
+	var p: Vector2 = world_to_screen(actor_pos)
+	p.y += (-8.0 + sin(elapsed * 2.2) * 6.0) * WORLD_ZOOM
+	var s: float = WORLD_ZOOM
+	var thruster_pulse: float = 0.88 + (sin(elapsed * 4.3) + 1.0) * 0.06
+	var thruster_alpha: float = 0.17 + (sin(elapsed * 5.1) + 1.0) * 0.08
+
+	draw_circle(p + Vector2(0.0, 43.0 * s), 19.0 * s * thruster_pulse, Color(0.36, 0.89, 1.0, thruster_alpha))
+	draw_colored_polygon(PackedVector2Array([p + Vector2(-42.0, -2.0) * s, p + Vector2(-20.0, 8.0) * s, p + Vector2(-26.0, 34.0) * s]), Color("4c43b2"))
+	draw_colored_polygon(PackedVector2Array([p + Vector2(42.0, -2.0) * s, p + Vector2(20.0, 8.0) * s, p + Vector2(26.0, 34.0) * s]), Color("4c43b2"))
+
+	draw_set_transform(p, 0.0, Vector2(1.0, 1.16))
+	draw_circle(Vector2.ZERO, 42.0 * s, Color("6959e8"))
+	draw_set_transform(p + Vector2(0.0, -12.0) * s, 0.0, Vector2(1.0, 0.80))
+	draw_circle(Vector2.ZERO, 31.0 * s, Color("101733"))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+	draw_circle(p + Vector2(-14.0, -15.0) * s, 5.5 * s, Color("d7fbff"))
+	draw_circle(p + Vector2(14.0, -15.0) * s, 5.5 * s, Color("d7fbff"))
+	var mouth_h: float = (3.0 if busy else 1.4) * s * (0.65 + abs(sin(elapsed * 12.5)) * (1.1 if busy else 0.0))
+	draw_rect(Rect2(p.x - 8.0 * s, p.y + 1.0 * s, 16.0 * s, mouth_h), Color("89f3ff"))
+	draw_line(p + Vector2(0.0, -49.0) * s, p + Vector2(0.0, -70.0) * s, Color("b0a6ff"), 4.0 * s)
+	draw_circle(p + Vector2(0.0, -78.0) * s, 7.0 * s, Color("6eeaf5"))
 
 func create_ui() -> void:
-	var layer := CanvasLayer.new()
+	var layer: CanvasLayer = CanvasLayer.new()
 	layer.layer = 100
 	add_child(layer)
 
-	var title := Label.new()
+	var title: Label = Label.new()
 	title.text = "KIDSLIVE / ARCHITECTURE SHOOTOUT — GODOT"
-	title.position = Vector2(14, 14)
-	title.add_theme_font_size_override("font_size", 12)
+	title.position = Vector2(14.0, 34.0)
+	title.add_theme_font_size_override("font_size", 10)
 	title.add_theme_color_override("font_color", Color("9ba8dc"))
 	layer.add_child(title)
 
-	var heading := Label.new()
+	var heading: Label = Label.new()
 	heading.text = "Godot Native Candidate"
-	heading.position = Vector2(14, 34)
+	heading.position = Vector2(14.0, 52.0)
 	heading.add_theme_font_size_override("font_size", 24)
 	layer.add_child(heading)
 
 	metrics_label = Label.new()
-	metrics_label.position = Vector2(14, 68)
-	metrics_label.size = Vector2(360, 64)
+	metrics_label.position = Vector2(14.0, 88.0)
+	metrics_label.size = Vector2(360.0, 48.0)
 	metrics_label.add_theme_font_size_override("font_size", 12)
 	metrics_label.add_theme_color_override("font_color", Color("dfe5ff"))
 	layer.add_child(metrics_label)
 
 	selected_label = Label.new()
-	selected_label.position = Vector2(14, 132)
-	selected_label.size = Vector2(360, 24)
-	selected_label.add_theme_font_size_override("font_size", 13)
-	selected_label.add_theme_color_override("font_color", Color("9ba8dc"))
+	selected_label.position = Vector2(14.0, 137.0)
+	selected_label.size = Vector2(360.0, 22.0)
+	selected_label.add_theme_font_size_override("font_size", 12)
+	selected_label.add_theme_color_override("font_color", Color("aeb8df"))
 	layer.add_child(selected_label)
 
 	mode_label = Label.new()
-	mode_label.position = Vector2(14, 158)
-	mode_label.size = Vector2(360, 24)
-	mode_label.add_theme_font_size_override("font_size", 12)
-	mode_label.add_theme_color_override("font_color", Color("7ff0b8"))
+	mode_label.position = Vector2(14.0, 161.0)
+	mode_label.size = Vector2(360.0, 22.0)
+	mode_label.add_theme_font_size_override("font_size", 11)
 	layer.add_child(mode_label)
 
-	var controls := HBoxContainer.new()
-	controls.position = Vector2(10, 770)
-	controls.size = Vector2(370, 58)
+	var controls: HBoxContainer = HBoxContainer.new()
+	controls.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	controls.position = Vector2(10.0, -66.0)
+	controls.size = Vector2(-20.0, 56.0)
 	controls.add_theme_constant_override("separation", 6)
 	layer.add_child(controls)
 
-	var steady_btn := Button.new()
-	steady_btn.text = "Steady"
-	steady_btn.custom_minimum_size = Vector2(82, 48)
-	steady_btn.pressed.connect(set_steady)
-	controls.add_child(steady_btn)
+	add_control_button(controls, "Steady", set_steady)
+	add_control_button(controls, "Busy", set_busy)
+	add_control_button(controls, "Next", next_world)
+	add_control_button(controls, "Reset", reset_metrics)
 
-	var busy_btn := Button.new()
-	busy_btn.text = "Busy"
-	busy_btn.custom_minimum_size = Vector2(82, 48)
-	busy_btn.pressed.connect(set_busy)
-	controls.add_child(busy_btn)
-
-	var next_btn := Button.new()
-	next_btn.text = "Next"
-	next_btn.custom_minimum_size = Vector2(82, 48)
-	next_btn.pressed.connect(next_world)
-	controls.add_child(next_btn)
-
-	var reset_btn := Button.new()
-	reset_btn.text = "Reset"
-	reset_btn.custom_minimum_size = Vector2(82, 48)
-	reset_btn.pressed.connect(reset_metrics)
-	controls.add_child(reset_btn)
+func add_control_button(parent: HBoxContainer, text: String, callback: Callable) -> void:
+	var button: Button = Button.new()
+	button.text = text
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.custom_minimum_size = Vector2(78.0, 48.0)
+	button.pressed.connect(callback)
+	parent.add_child(button)
 
 func set_steady() -> void:
 	busy = false
 	busy_timer = 0.0
-	for i in range(motes.size()):
-		motes[i].visible = i < STEADY_MOTES
 	reseed_motes()
 	reset_metrics()
 	refresh_mode_label()
@@ -370,8 +274,6 @@ func set_steady() -> void:
 func set_busy() -> void:
 	busy = true
 	busy_timer = 0.0
-	for mote in motes:
-		mote.visible = true
 	reseed_motes()
 	emit_particles(42, 1.05)
 	reset_metrics()
@@ -380,130 +282,86 @@ func set_busy() -> void:
 func next_world() -> void:
 	visit_world((selected_index + 1) % PLACES.size(), true)
 
-func visit_world(index: int, animate := true) -> void:
+func visit_world(index: int, animate: bool = true) -> void:
 	selected_index = index
 	var place: Dictionary = PLACES[index]
-	selected_label.text = "%s — %s" % [place["name"], place["subtitle"]]
-
-	if animate:
-		var tween := create_tween().set_parallel(true)
-		tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		tween.tween_property(camera, "position", place["pos"], 0.9)
-		tween.tween_property(actor, "position", place["pos"] + Vector2(126, -86), 0.9)
-	else:
-		camera.position = place["pos"]
-		actor.position = place["pos"] + Vector2(126, -86)
-
+	var target: Vector2 = place["pos"] as Vector2
+	camera_target = target
+	actor_target = target + Vector2(126.0, -86.0)
+	if not animate:
+		camera_pos = camera_target
+		actor_pos = actor_target
+	selected_label.text = "%s — %s" % [str(place["name"]), str(place["subtitle"])]
 	reseed_motes()
 	emit_particles(36 if busy else 24, 1.0)
+	refresh_mode_label()
 
 func reseed_motes() -> void:
 	var place: Dictionary = PLACES[selected_index]
-	var count := BUSY_MOTES if busy else STEADY_MOTES
-	for i in range(count):
-		var angle := float(i) * 2.399963 + place["pos"].x * 0.0007
-		var distance := 110.0 + float(i % 12) * 36.0
-		var origin := place["pos"] + Vector2(cos(angle) * distance, sin(angle) * distance * 0.68)
+	var center: Vector2 = place["pos"] as Vector2
+	var count: int = BUSY_MOTES if busy else STEADY_MOTES
+	for i: int in range(count):
+		var angle: float = float(i) * 2.399963 + center.x * 0.0007
+		var distance: float = 110.0 + float(i % 12) * 36.0
+		var origin: Vector2 = center + Vector2(cos(angle) * distance, sin(angle) * distance * 0.68)
 		mote_origins[i] = origin
-		motes[i].position = origin
-		motes[i].color = Color(place["accent"], 0.16 + float(i % 5) * 0.05)
-
-func update_motes() -> void:
-	var count := BUSY_MOTES if busy else STEADY_MOTES
-	for i in range(count):
-		var phase := elapsed * (0.38 + float(i % 7) * 0.07) + float(i) * 0.71
-		motes[i].position = mote_origins[i] + Vector2(cos(phase) * (5 + i % 5 * 3), sin(phase * 0.82) * (8 + i % 6 * 3))
-
-func update_actor() -> void:
-	actor_visual.position.y = -8.0 + sin(elapsed * 2.2) * 6.0
-	actor_thruster.scale = Vector2.ONE * (0.88 + (sin(elapsed * 4.3) + 1.0) * 0.06)
-	actor_thruster.color.a = 0.17 + (sin(elapsed * 5.1) + 1.0) * 0.08
-	actor_mouth.scale.y = 0.65 + abs(sin(elapsed * 12.5)) * 1.7 if busy else 0.65
-
-func update_worlds() -> void:
-	for i in range(world_nodes.size()):
-		if not world_nodes[i].visible:
-			continue
-		var phase := elapsed * 1.6 + float(i) * 0.83
-		var scale_value := 0.98 + sin(phase) * 0.045
-		portal_nodes[i].scale = Vector2.ONE * scale_value
-		var orbit := elapsed * (0.82 + float(i) * 0.012) + float(i) * 0.83
-		orbiter_nodes[i].position = Vector2(cos(orbit) * 51.0, -53.0 + sin(orbit) * 51.0)
-
-func update_culling() -> void:
-	if camera == null:
-		return
-	for i in range(world_nodes.size()):
-		world_nodes[i].visible = world_nodes[i].position.distance_to(camera.position) <= WORLD_CULL_DISTANCE
 
 func emit_particles(count: int, energy: float) -> void:
-	var place: Dictionary = PLACES[selected_index]
-	var emitted := 0
-	for i in range(particles.size()):
+	var center: Vector2 = PLACES[selected_index]["pos"] as Vector2
+	var emitted: int = 0
+	for i: int in range(PARTICLE_POOL):
 		if emitted >= count:
 			break
-		var state: Dictionary = particles[i]
-		if state["active"]:
+		if particle_life[i] > 0.0:
 			continue
-		var node: Polygon2D = state["node"]
-		var angle := randf_range(-PI, PI)
-		var speed := randf_range(32.0, 96.0) * energy
-		var life := randf_range(0.6, 1.05)
-		state["active"] = true
-		state["velocity"] = Vector2(cos(angle) * speed, sin(angle) * speed - 16.0 * energy)
-		state["life"] = life
-		state["max_life"] = life
-		node.position = place["pos"] + Vector2(randf_range(-30, 30), randf_range(-70, -22))
-		node.color = Color(place["accent"], randf_range(0.42, 0.9))
-		node.scale = Vector2.ONE * randf_range(0.65, 1.2)
-		node.rotation = randf_range(-PI, PI)
-		node.visible = true
+		var angle: float = randf_range(-PI, PI)
+		var speed: float = randf_range(32.0, 96.0) * energy
+		var life: float = randf_range(0.60, 1.05)
+		particle_positions[i] = center + Vector2(randf_range(-30.0, 30.0), randf_range(-70.0, -22.0))
+		particle_velocities[i] = Vector2(cos(angle) * speed, sin(angle) * speed - 16.0 * energy)
+		particle_life[i] = life
+		particle_max_life[i] = life
 		emitted += 1
 
 func update_particles(delta: float) -> void:
-	for i in range(particles.size()):
-		var state: Dictionary = particles[i]
-		if not state["active"]:
+	for i: int in range(PARTICLE_POOL):
+		if particle_life[i] <= 0.0:
 			continue
-		var node: Polygon2D = state["node"]
-		state["life"] -= delta
-		if state["life"] <= 0.0:
-			state["active"] = false
-			node.visible = false
+		particle_life[i] -= delta
+		if particle_life[i] <= 0.0:
+			particle_life[i] = 0.0
 			continue
-		var velocity: Vector2 = state["velocity"]
+		var velocity: Vector2 = particle_velocities[i]
 		velocity.y += 20.0 * delta
-		state["velocity"] = velocity
-		node.position += velocity * delta
-		node.rotation += delta * 1.5
-		node.color.a = max(0.0, state["life"] / state["max_life"])
+		particle_velocities[i] = velocity
+		particle_positions[i] += velocity * delta
 
 func refresh_metrics() -> void:
 	if frame_samples.is_empty():
 		return
-	var sorted := frame_samples.duplicate()
+	var sorted: PackedFloat32Array = frame_samples.duplicate()
 	sorted.sort()
-	var sum := 0.0
-	var worst := 0.0
-	var long_frames := 0
-	for ms in frame_samples:
-		sum += ms
-		worst = max(worst, ms)
+	var total_ms: float = 0.0
+	var worst_ms: float = 0.0
+	var long_frames: int = 0
+	for ms: float in frame_samples:
+		total_ms += ms
+		worst_ms = max(worst_ms, ms)
 		if ms > 32.0:
 			long_frames += 1
-	var avg_ms := sum / float(frame_samples.size())
-	var p99_index := min(sorted.size() - 1, int(floor(float(sorted.size()) * 0.99)))
+	var avg_ms: float = total_ms / float(frame_samples.size())
+	var p99_index: int = min(sorted.size() - 1, int(floor(float(sorted.size()) * 0.99)))
 	var p99_ms: float = sorted[p99_index]
-	var active_fx := 0
-	for state in particles:
-		if state["active"]:
+	var active_fx: int = 0
+	for life: float in particle_life:
+		if life > 0.0:
 			active_fx += 1
 	metrics_label.text = "%d now   %d avg   %d 1%% low\n%.1f avg ms   %.1f worst   %d long   %d FX" % [
 		Engine.get_frames_per_second(),
-		int(round(1000.0 / avg_ms)),
-		int(round(1000.0 / p99_ms)),
+		int(round(1000.0 / max(0.1, avg_ms))),
+		int(round(1000.0 / max(0.1, p99_ms))),
 		avg_ms,
-		worst,
+		worst_ms,
 		long_frames,
 		active_fx,
 	]
@@ -517,22 +375,3 @@ func reset_metrics() -> void:
 func refresh_mode_label() -> void:
 	mode_label.text = "BUSY LESSON / native GL" if busy else "PRODUCTION STEADY / native GL"
 	mode_label.add_theme_color_override("font_color", Color("ffd166") if busy else Color("7ff0b8"))
-
-func circle_points(radius: float, count: int) -> PackedVector2Array:
-	return ellipse_points(radius, radius, count)
-
-func ellipse_points(rx: float, ry: float, count: int) -> PackedVector2Array:
-	var points := PackedVector2Array()
-	for i in range(count):
-		var angle := TAU * float(i) / float(count)
-		points.append(Vector2(cos(angle) * rx, sin(angle) * ry))
-	return points
-
-func closed_points(points: PackedVector2Array) -> PackedVector2Array:
-	var result := points.duplicate()
-	if not result.is_empty():
-		result.append(result[0])
-	return result
-
-func diamond_points(radius: float) -> PackedVector2Array:
-	return PackedVector2Array([Vector2(0, -radius), Vector2(radius, 0), Vector2(0, radius), Vector2(-radius, 0)])
