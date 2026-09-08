@@ -12,6 +12,6 @@ test('boots the production benchmark and exercises realistic busy load', async (
   await expect(page.getByTestId('benchmark-mode')).toContainText('BUSY LESSON');
 
   await page.getByRole('button', { name: 'Reset sample' }).click();
-  await page.getByRole('button', { name: 'Next world' }).click();
+  await page.getByRole('button', { name: /German Harbor/ }).click();
   await expect(page.getByText(/Ready for a tiny language mission/)).toBeVisible();
 });
