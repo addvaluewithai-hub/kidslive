@@ -9,21 +9,22 @@ KidsLive is a code-first, mobile-first interactive 2D learning universe where ch
 - Product shell: React + TypeScript.
 - Interactive world: Phaser.
 - Build/dev: Vite.
-- Mobile packaging target: Capacitor after the browser architecture spike passes.
+- Package manager: pnpm.
+- Mobile packaging target: Capacitor after the browser architecture spike passes the real-device gate.
 - Experience/curriculum logic: pure TypeScript, deterministic and testable without Phaser or AI.
 - AI: an adapter behind bounded tutor/tool contracts; the model never owns curriculum truth, rewards, or progress.
 - CI: GitHub Actions; every PR should be buildable and testable without external AI calls.
 
 ## Current status
-**Architecture Spike 001: Phaser world/performance spike — implemented on `feature/phaser-world-spike`, awaiting CI and real-device performance gate.**
+**Architecture Spike 001: Phaser world/performance spike — browser CI is green; real-device Android performance validation is the remaining architecture gate.**
 
-The first spike intentionally contains no real curriculum and no live AI. It proves the world/rendering/development loop first.
+PR #2 contains the first spike. It intentionally contains no real curriculum and no live AI. It proves the world/rendering/development loop first. The stack remains provisional until the fixed-device performance check in `PERFORMANCE.md` passes.
 
 ## How to resume in a future conversation
 1. Read `project/README.md`.
 2. Read `project/DECISIONS.md` for decisions that should not be casually reopened.
 3. Read `project/TASKS.md`; continue the first task marked `NEXT` or `IN PROGRESS`.
-4. Check the current branch/PR and CI before writing code.
+4. Check current PRs and CI before writing code.
 5. Update this folder whenever architecture, scope, acceptance criteria, or launch assumptions change.
 
 ## Product principles
