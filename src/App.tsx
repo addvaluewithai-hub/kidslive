@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createGame } from './game/createGame';
 import { PLACES } from './game/worldConfig';
-import { worldBus, type StressLevel, type WorldMetrics } from './game/worldBus';
+import { worldBus, type BenchmarkLoad, type WorldMetrics } from './game/worldBus';
 
 const EMPTY_METRICS: WorldMetrics = {
   fps: 0,
@@ -11,22 +11,20 @@ const EMPTY_METRICS: WorldMetrics = {
   worstFrameMs: 0,
   longFrames: 0,
   objects: 0,
-  stressLevel: 0,
-  stressLabel: 'NORMAL',
+  activeParticles: 0,
+  animatedObjects: 0,
+  benchmarkLoad: 'steady',
+  benchmarkLabel: 'PRODUCTION STEADY',
 };
 
-const STRESS_LEVELS: Array<{ level: StressLevel; label: string }> = [
-  { level: 0, label: 'NORMAL' },
-  { level: 1, label: 'BUSY ×4' },
-  { level: 2, label: 'HEAVY ×10' },
-  { level: 3, label: 'TORTURE ×20' },
-];
+const DEFAULT_TUTOR_LINE = 'Let’s explore this place together.';
 
 export function App() {
   const stageRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   const [selectedId, setSelectedId] = useState(PLACES[0].id);
   const [metrics, setMetrics] = useState<WorldMetrics>(EMPTY_METRICS);
+  const [tutorLine, setTutorLine] = useState(DEFAULT_TUTOR_LINE);
   const selected = useMemo(() => PLACES.find((place) => place.id === selectedId) ?? PLACES[0], [selectedId]);
 
   useEffect(() => {
@@ -37,42 +35,55 @@ export function App() {
     const onReady = () => setReady(true);
     const onSelected = (id: string) => setSelectedId(id);
     const onMetrics = (next: WorldMetrics) => setMetrics(next);
+    const onTutorLine = (line: string) => setTutorLine(line);
 
     worldBus.on('ready', onReady);
     worldBus.on('selected', onSelected);
     worldBus.on('metrics', onMetrics);
+    worldBus.on('tutor-line', onTutorLine);
 
     return () => {
       worldBus.off('ready', onReady);
       worldBus.off('selected', onSelected);
       worldBus.off('metrics', onMetrics);
+      worldBus.off('tutor-line', onTutorLine);
       game.destroy(true);
     };
   }, []);
+
+  const setLoad = (load: BenchmarkLoad) => worldBus.emit('benchmark-load', load);
 
   return (
     <main className="app-shell">
       <div className="world-stage" ref={stageRef} data-testid="planet-stage" />
 
       <header className="topbar">
-        <div>
-          <span className="eyebrow">KIDSLIVE / ARCHITECTURE SPIKE 001B</span>
-          <h1>Nova Planet</h1>
+        <div className="brand-block">
+          <span className="eyebrow">KIDSLIVE / ARCHITECTURE SPIKE 001C</span>
+          <h1>Production Density</h1>
+          <p>Realistic world load, not a synthetic sprite torture test.</p>
         </div>
+
         <div className="metrics" aria-label="performance metrics">
           <span><b>{metrics.fps || '—'}</b> now</span>
           <span><b>{metrics.averageFps || '—'}</b> avg</span>
           <span><b>{metrics.onePercentLowFps || '—'}</b> 1% low</span>
-          <span><b>{metrics.frameMs || '—'}</b> ms</span>
-          <span><b>{metrics.worstFrameMs || '—'}</b> worst</span>
+          <span><b>{metrics.worstFrameMs || '—'}</b> worst ms</span>
           <span><b>{metrics.longFrames}</b> long</span>
-          <span><b>{metrics.objects || '—'}</b> objects</span>
-          <span className={ready ? 'ready' : ''}>{ready ? metrics.stressLabel : 'Booting…'}</span>
+          <span><b>{metrics.animatedObjects || '—'}</b> animated</span>
+          <span><b>{metrics.activeParticles}</b> active FX</span>
+          <span className={ready ? 'ready' : ''} data-testid="benchmark-mode">
+            {ready ? metrics.benchmarkLabel : 'Booting…'}
+          </span>
         </div>
       </header>
 
       <aside className="control-panel">
-        <span className="eyebrow">FLY TO A PLACE</span>
+        <div className="panel-heading">
+          <span className="eyebrow">WORLD TRAVEL</span>
+          <strong>{selected.name}</strong>
+        </div>
+
         <div className="place-list">
           {PLACES.map((place) => (
             <button
@@ -86,31 +97,45 @@ export function App() {
           ))}
         </div>
 
-        <div className="actions">
-          <button onClick={() => worldBus.emit('tour')}>Next world</button>
-        </div>
-
-        <div className="stress-panel" data-testid="stress-panel">
-          <span className="eyebrow">PERFORMANCE LOAD</span>
-          <div className="stress-grid">
-            {STRESS_LEVELS.map((item) => (
-              <button
-                key={item.level}
-                className={metrics.stressLevel === item.level ? 'stress-on' : ''}
-                onClick={() => worldBus.emit('stress-level', item.level)}
-              >
-                {item.label}
-              </button>
-            ))}
+        <div className="benchmark-panel">
+          <span className="eyebrow">REALISTIC LOAD</span>
+          <div className="benchmark-actions">
+            <button
+              className={metrics.benchmarkLoad === 'steady' ? 'benchmark-on' : ''}
+              onClick={() => setLoad('steady')}
+            >
+              Steady world
+            </button>
+            <button
+              className={metrics.benchmarkLoad === 'busy' ? 'benchmark-on busy' : ''}
+              onClick={() => setLoad('busy')}
+            >
+              Busy lesson
+            </button>
           </div>
-          <small>Give each level ~10 seconds, then fly between worlds. TORTURE intentionally redraws geometry and moves ~9k extra sprites every frame.</small>
+          <div className="actions">
+            <button onClick={() => worldBus.emit('tour')}>Next world</button>
+            <button onClick={() => worldBus.emit('reset-metrics')}>Reset sample</button>
+          </div>
+          <small>
+            Busy lesson keeps extra ambient animation, pooled effects, actor speech motion and repeated portal activity running continuously.
+          </small>
         </div>
       </aside>
 
-      <section className="place-card" data-testid="selected-place">
-        <span>Currently exploring</span>
-        <strong>{selected.name}</strong>
-        <p>{selected.subtitle}. This is only the world/performance spike — no curriculum or AI is wired yet.</p>
+      <section className="tutor-card" aria-label="simulated AI tutor overlay">
+        <div className="tutor-avatar"><span /></div>
+        <div>
+          <span className="eyebrow">NOVA / SIMULATED LIVE SPEECH</span>
+          <p>{tutorLine}</p>
+          <div className="speech-wave" aria-hidden="true"><i /><i /><i /><i /></div>
+        </div>
+      </section>
+
+      <section className="benchmark-note">
+        <span>Goal</span>
+        <strong>Stay smooth here with headroom.</strong>
+        <p>The ×4 / ×10 test found the failure wall. This scene approximates the density we actually intend to ship.</p>
       </section>
     </main>
   );

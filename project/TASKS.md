@@ -5,11 +5,11 @@ Statuses: `DONE`, `IN PROGRESS`, `NEXT`, `PLANNED`, `BLOCKED`.
 Each item is intentionally a meaningful deliverable, not a list of tiny implementation chores. Implementation details live in PRs/issues when needed.
 
 ## A0 — Architecture & performance spike
-**Status: IN PROGRESS**
+**Status: IN PROGRESS — production-density physical Android gate**
 
-Build a code-only Phaser planet stress scene under React, establish unit/build/browser CI, and benchmark on representative Android hardware.
+Validate Phaser as the rendering/runtime direction under React using browser CI, a synthetic failure-boundary test, and a realistic production-density world benchmark on representative Android hardware.
 
-**Done when:** browser CI is green; desktop/mobile browser smoke passes; stress mode is measurable; repeated mount/unmount is clean; a fixed low/medium Android device can run the scene without visible jank; the decision log records PASS → Phaser or FAIL → Godot.
+**Done when:** browser CI is green; desktop/mobile browser smoke passes; the synthetic failure wall is documented; the production-density scene is smooth in steady mode and acceptably smooth in busy mode on representative Android hardware; repeated runtime use shows no obvious unbounded behavior; the decision log records PASS → Phaser or FAIL → Godot.
 
 ## A1 — Repository and development foundation
 **Status: NEXT after A0 passes**

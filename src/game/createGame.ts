@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PlanetSpikeScene } from './PlanetSpikeScene';
+import { ProductionBenchmarkScene } from './ProductionBenchmarkScene';
 
 export function createGame(parent: HTMLElement) {
   return new Phaser.Game({
@@ -8,7 +8,7 @@ export function createGame(parent: HTMLElement) {
     width: parent.clientWidth,
     height: parent.clientHeight,
     backgroundColor: '#080b22',
-    scene: [PlanetSpikeScene],
+    scene: [ProductionBenchmarkScene],
     render: {
       antialias: true,
       pixelArt: false,
