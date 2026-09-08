@@ -8,25 +8,35 @@ Use this as a compact ADR log. New decisions should include date, decision, why,
 The current Nova/PixiLive prototype was inexpensive to build and can be reimplemented. Existing character code is not a constraint on the world architecture.
 
 ## D-002 — Start with Phaser + TypeScript + React
-**Status:** Accepted provisionally — 2026-09-08
+**Status:** Provisional, under final performance review — 2026-09-08
 
-We will validate Phaser as the 2D world/game layer because it gives scenes, camera, input, tweens, animation, particles, asset lifecycle, and game-loop primitives without building a game framework on top of a renderer.
+We are validating Phaser as the 2D world/game layer because it gives scenes, camera, input, tweens, animation, particles, asset lifecycle, and game-loop primitives without building a game framework on top of a renderer.
 
 React owns normal product UI. Phaser owns the living world. Pure TypeScript owns curriculum/domain state.
 
-**Reopen if:** the real-device performance gate fails without heroic optimization, or a required interaction cannot be implemented cleanly.
+### Evidence
+- Synthetic test: ×4 independent-sprite stress produced serious jank; ×10 effectively froze on the physical Android device.
+- First realistic production-density benchmark: approximately **24 FPS steady** and **13 FPS busy**. Subjective jank was light, but the measured performance is below the product budget and leaves insufficient headroom.
+- The realistic scene still contains avoidable expensive patterns (live vector Shape objects, nested Containers, always-live off-camera worlds), so this is considered a failure of the naive implementation rather than final proof against Phaser.
 
-**Primary fallback:** Godot. Do not drift into a long hybrid rescue architecture if the gate fails.
+### Final gate
+One production-pattern optimization pass is allowed: bake static procedural art to textures, cull/sleep off-camera content, reduce unnecessary containers/per-frame JS, and keep pooled effects bounded without cutting intended product density.
 
-## D-003 — Capacitor is the intended mobile wrapper, not a requirement of Spike 001
-**Status:** Accepted provisionally — 2026-09-08
+**Lock Phaser if:** the same device reaches roughly 50–60 FPS steady and 45+ FPS busy with stable pacing.
 
-Browser development stays extremely fast and CI-friendly. Capacitor will be introduced after the Phaser browser spike passes so we test the same world in iOS/Android WebViews and add native plugins only where justified.
+**Reject Phaser if:** it remains materially below that target or requires heroic renderer/browser workarounds.
+
+**Primary fallback:** Godot. Do not drift into a long hybrid rescue architecture if the optimized gate fails.
+
+## D-003 — Capacitor is conditional on the web runtime winning A0
+**Status:** Provisional — 2026-09-08
+
+Capacitor remains the preferred mobile wrapper only if the Phaser/web runtime passes A0. If A0 selects Godot, this decision is superseded for the game/world runtime rather than forcing Godot into a hybrid wrapper.
 
 ## D-004 — Experience Engine is framework-independent
 **Status:** Accepted — 2026-09-08
 
-Lesson progression, quiz truth, retry policy, hints, progress, unlocks, XP, streaks, and assessment are pure deterministic TypeScript/domain logic. Phaser, React, and AI consume commands/events from this layer; they do not own its truth.
+Lesson progression, quiz truth, retry policy, hints, progress, unlocks, XP, streaks, and assessment are pure deterministic TypeScript/domain logic. The renderer, product UI, and AI consume commands/events from this layer; they do not own its truth.
 
 ## D-005 — AI is a bounded tutor/actor, never the authority
 **Status:** Accepted — 2026-09-08

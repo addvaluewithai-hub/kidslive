@@ -17,7 +17,7 @@ The second benchmark intentionally pushed pathological independent per-frame spr
 Physical Android result: BUSY ×4 already showed serious jank; HEAVY ×10 effectively froze the experience before TORTURE could be selected. This successfully found a synthetic failure wall. It is not evidence that a production Phaser scene will behave the same way, because shipping content should not update thousands of independent sprites every frame.
 
 ## Spike 001C — production-density benchmark
-The current architecture gate is a realistic scene rather than a torture scene. It keeps the kinds of work we actually expect to ship active at the same time:
+The architecture gate was then moved to a realistic scene rather than a torture scene. It keeps the kinds of work we actually expect to ship active at the same time:
 - Six richer floating worlds with animated portals and orbiters.
 - Multi-layer parallax/star background and static world decoration.
 - A code-drawn flying actor with idle, glow, blink/speech-state motion.
@@ -29,22 +29,31 @@ The current architecture gate is a realistic scene rather than a torture scene. 
 
 Metrics use a rolling frame window: current FPS, average FPS, approximate 1% low FPS, average/worst frame time, long frames (>32 ms), active effects, and animated-object count.
 
-### Physical test procedure
-1. Open the deployed `main` URL on Chrome on the target Android device.
-2. Leave **Steady world** selected for 15–20 seconds and travel through several worlds.
-3. Record average FPS, 1% low, worst frame time, long-frame count, and whether movement visibly hitches.
-4. Tap **Reset sample**.
-5. Enable **Busy lesson**, leave it running for 20–30 seconds, and travel through several worlds.
-6. Record the same metrics and subjective jank.
-7. Repeat once after the page has been open for a few minutes to catch obvious thermal/memory problems.
+### First physical Android result
+On the first representative Android test of Spike 001C:
+- **PRODUCTION STEADY:** ~24 FPS average.
+- **BUSY LESSON:** ~13 FPS average.
+- Subjective visible jank was described as light/not very noticeable, but the measured frame rate is far below the intended performance budget and leaves no credible headroom for real audio, AI, networking, richer content, or lower-end devices.
 
-## Initial target behavior
-These are starting budgets, not promises carved in stone:
-- Normal navigation and actor flight should feel 60 FPS on target mid-range devices.
-- Production steady should remain near display refresh with no repeatable visible hitch.
-- Busy lesson should retain comfortable headroom for real audio/AI/network work that is not yet wired.
-- No unbounded memory growth after repeated scene/app lifecycle cycles.
-- World boot and transitions should be measurable and later given explicit time budgets.
+This result means the **naive production implementation fails the performance gate**. It does not yet prove that Phaser itself must be abandoned, because this scene still uses several expensive patterns that a real mobile build should avoid: many vector Shape game objects, nested Containers, all six worlds kept live, and relatively little texture baking/culling.
+
+## Spike 001D — one final production-pattern optimization gate
+Before switching engines, run one deliberate optimization pass using normal mobile-game practices, not heroic or product-compromising hacks:
+- Bake static/procedural vector art to textures where practical instead of rendering many Shape objects every frame.
+- Keep only genuinely dynamic parts as live vector/game objects.
+- Cull or sleep off-camera world content.
+- Reduce unnecessary nested Containers and per-frame JS work.
+- Keep particles pooled and bounded.
+- Preserve the intended visual density and interaction model; do not win the benchmark by deleting the product.
+
+### Decision threshold
+The same physical Android device is the decision device.
+
+**Phaser PASS:** optimized production steady is roughly 50–60 FPS with stable pacing, and busy lesson remains roughly 45+ FPS with no repeatable visible hitch, leaving meaningful headroom for audio/AI.
+
+**Phaser FAIL → Godot:** the optimized scene remains materially below those targets, or reaching them requires invasive renderer-specific tricks, major visual cuts, or ongoing browser/WebView fighting.
+
+A result around 24 FPS steady / 13 FPS busy is not acceptable for shipping even if it feels tolerable subjectively.
 
 ## Trusted measurement hierarchy
 1. **Physical fixed Android benchmark device** — architecture and regression truth.
@@ -52,11 +61,6 @@ These are starting budgets, not promises carved in stone:
 3. Local desktop/browser profiling — diagnosis and iteration.
 4. Emulator/simulator — smoke behavior, not final performance truth.
 5. Hosted GitHub runner — deterministic checks only, not FPS truth.
-
-## PASS / FAIL rule for Phaser
-**PASS:** the representative device runs the production-density scene smoothly in steady mode and remains acceptably smooth in busy mode, with enough margin to add audio/AI without renderer hacks.
-
-**FAIL:** realistic production density itself requires invasive renderer hacks, removing core product visuals, or repeatedly fighting browser/WebView constraints. If this happens early, move to the Godot fallback rather than building a permanent hybrid workaround.
 
 ## Future automated budgets
 - JS bundle and route/chunk sizes.
