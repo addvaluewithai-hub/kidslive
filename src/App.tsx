@@ -1,9 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createGame } from './game/createGame';
 import { PLACES } from './game/worldConfig';
-import { worldBus, type WorldMetrics } from './game/worldBus';
+import { worldBus, type StressLevel, type WorldMetrics } from './game/worldBus';
 
-const EMPTY_METRICS: WorldMetrics = { fps: 0, objects: 0, stress: false };
+const EMPTY_METRICS: WorldMetrics = {
+  fps: 0,
+  averageFps: 0,
+  onePercentLowFps: 0,
+  frameMs: 0,
+  worstFrameMs: 0,
+  longFrames: 0,
+  objects: 0,
+  stressLevel: 0,
+  stressLabel: 'NORMAL',
+};
+
+const STRESS_LEVELS: Array<{ level: StressLevel; label: string }> = [
+  { level: 0, label: 'NORMAL' },
+  { level: 1, label: 'BUSY ×4' },
+  { level: 2, label: 'HEAVY ×10' },
+  { level: 3, label: 'TORTURE ×20' },
+];
 
 export function App() {
   const stageRef = useRef<HTMLDivElement>(null);
@@ -39,13 +56,18 @@ export function App() {
 
       <header className="topbar">
         <div>
-          <span className="eyebrow">KIDSLIVE / ARCHITECTURE SPIKE 001</span>
+          <span className="eyebrow">KIDSLIVE / ARCHITECTURE SPIKE 001B</span>
           <h1>Nova Planet</h1>
         </div>
         <div className="metrics" aria-label="performance metrics">
-          <span><b>{metrics.fps || '—'}</b> FPS</span>
+          <span><b>{metrics.fps || '—'}</b> now</span>
+          <span><b>{metrics.averageFps || '—'}</b> avg</span>
+          <span><b>{metrics.onePercentLowFps || '—'}</b> 1% low</span>
+          <span><b>{metrics.frameMs || '—'}</b> ms</span>
+          <span><b>{metrics.worstFrameMs || '—'}</b> worst</span>
+          <span><b>{metrics.longFrames}</b> long</span>
           <span><b>{metrics.objects || '—'}</b> objects</span>
-          <span className={ready ? 'ready' : ''}>{ready ? 'World spike ready' : 'Booting…'}</span>
+          <span className={ready ? 'ready' : ''}>{ready ? metrics.stressLabel : 'Booting…'}</span>
         </div>
       </header>
 
@@ -63,14 +85,25 @@ export function App() {
             </button>
           ))}
         </div>
+
         <div className="actions">
           <button onClick={() => worldBus.emit('tour')}>Next world</button>
-          <button
-            className={metrics.stress ? 'stress-on' : ''}
-            onClick={() => worldBus.emit('stress', !metrics.stress)}
-          >
-            {metrics.stress ? 'Stress mode ON' : 'Enable stress mode'}
-          </button>
+        </div>
+
+        <div className="stress-panel" data-testid="stress-panel">
+          <span className="eyebrow">PERFORMANCE LOAD</span>
+          <div className="stress-grid">
+            {STRESS_LEVELS.map((item) => (
+              <button
+                key={item.level}
+                className={metrics.stressLevel === item.level ? 'stress-on' : ''}
+                onClick={() => worldBus.emit('stress-level', item.level)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <small>Give each level ~10 seconds, then fly between worlds. TORTURE intentionally redraws geometry and moves ~9k extra sprites every frame.</small>
         </div>
       </aside>
 
