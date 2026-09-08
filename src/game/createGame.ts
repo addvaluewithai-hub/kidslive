@@ -10,9 +10,14 @@ export function createGame(parent: HTMLElement) {
     backgroundColor: '#080b22',
     scene: [ProductionBenchmarkScene],
     render: {
-      antialias: false,
+      // The previous final-gate build deliberately disabled antialiasing to maximize
+      // throughput. That made the otherwise-fast candidate look visibly pixelated
+      // on dense Android screens. The shootout candidate restores smooth sampling so
+      // we judge Phaser on both motion and visual quality, not just raw FPS.
+      antialias: true,
+      antialiasGL: true,
       pixelArt: false,
-      roundPixels: true,
+      roundPixels: false,
       powerPreference: 'high-performance',
     },
     scale: {
