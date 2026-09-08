@@ -3,16 +3,16 @@ import { ProductionBenchmarkScene } from './ProductionBenchmarkScene';
 
 export function createGame(parent: HTMLElement) {
   return new Phaser.Game({
-    type: Phaser.AUTO,
+    type: Phaser.WEBGL,
     parent,
     width: parent.clientWidth,
     height: parent.clientHeight,
     backgroundColor: '#080b22',
     scene: [ProductionBenchmarkScene],
     render: {
-      antialias: true,
+      antialias: false,
       pixelArt: false,
-      roundPixels: false,
+      roundPixels: true,
       powerPreference: 'high-performance',
     },
     scale: {
