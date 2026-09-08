@@ -44,7 +44,7 @@ const PLACES = [
   { id: 'knowledge', name: 'Knowledge Observatory', subtitle: 'How do we know?', x: 860, y: 650, accent: '#d493ff' },
   { id: 'habits', name: 'Habits Garden', subtitle: 'Tiny wins', x: 505, y: 720, accent: '#7ff0b8' },
   { id: 'lab', name: 'Curiosity Lab', subtitle: 'Try & discover', x: 160, y: 590, accent: '#ff8fb9' },
-] as const;
+];
 
 type Place = (typeof PLACES)[number];
 
@@ -125,17 +125,19 @@ function Actor({ x, y, timestamp, busy }: { x: SharedValue<number>; y: SharedVal
   const thrusterScale = useDerivedValue(() => 0.88 + (Math.sin(timestamp.value / 1000 * 4.3) + 1) * 0.06);
   const thrusterOpacity = useDerivedValue(() => 0.17 + (Math.sin(timestamp.value / 1000 * 5.1) + 1) * 0.08);
   const mouthScale = useDerivedValue(() => busy.value > 0.5 ? 0.65 + Math.abs(Math.sin(timestamp.value / 1000 * 12.5)) * 1.7 : 0.65);
+  const thrusterTransform = useDerivedValue(() => [{ scale: thrusterScale.value }]);
+  const mouthTransform = useDerivedValue(() => [{ scaleY: mouthScale.value }]);
 
   return (
     <Group transform={transform}>
-      <Group transform={useDerivedValue(() => [{ scale: thrusterScale.value }])} opacity={thrusterOpacity}>
+      <Group transform={thrusterTransform} opacity={thrusterOpacity}>
         <Oval x={-22} y={29} width={44} height={32} color="#5ce4ff" opacity={0.42} />
       </Group>
       <Oval x={-42} y={-49} width={84} height={98} color="#6959e8" />
       <Oval x={-31} y={-37} width={62} height={50} color="#101733" />
       <Circle cx={-14} cy={-15} r={5.5} color="#d7fbff" />
       <Circle cx={14} cy={-15} r={5.5} color="#d7fbff" />
-      <Group transform={useDerivedValue(() => [{ scaleY: mouthScale.value }])}>
+      <Group transform={mouthTransform}>
         <Rect x={-8} y={1} width={16} height={4} color="#89f3ff" />
       </Group>
       <Line p1={vec(0, -49)} p2={vec(0, -70)} color="#b0a6ff" strokeWidth={4} />
@@ -151,13 +153,13 @@ export default function App() {
   const [busyMode, setBusyMode] = useState(false);
   const [metrics, setMetrics] = useState<Metrics>({ avg: 0, low: 0, worst: 0, long: 0 });
 
-  const cameraX = useSharedValue(PLACES[0].x);
-  const cameraY = useSharedValue(PLACES[0].y);
-  const actorX = useSharedValue(PLACES[0].x + 126);
-  const actorY = useSharedValue(PLACES[0].y - 86);
-  const selectedX = useSharedValue(PLACES[0].x);
-  const selectedY = useSharedValue(PLACES[0].y);
-  const busy = useSharedValue(0);
+  const cameraX = useSharedValue<number>(PLACES[0].x);
+  const cameraY = useSharedValue<number>(PLACES[0].y);
+  const actorX = useSharedValue<number>(PLACES[0].x + 126);
+  const actorY = useSharedValue<number>(PLACES[0].y - 86);
+  const selectedX = useSharedValue<number>(PLACES[0].x);
+  const selectedY = useSharedValue<number>(PLACES[0].y);
+  const busy = useSharedValue<number>(0);
 
   const worldTransform = useDerivedValue(() => [
     { translateX: width / 2 - cameraX.value * WORLD_ZOOM },
@@ -211,11 +213,11 @@ export default function App() {
     value.set(Math.cos(rotation) * scale, Math.sin(rotation) * scale, x, y);
   });
 
-  const sumMs = useSharedValue(0);
-  const frameCount = useSharedValue(0);
-  const worstMs = useSharedValue(0);
-  const longFrames = useSharedValue(0);
-  const lastReport = useSharedValue(0);
+  const sumMs = useSharedValue<number>(0);
+  const frameCount = useSharedValue<number>(0);
+  const worstMs = useSharedValue<number>(0);
+  const longFrames = useSharedValue<number>(0);
+  const lastReport = useSharedValue<number>(0);
 
   const publishMetrics = useCallback((avgMs: number, worst: number, long: number) => {
     setMetrics({
