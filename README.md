@@ -8,17 +8,18 @@ The project is validating a **React + TypeScript + Phaser** world architecture b
 Run locally:
 
 ```bash
-npm install
-npm run dev
+corepack enable
+pnpm install
+pnpm dev
 ```
 
 Quality checks:
 
 ```bash
-npm test
-npm run build
-npx playwright install chromium
-npm run e2e
+pnpm test
+pnpm build
+pnpm exec playwright install chromium
+pnpm e2e
 ```
 
 ## Project reference
