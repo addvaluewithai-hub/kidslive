@@ -39,8 +39,8 @@ h1 { margin: 4px 0 0; font-size: clamp(24px, 4vw, 40px); line-height: 1; }
   padding: 7px;
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 18px;
-  background: rgba(9, 13, 39, .76);
-  backdrop-filter: blur(16px);
+  background: rgba(9, 13, 39, .94);
+  contain: layout paint;
 }
 .metrics span { padding: 7px 9px; border-radius: 11px; background: rgba(255,255,255,.055); font-size: 11px; color: #aeb8df; }
 .metrics b { color: white; }
@@ -56,8 +56,8 @@ h1 { margin: 4px 0 0; font-size: clamp(24px, 4vw, 40px); line-height: 1; }
   padding: 14px;
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 22px;
-  background: rgba(9, 13, 39, .78);
-  backdrop-filter: blur(18px);
+  background: rgba(9, 13, 39, .95);
+  contain: layout paint;
 }
 .panel-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .panel-heading > strong { font-size: 12px; color: white; }
@@ -100,8 +100,8 @@ h1 { margin: 4px 0 0; font-size: clamp(24px, 4vw, 40px); line-height: 1; }
   padding: 14px 16px;
   border: 1px solid rgba(120,225,255,.2);
   border-radius: 22px;
-  background: rgba(9, 13, 39, .82);
-  backdrop-filter: blur(20px);
+  background: rgba(9, 13, 39, .96);
+  contain: layout paint;
   pointer-events: none;
 }
 .tutor-avatar { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 18px; background: linear-gradient(145deg, rgba(121,96,255,.55), rgba(54,213,239,.28)); }
@@ -122,8 +122,8 @@ h1 { margin: 4px 0 0; font-size: clamp(24px, 4vw, 40px); line-height: 1; }
   padding: 12px 14px;
   border: 1px solid rgba(255,255,255,.09);
   border-radius: 17px;
-  background: rgba(9, 13, 39, .62);
-  backdrop-filter: blur(14px);
+  background: rgba(9, 13, 39, .93);
+  contain: layout paint;
   pointer-events: none;
 }
 .benchmark-note span { color: #9ba8dc; font-size: 9px; text-transform: uppercase; letter-spacing: .14em; }
