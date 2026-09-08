@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "KidsLive Skia Benchmark",
-    "slug": "kidslive-skia-benchmark",
-    "version": "0.1.0",
+    "name": "Orbit Three",
+    "slug": "orbit-three",
+    "version": "0.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "android": {
-      "package": "com.addvaluewithai.kidslive.skiabenchmark",
+      "package": "com.addvaluewithai.orbit.three",
       "edgeToEdgeEnabled": true
     },
     "plugins": [],
