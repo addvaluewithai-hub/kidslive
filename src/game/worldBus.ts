@@ -12,6 +12,7 @@ export type WorldMetrics = {
   objects: number;
   activeParticles: number;
   animatedObjects: number;
+  renderer: 'WEBGL' | 'CANVAS';
   benchmarkLoad: BenchmarkLoad;
   benchmarkLabel: string;
 };
