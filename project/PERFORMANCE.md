@@ -18,6 +18,15 @@ Metrics are reported over a rolling frame window: current FPS, average FPS, appr
 
 Actor travel was also separated from the actor's idle bob and camera pixel rounding was enabled after the first Android check showed visible actor micro-jitter during camera travel.
 
+### First physical Android result — 2026-09-08
+- **NORMAL:** remained usable/smooth enough for the baseline product spike.
+- **BUSY ×4:** severe visible slowdown / effectively hung.
+- **HEAVY ×10:** page effectively froze.
+- **TORTURE ×20:** could not be reached because interaction was already unusable at ×10.
+- Device model/Android/Chrome versions still need to be recorded.
+
+**Interpretation:** this successfully found a real browser-runtime failure boundary. It does **not** by itself fail Phaser: BUSY and above are deliberately pathological, with 1,200+ independently updated sprites rather than a realistic production scene. The next architecture gate is a production-density simulation that uses the rendering patterns we would actually ship (bounded active objects, pooled/batched effects, culling, representative character/UI/audio work). Phaser passes only if that representative scene remains smooth with meaningful headroom.
+
 ## Initial target behavior
 These are starting budgets, not promises carved in stone:
 - Normal navigation and actor flight should feel 60 FPS on target mid-range devices.
