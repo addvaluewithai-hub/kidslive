@@ -1,154 +1,194 @@
 # Session Delivery Model
 
-This file defines how autonomous development sessions turn roadmap phases into meaningful delivery outcomes.
+This file defines how autonomous development sessions turn roadmap phases into substantial delivery outcomes.
 
-The roadmap in `TASKS.md` defines **what phase we are in**. This file defines **what one working session should try to finish**.
+`TASKS.md` defines **what phase we are in**. This file defines **how that phase is executed session by session**.
 
-## Core rule
+## Eight-session phase cadence
 
-A normal session should aim to complete one meaningful capability end-to-end, not one file, one interface, one test, or one commit.
+Every roadmap phase is run with a standard **8-session budget**:
 
-**Prefer one substantial outcome over several micro-tasks.** Multiple commits are normal inside one session. A session should keep working on the same objective until one of these is true:
+1. **D1 — Delivery 1**
+2. **D2 — Delivery 2**
+3. **D3 — Delivery 3**
+4. **D4 — Delivery 4**
+5. **D5 — Delivery 5**
+6. **Q — QA / critique**
+7. **F — Fix / polish**
+8. **P — Plan the next phase**
 
-1. the objective is complete and the relevant lightweight checks pass;
-2. a genuine external/technical blocker prevents further useful progress; or
-3. substantial progress has been made and the remaining work has a clear, durable handoff that cannot reasonably be completed in the current run.
+The first five are the maximum implementation budget for the phase. They must be large, coherent outcomes rather than micro-tasks. If the implementation is genuinely complete before D5, do not invent filler work; move directly to Q. The normal operating model is therefore **up to five delivery sessions + three mandatory transition sessions**.
 
-Do not stop merely because one safe commit landed.
+A phase must not silently consume a sixth ordinary delivery session because the first five were undersized. If the five-session decomposition proves too small, the planning was wrong: re-scope within the phase acceptance criteria, combine work more aggressively, or explicitly record a genuine blocker/exception.
 
-## Session size
+The only acceptable reason to exceed the normal 8-session cadence is a real blocking defect, external dependency, or failed phase gate that would make advancing dishonest or unsafe. Never advance a broken phase just to preserve the count.
 
-The default target is deliberately larger than a micro-slice. A good session usually changes enough of the system to create a capability that can be exercised or meaningfully verified.
+## Delivery-session rule (D1–D5)
 
-Good session outcomes:
+A delivery session should aim to complete one meaningful capability end-to-end, not one file, one interface, one test, one visual tweak, or one commit.
+
+**Prefer one substantial outcome over several micro-tasks.** Multiple files and multiple commits are normal. Keep working on the same delivery objective until one of these is true:
+
+1. the objective is complete and relevant lightweight checks pass;
+2. a genuine blocker prevents further useful progress; or
+3. substantial progress is durable and the remaining work truly cannot reasonably be completed in the current run.
+
+Do not stop merely because one safe commit landed. Small fixes belong inside the active delivery objective.
+
+Ordinary delivery sessions should optimize roughly for **80% building / 20% checking**.
+
+### Good delivery outcomes
 - a complete navigation flow;
 - a renderer/runtime subsystem wired end-to-end;
 - one authored interaction working through domain + presentation boundaries;
-- one persistence/reward capability with its deterministic tests;
+- one persistence/reward capability with deterministic tests;
 - one representative product state that can be opened and used.
 
-Usually too small to consume a session by themselves:
+### Usually too small for a delivery session by themselves
 - a single type/interface;
 - renaming or formatting;
 - one config flag;
 - one isolated adapter with no current consumer;
 - one visual tweak;
-- adding tests for already-working behavior without a discovered regression;
+- tests for already-working behavior without a discovered regression;
 - QA infrastructure that does not protect current product behavior.
 
-Small fixes should normally be folded into the active session objective.
+## Session 6 — Q: QA / critique
 
-## Execution loop
+This is a dedicated phase-level review session. Its job is to **evaluate**, not to turn into another implementation session.
 
-1. Read `README.md`, `TASKS.md`, this file, and the relevant architecture/decision docs.
-2. Identify the first unfinished session target inside the current `NEXT`/`IN PROGRESS` phase.
-3. State a concrete success condition internally: **"By the end of this session, X works from start to finish."**
-4. Implement the whole coherent outcome. Use as many files and commits as needed.
-5. Run lightweight checks relevant to the change: normally typecheck, affected unit/integration tests, and build.
-6. Run visual QA only when user-visible React/Phaser/rendering/layout changed.
-7. Fix issues discovered by those checks while they are part of the same objective.
-8. Update the target status only when its success condition is actually satisfied.
-9. Perform the full `STAGE_GATES.md` process only when the roadmap phase itself is close to completion.
+Use `TESTING.md` and `STAGE_GATES.md` and inspect the phase against its acceptance criteria. Run the relevant deterministic checks, inspect representative visual evidence when the phase changed user-visible behavior, and critique architecture, product/learning quality, UX, resilience, performance risk, safety/privacy boundaries, and regression risk as applicable.
 
-Ordinary sessions should optimize roughly for **80% building / 20% checking**. QA protects delivery; it is not the primary deliverable.
+Record concrete findings and classify them as blocking or non-blocking. Avoid broad feature additions during Q; trivial corrections are acceptable only when they do not distract from the review. The main output of Q is a trustworthy defect/polish list for F.
+
+## Session 7 — F: Fix / polish
+
+This session executes the findings from Q aggressively and coherently.
+
+Fix all blocking findings that can reasonably be fixed, address high-value polish/regressions, rerun the relevant checks, and leave the phase in a state that is genuinely safe to close. Do not use F to invent unrelated features or expand scope.
+
+If blocking findings remain after a serious F session, the phase does **not** advance. Record the blocker and continue only as an explicit exception to the normal 8-session cadence. Quality wins over bookkeeping.
+
+## Session 8 — P: Plan the next phase
+
+This session happens only after the current phase is genuinely ready to close.
+
+P must:
+
+1. finalize/record the current phase gate and roadmap status;
+2. mark the next roadmap phase `NEXT`/`IN PROGRESS` as appropriate;
+3. use the evidence and lessons from the completed phase to divide the next phase into **no more than five substantial delivery sessions (D1–D5)**;
+4. give each delivery session a concrete end-to-end outcome and `Done when` criteria;
+5. append the next phase's mandatory **Q, F, P** transition sessions;
+6. update this file so the next autonomous run has an unambiguous first target.
+
+Do not pre-plan distant phases into tiny tasks. Detailed decomposition belongs in the P session immediately before that phase begins, when evidence is fresh.
+
+## Execution loop for the hourly agent
+
+1. Read `README.md`, `TASKS.md`, this file, and relevant architecture/decision docs.
+2. Identify the current phase and its first unfinished session slot.
+3. Execute that slot according to its role: D, Q, F, or P.
+4. For D sessions, deliver the full coherent objective using as many files/commits as useful.
+5. For Q, review and record findings rather than expanding scope.
+6. For F, fix the Q findings and rerun focused evidence.
+7. For P, close the current phase and create the next phase's five-session delivery plan plus Q/F/P.
+8. Update this file when a session slot is genuinely complete.
+9. Preserve deterministic CI and never require a live AI/model provider.
+
+---
+
+# Current phase plan
 
 ## A2 — Planet Hub foundation
 
-### A2-S1 — Spatial hub + selection/navigation foundation
+A2 is using the new cadence retroactively. Work already completed before this cadence counts toward D1.
+
+### A2-D1 — Spatial hub + selection/navigation foundation
 **Status: DONE**
 
 **Outcome:** the user sees a responsive spatial hub with six authored places and can select/focus a place and return to overview.
 
 Includes the current spatial composition, place selection, camera focus/navigation, responsive mobile/desktop layout, and overview behavior.
 
-### A2-S2 — Enter/exit a place end-to-end
+### A2-D2 — Enter/exit a place end-to-end
 **Status: NEXT**
 
-**Outcome:** from the Planet Hub, the user can choose a place, enter a real placeholder place scene through an intentional transition, then return to the hub with expected hub state preserved.
+**Outcome:** from the Planet Hub, the user can choose a place, enter a real reusable placeholder place scene through an intentional transition, then return to the hub with expected state preserved.
 
 **Done when:**
-- hub selection exposes a clear enter action or direct enter interaction;
-- a reusable place-scene contract exists rather than a one-off English-only hack;
+- hub selection exposes a clear enter interaction;
+- a reusable place-scene contract exists rather than an English-only hack;
 - at least one authored placeholder place opens as its own Phaser scene/state;
 - transition in/out is coherent on touch and desktop;
-- returning restores the expected hub selection/camera state or deliberately resets it according to a documented rule;
-- scene lifecycle does not accumulate duplicate listeners/display objects across repeated enter/return cycles;
-- relevant unit/build/browser checks pass, with visual review because this changes the user-visible flow.
+- returning restores or deliberately resets hub selection/camera state according to one documented rule;
+- repeated enter/return cycles do not accumulate duplicate listeners/display objects;
+- relevant tests/build/browser checks pass and the visible flow is reviewed.
 
-### A2-S3 — Asset lifecycle + loading path
+### A2-D3 — Asset loading + lifecycle end-to-end
 **Status: PLANNED**
 
-**Outcome:** the hub/place flow has a real, reusable asset-loading policy rather than relying only on inline primitive graphics.
+**Outcome:** hub/place navigation uses a reusable authored asset-loading path with explicit ownership and lifecycle behavior.
 
 **Done when:**
-- one representative asset pack/manifest is loaded through a reusable path;
-- loading/ready/error behavior is explicit enough for future authored worlds;
+- one representative asset manifest/pack is loaded through a reusable path;
+- loading, ready, and error behavior are explicit enough for future authored worlds;
 - repeated scene entry does not blindly reload or leak resources;
-- ownership of persistent vs scene-local assets is documented in code or architecture notes;
-- the place still works deterministically without live services.
+- persistent vs scene-local asset ownership is clear;
+- the flow remains deterministic without live services.
 
-### A2-S4 — Developer visibility + bounded runtime behavior
+### A2-D4 — Runtime visibility + mobile/runtime hardening
 **Status: PLANNED**
 
-**Outcome:** A2 can be debugged and exercised without guessing, while production behavior remains bounded.
+**Outcome:** the hub can be debugged and exercised confidently while remaining bounded and usable on representative mobile conditions.
 
 **Done when:**
-- a development-only debug overlay or equivalent can expose useful hub facts such as scene/camera/selection/object or asset state;
-- it is absent or safely disabled in normal production presentation;
-- resize/orientation/re-entry paths do not create obvious duplicate objects/listeners;
+- development-only visibility exposes useful scene/camera/selection/asset facts;
+- production presentation remains clean;
+- resize/orientation/re-entry paths avoid duplicate objects/listeners;
 - touch targets and camera behavior are usable on the representative mobile viewport;
 - obvious unbounded update/allocation patterns are removed.
 
-### A2-S5 — Hub completion + A2 stage gate
+### A2-D5 — Cohesive hub integration
 **Status: PLANNED**
 
-**Outcome:** Planet Hub foundation is cohesive enough that A3 can add the companion without needing to rewrite hub fundamentals.
+**Outcome:** all A2 capabilities work together as one coherent Planet Hub foundation ready for the companion system to be added without rewriting hub fundamentals.
 
 **Done when:**
-- S1–S4 are complete;
-- six authored place placeholders remain responsive and navigable;
-- enter/return + loading/lifecycle paths are stable;
-- lightweight Android/browser evidence is representative;
-- the full A2 stage gate is recorded as PASS or PASS WITH FOLLOW-UP.
+- all six authored placeholders remain navigable;
+- selection, focus, enter/return, loading/lifecycle, responsive behavior, and dev visibility coexist cleanly;
+- repeated navigation is stable;
+- any rough integration gaps discovered while combining D1–D4 are resolved;
+- the phase is feature-complete enough to enter dedicated QA rather than adding more hub scope.
 
-## A3 — Character/actor system
+### A2-Q — Phase QA / critique
+**Status: PLANNED**
 
-Define detailed session targets when A3 becomes current. The intended session-sized sequence is:
+**Outcome:** perform the full evidence-based A2 review and leave a concrete blocking/non-blocking findings list. Do not treat this as another feature session.
 
-1. **Actor contract + first production actor end-to-end** — `WorldActor` backed by a real `PhaserActor`, visible in the hub, with deterministic fake actor coverage.
-2. **Movement/look/emotion behavior** — anchors/targets, movement and orientation, replaceable character definition, no Nova-specific domain assumptions.
-3. **Speech/action orchestration surface** — actor can perform bounded speak/action sequences using fake/scripted adapters, with interruption/cleanup behavior.
-4. **Hub integration + A3 gate** — companion survives hub navigation/scene lifecycle cleanly and A3 passes its phase gate.
+### A2-F — Fix / polish
+**Status: PLANNED**
 
-## A4 — Experience Engine v1
+**Outcome:** fix A2-Q findings, rerun focused checks/evidence, and leave A2 genuinely ready to close. If blockers remain, do not advance.
 
-Intended session-sized sequence:
+### A2-P — Close A2 + plan A3
+**Status: PLANNED**
 
-1. **Executable authored step graph** — load a small authored experience and deterministically advance through steps/events.
-2. **Assessment/retry/hint state machine** — correct/incorrect/retry/hint behavior with pure TypeScript tests.
-3. **Checkpoint/resume + tool permissions** — deterministic resume and bounded tool requests.
-4. **Content validation + runtime integration** — invalid experiences fail clearly; one experience drives a real Phaser flow.
-5. **A4 gate**.
+**Outcome:** record the final A2 gate/status, then decompose **A3 Character/actor system** into at most five substantial delivery sessions plus A3-Q, A3-F, and A3-P using what A2 taught us.
 
-## A5 — Tutor/AI orchestration v1
+---
 
-Intended session-sized sequence:
+# Future phases
 
-1. **Tutor contract + scripted tutor end-to-end** — one experience can request tutor behavior without a live provider.
-2. **Failure/slow/interruption behavior** — deterministic failure and delayed adapters, cancellation/interruption semantics.
-3. **Speech/text + bounded tools** — tutor outputs can drive approved speech/action/tool commands but never curriculum truth or rewards.
-4. **Observability + A5 gate** — useful event trail and phase-level QA without live-model CI dependency.
+Do not keep detailed D1–D5 plans for distant phases here. Each phase receives its detailed five-session delivery decomposition during the **P session of the immediately preceding phase**.
 
-## A6 — English World vertical slice
+The roadmap in `TASKS.md` remains authoritative for phase order and scope. The standard structure for every future phase is:
 
-A6 sessions should be especially outcome-oriented and may legitimately span many files/commits:
-
-1. **Enter English World + authored opening**.
-2. **Complete learning interaction loop** — context → instruction → user interaction → deterministic assessment → feedback.
-3. **Tutor/actor embodiment** — companion participates physically/verbally using A3/A5 contracts.
-4. **Reward + persistent visible change + return to hub**.
-5. **Vertical-slice polish/resilience + A6 gate**.
-
-## Future phases
-
-When a later phase becomes `NEXT`, define 3–6 similarly substantial session targets before doing implementation. Do not pre-plan distant phases into tiny tasks now; their best decomposition should use evidence from the completed vertical slice.
+- `A<N>-D1` — substantial delivery outcome
+- `A<N>-D2` — substantial delivery outcome
+- `A<N>-D3` — substantial delivery outcome
+- `A<N>-D4` — substantial delivery outcome
+- `A<N>-D5` — substantial delivery outcome
+- `A<N>-Q` — dedicated QA / critique
+- `A<N>-F` — dedicated fix / polish
+- `A<N>-P` — close phase + plan next phase into D1–D5 + Q/F/P
