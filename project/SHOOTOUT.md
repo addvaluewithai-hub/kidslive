@@ -1,15 +1,15 @@
 # Architecture Shootout — Phaser vs Godot vs React Native Skia
 
-Status: **BUILD GATE PASSED — PHYSICAL ANDROID COMPARISON NEXT**
+Status: **COMPLETE — REACT NATIVE SKIA SELECTED**
 
-The purpose of this shootout is to choose the KidsLive world/rendering runtime using physical-device evidence, not framework preference.
+The purpose of this shootout was to choose the KidsLive world/rendering runtime using physical-device evidence, not framework preference.
 
 ## Candidates
 
 ### A — Phaser + React + Capacitor
 Location: existing root app plus disposable `capacitor.config.json` packaging.
 
-The optimized Phaser benchmark restores smooth WebGL antialiasing so Phaser is not allowed to buy frame rate by looking visibly pixelated. For the physical shootout it is packaged into an installable Capacitor Android APK, so the primary comparison is app-vs-app on the same phone rather than Chrome-vs-native.
+The optimized Phaser benchmark restores smooth WebGL antialiasing so Phaser is not allowed to buy frame rate by looking visibly pixelated. For the physical shootout it was packaged into an installable Capacitor Android APK so the comparison was app-vs-app on the same phone rather than Chrome-vs-native.
 
 ### B — Godot native 2D
 Location: `benchmarks/godot/`.
@@ -31,7 +31,7 @@ Location: `benchmarks/skia/`.
 
 ## Fairness rules
 
-We are not trying to write identical engine internals. Each candidate should use the production-friendly pattern that its ecosystem is good at while presenting approximately the same product density:
+We did not try to write identical engine internals. Each candidate used the production-friendly pattern its ecosystem is good at while presenting approximately the same product density:
 
 - Six authored-looking floating places.
 - Camera travel among places.
@@ -43,69 +43,54 @@ We are not trying to write identical engine internals. Each candidate should use
 - Product UI/metrics overlay.
 - No live AI, microphone, networking, physics or large art assets yet.
 
-A candidate should not be penalized for using an efficient native primitive (for example Skia Atlas or Godot canvas nodes), because that is exactly what we would use in production.
+A candidate was not penalized for using an efficient native primitive such as Skia Atlas or Godot canvas nodes, because that is exactly what production would use.
 
-The primary physical comparison uses **three installable Android APKs**. The Phaser browser deployment may still be used as a secondary diagnostic, but it is not the apples-to-apples scorecard run.
+The primary physical comparison used three installable Android APKs on the same phone.
 
-## Physical Android test
+## Physical Android result
 
-Use the same phone for all three candidates. Close/reopen each candidate before its run.
+User-reported same-phone results:
 
-For each candidate:
+| Candidate | Steady avg | Busy avg | Result |
+|---|---:|---:|---|
+| Phaser sharp WebGL + Capacitor / Orbit One | 60 FPS | 44 FPS | Good steady, but busy load loses substantial headroom |
+| Godot native / Orbit Two | 60 FPS | 50 FPS | Strong native result |
+| React Native Skia / Orbit Three | 60 FPS | 60 FPS | Best result; held display-rate performance under busy load |
 
-1. Run **Steady** for 20 seconds while pressing **Next** through several worlds.
-2. Record average FPS, approximate 1% low, worst frame time and visible jank.
-3. Switch to **Busy** and reset the sample.
-4. Run for 30 seconds while travelling through several worlds.
-5. Record the same metrics.
-6. Judge visual sharpness at normal viewing distance: `poor / acceptable / sharp`.
-7. Judge touch/camera feel: `poor / acceptable / excellent`.
-8. Leave it open for two minutes and repeat Busy once to expose obvious thermal degradation.
+The exact per-engine metric implementations are not mathematically identical, so the numbers should not be treated as laboratory-grade cross-engine telemetry. The result is still strong enough for the architecture decision: Skia was the only candidate that remained at 60 FPS in both steady and busy modes on the same physical device.
 
-Install these three separate apps:
-- **Phaser + Capacitor**: `kidslive-phaser-benchmark.apk`.
-- **Godot**: `kidslive-godot-benchmark.apk`.
-- **React Native Skia**: `kidslive-skia-benchmark.apk`.
+## Decision
 
-They use different Android package IDs, so all three can remain installed at the same time.
+**Winner: Expo + React Native + React Native Skia + Reanimated/Worklets.**
 
-## Scorecard
+Why:
 
-Record results here after physical testing.
+1. It provided the best physical-device headroom in the production-density benchmark: **60 FPS steady / 60 FPS busy**.
+2. It keeps the core mobile product, UI, native capabilities, and world rendering in one React Native/TypeScript architecture rather than introducing a second application runtime or a second primary language.
+3. Skia gives crisp native rendering without the browser/canvas quality-performance tradeoff encountered during the Phaser spike.
+4. Reanimated/Worklets let frame-critical animation live off ordinary React render state.
+5. The build is reproducible in GitHub Actions and remains code-first.
+6. KidsLive is interaction/animation-heavy rather than physics-heavy, so owning a small world/camera/actor layer is acceptable and preferable to carrying a full game engine solely for rendering primitives.
 
-| Candidate | Steady avg | Busy avg | 1% low | Visual sharpness | Jank | Touch feel | Notes |
-|---|---:|---:|---:|---|---|---|---|
-| Phaser sharp WebGL + Capacitor | — | — | — | — | — | — | Android APK |
-| Godot native | — | — | — | — | — | — | Android APK |
-| React Native Skia | — | — | — | — | — | — | Android APK |
+Godot remains useful evidence and would be the first renderer fallback if a future production workload exposes a capability Skia cannot satisfy cleanly. Phaser and Godot benchmark implementations are disposable A0 evidence and must not become parallel production engines.
 
-## Decision criteria
+## Reopen criteria
 
-Raw FPS alone does not choose the stack. The winning option must give KidsLive enough headroom for real audio/AI/networking while remaining pleasant to build and test.
+Reopen the runtime decision only with concrete production evidence, for example:
 
-Priority order:
+- representative Android devices cannot hold the product performance budget after real assets/audio/world complexity are added;
+- a required game mechanic would force us to build a large general-purpose engine layer on top of Skia;
+- lifecycle/audio/input/native integration reveals a recurring architecture problem rather than a local implementation bug.
 
-1. Stable frame pacing on representative Android hardware.
-2. Crisp visual output without sacrificing core world density.
-3. No renderer/runtime architecture that creates recurring mobile-specific hacks.
-4. Code-first workflow and strong GitHub Actions reproducibility.
-5. Fast AI-assisted development and deterministic tests.
-6. Reasonable path to audio, microphone, lifecycle and native product features.
-7. Minimal duplicated framework/glue code.
+Do not reopen based only on framework preference or the old Nova/Pixi prototype.
 
-## Decision rule
+## Build evidence
 
-- If one candidate clearly wins performance/quality and remains code-first, choose it and close A0.
-- If Godot and Skia are both effectively locked at display refresh, prefer the one with the simpler complete-product architecture after considering audio/AI/product UI integration.
-- Do not keep multiple world engines in production. The shootout is disposable evidence, not a permanent multi-engine architecture.
+The shootout established green GitHub Actions build paths for all three candidates:
 
-## Build artifacts
+- `.github/workflows/shootout-phaser.yml` → installable Phaser + Capacitor APK.
+- `.github/workflows/shootout-godot.yml` → installable Godot APK.
+- `.github/workflows/shootout-skia.yml` → installable React Native Skia APK.
+- Root CI (`quality` + `browser-smoke`) also passed during the shootout.
 
-GitHub Actions workflows:
-
-- `.github/workflows/shootout-phaser.yml` → `kidslive-phaser-benchmark-apk` — **GREEN**.
-- `.github/workflows/shootout-godot.yml` → `kidslive-godot-benchmark-apk` — **GREEN**.
-- `.github/workflows/shootout-skia.yml` → `kidslive-skia-benchmark-apk` — **GREEN**.
-- Root CI (`quality` + `browser-smoke`) — **GREEN** on the shootout branch before physical testing.
-
-Known-good installable APK artifacts now exist for all three candidates. The remaining A0 gate is physical same-phone comparison and recording one winner.
+A0 is complete. Production work continues with the React Native Skia path only.
