@@ -26,7 +26,6 @@ export class PlaceholderPlaceScene extends Phaser.Scene {
     }
 
     this.cameras.main.setBackgroundColor('#071426');
-    this.cameras.main.fadeIn(220, 7, 20, 38);
 
     const { width, height } = this.scale;
     const centerX = width / 2;
