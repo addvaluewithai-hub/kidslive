@@ -65,6 +65,7 @@ export class PlanetHubScene extends Phaser.Scene {
         fontStyle: 'bold',
         color: '#f5f8ff',
       })
+      .setOrigin(0.5, 0)
       .setScrollFactor(0);
 
     this.subtitle = this.add
@@ -73,6 +74,7 @@ export class PlanetHubScene extends Phaser.Scene {
         fontSize: '16px',
         color: '#a9b8d3',
       })
+      .setOrigin(0.5, 0)
       .setScrollFactor(0);
 
     this.overviewButton = this.add
@@ -115,6 +117,10 @@ export class PlanetHubScene extends Phaser.Scene {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.tweens.killAll();
     });
+  }
+
+  update() {
+    this.syncHudToCamera();
   }
 
   private buildBackdrop() {
@@ -285,6 +291,27 @@ export class PlanetHubScene extends Phaser.Scene {
     this.layout(gameSize.width, gameSize.height);
   }
 
+  private syncHudToCamera() {
+    if (!this.title || !this.subtitle || !this.overviewButton || !this.enterButton) return;
+
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const compact = width < 700;
+    const zoom = this.cameras.main.zoom;
+    const inverseZoom = 1 / zoom;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const fixedX = (screenX: number) => centerX + (screenX - centerX) * inverseZoom;
+    const fixedY = (screenY: number) => centerY + (screenY - centerY) * inverseZoom;
+
+    this.title.setScale(inverseZoom).setPosition(centerX, fixedY(compact ? 54 : 58));
+    this.subtitle.setScale(inverseZoom).setPosition(centerX, fixedY(compact ? 94 : 108));
+    this.enterButton.setScale(inverseZoom).setPosition(fixedX(18), fixedY(height - 18));
+    this.overviewButton
+      .setScale(inverseZoom)
+      .setPosition(fixedX(width - 18), fixedY(height - 18));
+  }
+
   private layout(width: number, height: number) {
     if (
       !this.title ||
@@ -299,10 +326,8 @@ export class PlanetHubScene extends Phaser.Scene {
 
     const compact = width < 700;
     const titleSize = compact ? 28 : 36;
-    this.title.setFontSize(titleSize).setPosition(width / 2, compact ? 54 : 58).setOrigin(0.5, 0);
-    this.subtitle.setPosition(width / 2, compact ? 94 : 108).setOrigin(0.5, 0);
-    this.enterButton.setPosition(18, height - 18);
-    this.overviewButton.setPosition(width - 18, height - 18);
+    this.title.setFontSize(titleSize);
+    this.syncHudToCamera();
 
     this.backdrop.each((child: Phaser.GameObjects.GameObject) => {
       const star = child as Phaser.GameObjects.Arc;
