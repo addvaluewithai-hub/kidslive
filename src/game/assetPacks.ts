@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { HUB_PLACES } from './places';
 
 export type AssetOwnership = 'persistent' | 'scene';
 
@@ -37,7 +38,7 @@ function createPlacePack(placeId: string): AuthoredAssetPack {
 }
 
 const PLACE_ASSET_PACKS = new Map<string, AuthoredAssetPack>(
-  ['english', 'science', 'math', 'chess', 'art', 'music'].map((placeId) => [placeId, createPlacePack(placeId)]),
+  HUB_PLACES.map((place) => [place.id, createPlacePack(place.id)]),
 );
 
 export function getPlaceAssetPack(placeId: string): AuthoredAssetPack | undefined {
