@@ -62,7 +62,7 @@ export class PlaceholderPlaceScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const backButton = this.add
-      .text(20, 20, '← Back to planet', {
+      .text(20, 58, '← Back to planet', {
         fontFamily: 'system-ui, sans-serif',
         fontSize: '15px',
         fontStyle: 'bold',
