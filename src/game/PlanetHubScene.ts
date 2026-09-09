@@ -52,7 +52,6 @@ export class PlanetHubScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor('#071426');
-    this.cameras.main.fadeIn(220, 7, 20, 38);
 
     this.backdrop = this.add.container();
     this.buildBackdrop();
