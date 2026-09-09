@@ -16,6 +16,7 @@ export class PlanetHubScene extends Phaser.Scene {
   private backdrop?: Phaser.GameObjects.Container;
   private path?: Phaser.GameObjects.Graphics;
   private placeLayer?: Phaser.GameObjects.Container;
+  private hudBackdrop?: Phaser.GameObjects.Rectangle;
   private title?: Phaser.GameObjects.Text;
   private subtitle?: Phaser.GameObjects.Text;
   private overviewButton?: Phaser.GameObjects.Text;
@@ -40,9 +41,15 @@ export class PlanetHubScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor('#071426');
 
-    this.backdrop = this.add.container();
+    this.backdrop = this.add.container().setDepth(-2);
     this.buildBackdrop();
-    this.path = this.add.graphics();
+    this.path = this.add.graphics().setDepth(-1);
+
+    this.hudBackdrop = this.add
+      .rectangle(0, 0, 1, 1, 0x071426, 0.94)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(100);
 
     this.title = this.add
       .text(0, 0, 'Your Learning Planet', {
@@ -52,7 +59,8 @@ export class PlanetHubScene extends Phaser.Scene {
         color: '#f5f8ff',
       })
       .setOrigin(0.5, 0)
-      .setScrollFactor(0);
+      .setScrollFactor(0)
+      .setDepth(101);
 
     this.subtitle = this.add
       .text(0, 0, 'Choose a place to explore', {
@@ -61,7 +69,8 @@ export class PlanetHubScene extends Phaser.Scene {
         color: '#a9b8d3',
       })
       .setOrigin(0.5, 0)
-      .setScrollFactor(0);
+      .setScrollFactor(0)
+      .setDepth(101);
 
     this.overviewButton = this.add
       .text(0, 0, 'Overview', {
@@ -74,6 +83,7 @@ export class PlanetHubScene extends Phaser.Scene {
       })
       .setOrigin(1, 1)
       .setScrollFactor(0)
+      .setDepth(101)
       .setAlpha(0)
       .setInteractive({ useHandCursor: true });
     this.overviewButton.on('pointerdown', () => this.showOverview());
@@ -89,6 +99,7 @@ export class PlanetHubScene extends Phaser.Scene {
       })
       .setOrigin(0, 1)
       .setScrollFactor(0)
+      .setDepth(101)
       .setAlpha(0)
       .setInteractive({ useHandCursor: true });
     this.enterButton.on('pointerdown', () => this.enterSelectedPlace());
@@ -333,12 +344,15 @@ export class PlanetHubScene extends Phaser.Scene {
       !this.enterButton ||
       !this.placeLayer ||
       !this.backdrop ||
-      !this.path
+      !this.path ||
+      !this.hudBackdrop
     )
       return;
 
     const compact = isCompactHubViewport(width);
     const titleSize = compact ? 28 : 36;
+    const hudHeight = compact ? 126 : 138;
+    this.hudBackdrop.setPosition(0, 0).setSize(width, hudHeight).setDisplaySize(width, hudHeight);
     this.title.setFontSize(titleSize);
     this.syncHudToCamera();
 
@@ -367,6 +381,5 @@ export class PlanetHubScene extends Phaser.Scene {
       else this.path?.lineTo(position.x, position.y);
     });
     this.path.strokePath();
-    this.path.setDepth(-1);
   }
 }
