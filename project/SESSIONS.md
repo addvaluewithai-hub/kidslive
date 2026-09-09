@@ -177,14 +177,16 @@ Includes the current spatial composition, place selection, camera focus/navigati
 **Delivered:** reviewed acceptance, architecture boundaries, latest main CI, all eight current Playwright screenshots, resilience, performance risk, and safety/privacy impact. The review is recorded in `project/qa/A2-Q.md`. Two blocking findings were identified: focused hub composition visibly collides/clips with the fixed heading, especially on the representative mobile viewport, and the authored asset-error fallback has no deterministic failure-path evidence. Non-blocking follow-ups cover the current bundle-size warning, later representative-device performance evidence, and avoiding premature test synchronization machinery.
 
 ### A2-F — Fix / polish
-**Status: NEXT**
+**Status: DONE**
 
 **Outcome:** fix A2-Q findings, rerun focused checks/evidence, and leave A2 genuinely ready to close. If blockers remain, do not advance.
 
 **Required focus:** repair focused hub composition on desktop/mobile and deterministically exercise the authored asset failure/fallback/return path using the existing Playwright stack. Keep the session scoped to QA findings rather than new hub features.
 
+**Delivered:** the fixed Planet Hub HUD now has an explicit high-depth backdrop/safe region, so camera pan/zoom can preserve spatial context without moving world planets and labels visibly through the heading. Refreshed desktop and 390×844 mobile evidence shows the focused return state with a legible title/subtitle and no prior heading collision. The existing Playwright stack now deliberately aborts the authored place-marker SVG, verifies that the request is exercised, captures the safe fallback presentation, and returns to the hub on both desktop and mobile. The first failure-path check exposed an assertion timing issue despite the fallback rendering correctly; the assertion was changed to synchronize on the actual asset request rather than adding new test infrastructure. Final CI run `34416649282` passes formatting, architecture/lint/type checks, unit tests, production build, all eight browser tests across desktop/mobile including the forced asset failure, and Android debug APK packaging. The A2-Q blocking findings are resolved; non-blocking bundle/performance follow-ups remain deferred to representative later phases as documented.
+
 ### A2-P — Close A2 + plan A3
-**Status: PLANNED**
+**Status: NEXT**
 
 **Outcome:** record the final A2 gate/status, then decompose **A3 Character/actor system** into at most five substantial delivery sessions plus A3-Q, A3-F, and A3-P using what A2 taught us.
 
