@@ -42,7 +42,7 @@ test('enters a representative place and returns without breaking the hub', async
   await canvas.click({ position: english });
   await page.waitForTimeout(320);
   await canvas.click({ position: { x: 92, y: viewport.height - 36 } });
-  await page.waitForTimeout(460);
+  await page.waitForTimeout(700);
 
   const place = await page.screenshot({ animations: 'disabled' });
   expect(place.equals(overview)).toBe(false);
@@ -52,7 +52,7 @@ test('enters a representative place and returns without breaking the hub', async
   });
 
   await canvas.click({ position: { x: 92, y: 76 } });
-  await page.waitForTimeout(460);
+  await page.waitForTimeout(700);
 
   const returnedHub = await page.screenshot({ animations: 'disabled' });
   expect(returnedHub.equals(place)).toBe(false);
@@ -63,9 +63,9 @@ test('enters a representative place and returns without breaking the hub', async
 
   // Repeat once to catch scene/listener lifecycle regressions in the same browser session.
   await canvas.click({ position: { x: 92, y: viewport.height - 36 } });
-  await page.waitForTimeout(460);
+  await page.waitForTimeout(700);
   await canvas.click({ position: { x: 92, y: 76 } });
-  await page.waitForTimeout(460);
+  await page.waitForTimeout(700);
   await expect(canvas).toBeVisible();
 });
 
