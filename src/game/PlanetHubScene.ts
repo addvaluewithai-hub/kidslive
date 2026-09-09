@@ -121,7 +121,7 @@ export class PlanetHubScene extends Phaser.Scene {
       camera: `z=${this.cameras.main.zoom.toFixed(2)} x=${Math.round(this.cameras.main.scrollX)} y=${Math.round(this.cameras.main.scrollY)}`,
       mode: this.transitioning ? 'transitioning' : (this.selectedPlaceId ?? 'overview'),
       objects: this.children.length,
-      detail: `places=${this.placeLayer?.length ?? 0} tweens=${this.tweens.getAllTweens().length}`,
+      detail: `places=${this.placeLayer?.length ?? 0} tweens=${this.tweens.getTweens().length}`,
     }));
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
