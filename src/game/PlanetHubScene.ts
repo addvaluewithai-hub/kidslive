@@ -45,6 +45,7 @@ export class PlanetHubScene extends Phaser.Scene {
   private placeLayer?: Phaser.GameObjects.Container;
   private title?: Phaser.GameObjects.Text;
   private subtitle?: Phaser.GameObjects.Text;
+  private overviewButton?: Phaser.GameObjects.Text;
   private selectedPlaceId?: string;
 
   constructor() {
@@ -58,18 +59,37 @@ export class PlanetHubScene extends Phaser.Scene {
     this.buildBackdrop();
     this.path = this.add.graphics();
 
-    this.title = this.add.text(0, 0, 'Your Learning Planet', {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: '34px',
-      fontStyle: 'bold',
-      color: '#f5f8ff',
-    });
+    this.title = this.add
+      .text(0, 0, 'Your Learning Planet', {
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '34px',
+        fontStyle: 'bold',
+        color: '#f5f8ff',
+      })
+      .setScrollFactor(0);
 
-    this.subtitle = this.add.text(0, 0, 'Choose a place to explore', {
-      fontFamily: 'system-ui, sans-serif',
-      fontSize: '16px',
-      color: '#a9b8d3',
-    });
+    this.subtitle = this.add
+      .text(0, 0, 'Choose a place to explore', {
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '16px',
+        color: '#a9b8d3',
+      })
+      .setScrollFactor(0);
+
+    this.overviewButton = this.add
+      .text(0, 0, 'Overview', {
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '14px',
+        fontStyle: 'bold',
+        color: '#d7e4fa',
+        backgroundColor: '#132947',
+        padding: { x: 12, y: 8 },
+      })
+      .setOrigin(1, 1)
+      .setScrollFactor(0)
+      .setAlpha(0)
+      .setInteractive({ useHandCursor: true });
+    this.overviewButton.on('pointerdown', () => this.showOverview());
 
     this.placeLayer = this.add.container();
     this.buildPlaces();
@@ -159,6 +179,7 @@ export class PlanetHubScene extends Phaser.Scene {
 
     this.selectedPlaceId = place.id;
     this.subtitle?.setText(`${place.label}: ${place.subtitle}`);
+    this.overviewButton?.setAlpha(1);
 
     this.placeLayer.each((child: Phaser.GameObjects.Container) => {
       const selected = child === selectedCard;
@@ -172,26 +193,56 @@ export class PlanetHubScene extends Phaser.Scene {
       });
     });
 
-    this.tweens.add({
-      targets: this.cameras.main,
-      zoom: 1.025,
-      duration: 90,
-      yoyo: true,
-      ease: 'Sine.InOut',
+    this.cameras.main.pan(selectedCard.x, selectedCard.y, 280, 'Sine.easeInOut');
+    this.cameras.main.zoomTo(1.08, 280, 'Sine.easeInOut');
+  }
+
+  private showOverview() {
+    if (!this.placeLayer) return;
+
+    this.selectedPlaceId = undefined;
+    this.subtitle?.setText('Choose a place to explore');
+    this.overviewButton?.setAlpha(0);
+
+    this.placeLayer.each((child: Phaser.GameObjects.Container) => {
+      this.tweens.killTweensOf(child);
+      this.tweens.add({
+        targets: child,
+        scale: 1,
+        alpha: 1,
+        duration: 180,
+        ease: 'Sine.Out',
+      });
     });
+
+    this.cameras.main.pan(this.scale.width / 2, this.scale.height / 2, 280, 'Sine.easeInOut');
+    this.cameras.main.zoomTo(1, 280, 'Sine.easeInOut');
   }
 
   private handleResize(gameSize: Phaser.Structs.Size) {
+    this.cameras.main.setScroll(0, 0).setZoom(1);
+    this.selectedPlaceId = undefined;
+    this.overviewButton?.setAlpha(0);
+    this.subtitle?.setText('Choose a place to explore');
     this.layout(gameSize.width, gameSize.height);
   }
 
   private layout(width: number, height: number) {
-    if (!this.title || !this.subtitle || !this.placeLayer || !this.backdrop || !this.path) return;
+    if (
+      !this.title ||
+      !this.subtitle ||
+      !this.overviewButton ||
+      !this.placeLayer ||
+      !this.backdrop ||
+      !this.path
+    )
+      return;
 
     const compact = width < 700;
     const titleSize = compact ? 28 : 36;
     this.title.setFontSize(titleSize).setPosition(width / 2, compact ? 54 : 58).setOrigin(0.5, 0);
     this.subtitle.setPosition(width / 2, compact ? 94 : 108).setOrigin(0.5, 0);
+    this.overviewButton.setPosition(width - 18, height - 18);
 
     this.backdrop.each((child: Phaser.GameObjects.GameObject) => {
       const star = child as Phaser.GameObjects.Arc;
@@ -212,7 +263,7 @@ export class PlanetHubScene extends Phaser.Scene {
       const position = positions[index];
       const x = centerX + position.x * spreadX;
       const y = centerY + position.y * spreadY;
-      child.setPosition(x, y);
+      child.setPosition(x, y).setScale(1).setAlpha(1);
       resolvedPositions.push(new Phaser.Math.Vector2(x, y));
     });
 
