@@ -1,69 +1,49 @@
-# Target Architecture
-
-## Runtime boundaries
+# Architecture
 
 ```text
-React product shell
-  onboarding / profile / HUD / quizzes / parent UI / settings
-                 |
-          commands + events
-                 v
-Phaser world runtime
-  planet / environments / actor / camera / portals / effects / mini-games
-                 |
-          commands + events
-                 v
-Pure TypeScript domain
-  experience engine / assessment / progression / rewards / tool permissions
-                 |
-                 v
-Adapters
-  AI tutor / audio / persistence / analytics / backend / native capabilities
+React product UI / Phaser world
+              |
+       commands + events
+              v
+       Pure TypeScript domain
+ experience / assessment / progression / rewards / permissions
+              |
+              v
+            Adapters
+ AI tutor / audio / persistence / analytics / backend / native capabilities
 ```
 
-The important boundary is not React vs Phaser. The important boundary is that the **domain can run headless**.
+## Ownership boundaries
 
-## Core contracts to grow toward
+### React
+Menus, parent/product UI, settings, normal forms, overlays, accessibility-heavy surfaces, and non-world application chrome.
+
+### Phaser
+World rendering, scene/place lifecycle, camera, touch/world input, actor visuals, animation/tweens, hotspots, lightweight effects, and world transitions.
+
+### Pure TypeScript domain
+Curriculum sequence, correct answers, retries, hints policy, checkpoints, progression, rewards, permissions, and deterministic state transitions. No Phaser, React, browser, native, network, or model imports.
+
+### Adapters
+AI, speech/audio, storage, backend, analytics, and native features. All important adapters require deterministic test doubles.
+
+## Companion/AI character
+
+The character is two separate concerns:
 
 ```ts
 interface WorldActor {
-  moveTo(anchorId: string): Promise<void>;
-  lookAt(targetId: string): void;
+  moveTo(target: Anchor): Promise<void>;
+  lookAt(target: Target): void;
+  speak(text: string): Promise<void>;
   perform(action: ActorAction): Promise<void>;
   setEmotion(emotion: Emotion): void;
 }
-
-interface Tutor {
-  respond(context: TutorContext): AsyncIterable<TutorEvent>;
-}
-
-interface ExperienceRuntime {
-  getState(): ExperienceState;
-  dispatch(event: ExperienceEvent): ExperienceState;
-}
 ```
 
-Production implementations can be animated or asynchronous. Tests can use `InstantActor`, `ScriptedTutor`, and in-memory persistence.
+`PhaserActor` is the production visual implementation. `FakeActor`/`InstantActor` are used in domain/integration tests.
 
-## World model
-Keep the first version intentionally small:
-- World
-- Scene
-- Place
-- Anchor
-- Portal
-- Hotspot
-- Actor
-- Camera
-- Effect
+The tutor/model talks to the product through bounded commands; it never owns Phaser objects directly. The old Pixi character is a reference implementation only: port useful assets/data/behavior, **not PixiJS itself**.
 
-Do not add ECS, global physics, a custom editor, or generic game-engine abstractions until a real feature requires them.
-
-## Experience model
-An experience is authored data/code with explicit objectives and transitions. Each step defines allowed actions, success/failure conditions, retry/hint policy, and reward requests. AI can improvise inside a step but cannot silently change the graph.
-
-## Content ownership
-Environment visuals, place definitions, experience definitions, assessment rules, and tool schemas are version-controlled. Build-time validators should reject duplicate IDs, broken transitions, missing anchors, unreachable required steps, and invalid reward references.
-
-## Backend
-Backend choice is intentionally deferred until the vertical slice establishes concrete needs. Required capabilities are expected to include child/parent identities, progress sync, content versions, safe AI session tokens, rewards, and observability. Avoid provider soup before those requirements exist.
+## Rule of thumb
+If code answers “what should happen educationally?”, it belongs in domain. If it answers “how does it look/move?”, it belongs in Phaser. If it answers “what did the model/service/device say?”, it belongs behind an adapter.

@@ -1,0 +1,8 @@
+{
+  "appId": "com.addvaluewithai.kidslive",
+  "appName": "KidsLive",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

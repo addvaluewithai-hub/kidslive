@@ -1,54 +1,51 @@
 # Architecture Decision Log
 
-Use this as a compact ADR log. New decisions should include date, decision, why, alternatives rejected, and what evidence would justify reopening it.
+Only accepted current decisions are kept here. Historical experiments remain in Git history but are not current architecture.
 
-## D-001 — Nova does not choose the product stack
+## D-001 — Existing Pixi/Nova prototype does not constrain the stack
 **Status:** Accepted — 2026-09-08
 
-The current Nova/PixiLive prototype was inexpensive to build and can be reimplemented. Existing character code is not a constraint on the world architecture.
+The old Pixi-based character prototype was inexpensive and disposable. Its renderer is not a production dependency.
 
-## D-002 — Start with Phaser + TypeScript + React
-**Status:** Provisional, under final performance review — 2026-09-08
+## D-002 — Phaser + React + Capacitor is the production runtime
+**Status:** Accepted — 2026-09-09
 
-We are validating Phaser as the 2D world/game layer because it gives scenes, camera, input, tweens, animation, particles, asset lifecycle, and game-loop primitives without building a game framework on top of a renderer.
+KidsLive will use **Phaser 3 + TypeScript** for the living world, **React** for product UI, and **Capacitor** for mobile packaging/native bridges.
 
-React owns normal product UI. Phaser owns the living world. Pure TypeScript owns curriculum/domain state.
+### Physical-device evidence
+At approximately the same benchmark density on the same Android phone:
+- Phaser + Capacitor: **60 FPS steady / 44 FPS busy**.
+- Godot native: **60 / 50**.
+- React Native Skia: **60 / 60**.
 
-### Evidence
-- Synthetic test: ×4 independent-sprite stress produced serious jank; ×10 effectively froze on the physical Android device.
-- First realistic production-density benchmark: approximately **24 FPS steady** and **13 FPS busy**. Subjective jank was light, but the measured performance is below the product budget and leaves insufficient headroom.
-- The realistic scene still contains avoidable expensive patterns (live vector Shape objects, nested Containers, always-live off-camera worlds), so this is considered a failure of the naive implementation rather than final proof against Phaser.
+Skia won raw renderer headroom, but Phaser was selected for the complete product because the observed busy result remained acceptable while Phaser already supplies scenes, camera/input, tweens, timelines, hit testing, particles/effects, asset lifecycle, and a mature game loop. This avoids spending product time building and maintaining a mini game engine above a lower-level renderer. Phaser also produced a substantially smaller benchmark APK.
 
-### Final gate
-One production-pattern optimization pass is allowed: bake static procedural art to textures, cull/sleep off-camera content, reduce unnecessary containers/per-frame JS, and keep pooled effects bounded without cutting intended product density.
+### Reopen only if
+A representative production vertical slice with real art/audio/UI cannot maintain acceptable frame pacing on target Android hardware without unacceptable visual compromise. Framework preference or a synthetic benchmark alone is not enough.
 
-**Lock Phaser if:** the same device reaches roughly 50–60 FPS steady and 45+ FPS busy with stable pacing.
-
-**Reject Phaser if:** it remains materially below that target or requires heroic renderer/browser workarounds.
-
-**Primary fallback:** Godot. Do not drift into a long hybrid rescue architecture if the optimized gate fails.
-
-## D-003 — Capacitor is conditional on the web runtime winning A0
-**Status:** Provisional — 2026-09-08
-
-Capacitor remains the preferred mobile wrapper only if the Phaser/web runtime passes A0. If A0 selects Godot, this decision is superseded for the game/world runtime rather than forcing Godot into a hybrid wrapper.
-
-## D-004 — Experience Engine is framework-independent
+## D-003 — Domain/curriculum logic is framework-independent
 **Status:** Accepted — 2026-09-08
 
-Lesson progression, quiz truth, retry policy, hints, progress, unlocks, XP, streaks, and assessment are pure deterministic TypeScript/domain logic. The renderer, product UI, and AI consume commands/events from this layer; they do not own its truth.
+Lesson progression, assessment truth, retries, hints, progress, unlocks, XP, streaks, rewards, and permissions live in deterministic TypeScript logic outside Phaser/React/network/model code.
 
-## D-005 — AI is a bounded tutor/actor, never the authority
+## D-004 — AI is a bounded tutor/actor, never the authority
 **Status:** Accepted — 2026-09-08
 
-The model may speak, explain, adapt wording, select allowed examples, perform, move, and request approved tools. It cannot directly award XP, change assessment truth, unlock arbitrary content, or mutate arbitrary backend state.
+AI may explain, adapt wording, speak, move the actor, perform allowed actions, and request approved tools. It cannot directly change curriculum truth, assessment results, unlocks, XP, or arbitrary backend state.
 
-## D-006 — CI cannot depend on a live model provider
+## D-005 — CI cannot depend on a live model provider
 **Status:** Accepted — 2026-09-08
 
-All AI integration must have scripted/fake adapters so pull requests are deterministic, cheap, and runnable without secrets or provider availability.
+Live AI/audio providers require fake/scripted/failure/slow adapters for deterministic CI.
 
-## D-007 — Performance decisions require device evidence
+## D-006 — Device evidence governs performance decisions
 **Status:** Accepted — 2026-09-08
 
-Hosted GitHub runner FPS is not a release metric. PR CI checks deterministic budgets and functional regressions; a fixed real Android device becomes the trusted performance benchmark before the stack is considered locked.
+Hosted CI is for correctness and deterministic budgets. Physical Android hardware is the trusted performance gate.
+
+## D-007 — Rebuild the Pixi character visual layer in Phaser TypeScript
+**Status:** Accepted — 2026-09-09
+
+Do **not** embed PixiJS inside Phaser or run two rendering/game loops. The production companion will implement a renderer-independent `WorldActor` contract, with a `PhaserActor` implementation written in TypeScript.
+
+Reusable pieces from the old prototype may be ported if renderer-independent: personality/prompts, state names, movement math, audio/TTS logic, timing data, SVG/PNG assets, and behavioral rules. Pixi display objects, Pixi animation code, and Pixi renderer lifecycle are replaced with Phaser equivalents.

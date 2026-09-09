@@ -4,49 +4,36 @@ on:
   pull_request:
   push:
     branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
         with:
           version: 10.17.1
-          run_install: false
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: '22.13.1'
           package-manager-cache: false
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm test
       - run: pnpm build
 
   browser-smoke:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
         with:
           version: 10.17.1
-          run_install: false
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: '22.13.1'
           package-manager-cache: false
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm build
       - run: pnpm e2e
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7

@@ -1,26 +1,23 @@
 # KidsLive
 
-A code-first interactive learning universe for children.
+KidsLive is a mobile-first interactive 2D learning universe for children.
 
-## Current work
-The project is validating a **React + TypeScript + Phaser** world architecture before committing to mobile packaging. The first implementation is a deliberately busy planet/world spike with a procedural flying character, six learning destinations, camera movement, animated objects, a stress mode, and CI coverage.
+## Locked runtime
 
-Run locally:
+- **Phaser 3 + TypeScript** for the living world.
+- **React** for product UI and overlays.
+- **Capacitor** for Android/iOS packaging and native bridges.
+- Pure TypeScript domain logic for curriculum, assessment, progression, rewards, and permissions.
+
+A0 architecture validation is complete. The repository working tree has been reset to a small production starter; benchmark implementations and alternate-engine spikes are intentionally not part of the current source tree.
+
+## Start here
 
 ```bash
-corepack enable
 pnpm install
 pnpm dev
 ```
 
-Quality checks:
+For project context, read `project/README.md`, then `project/DECISIONS.md`, then `project/TASKS.md`.
 
-```bash
-pnpm test
-pnpm build
-pnpm exec playwright install chromium
-pnpm e2e
-```
-
-## Project reference
-Start with [`project/README.md`](project/README.md). It is the durable project HQ containing architecture decisions, medium-sized roadmap tasks, testing/performance strategy, and launch gates.
+**`main` is authoritative. Historical PRs/branch names are not product direction.**
