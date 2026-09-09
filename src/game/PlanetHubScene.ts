@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { HUB_PLACES, getHubPlace, type HubPlace } from './places';
+import { RuntimeDebugOverlay } from './runtimeDebug';
 
 type HubPosition = {
   x: number;
@@ -36,9 +37,11 @@ export class PlanetHubScene extends Phaser.Scene {
   private subtitle?: Phaser.GameObjects.Text;
   private overviewButton?: Phaser.GameObjects.Text;
   private enterButton?: Phaser.GameObjects.Text;
+  private debugOverlay?: RuntimeDebugOverlay;
   private selectedPlaceId?: string;
   private initialSelectedPlaceId?: string;
   private transitioning = false;
+  private lastHudZoom = Number.NaN;
 
   constructor() {
     super('planet-hub');
@@ -48,6 +51,7 @@ export class PlanetHubScene extends Phaser.Scene {
     this.initialSelectedPlaceId = data.selectedPlaceId;
     this.selectedPlaceId = undefined;
     this.transitioning = false;
+    this.lastHudZoom = Number.NaN;
   }
 
   create() {
@@ -83,7 +87,7 @@ export class PlanetHubScene extends Phaser.Scene {
         fontStyle: 'bold',
         color: '#d7e4fa',
         backgroundColor: '#132947',
-        padding: { x: 12, y: 8 },
+        padding: { x: 12, y: 12 },
       })
       .setOrigin(1, 1)
       .setScrollFactor(0)
@@ -98,7 +102,7 @@ export class PlanetHubScene extends Phaser.Scene {
         fontStyle: 'bold',
         color: '#071426',
         backgroundColor: '#f5f8ff',
-        padding: { x: 14, y: 10 },
+        padding: { x: 14, y: 12 },
       })
       .setOrigin(0, 1)
       .setScrollFactor(0)
@@ -111,14 +115,22 @@ export class PlanetHubScene extends Phaser.Scene {
     this.layout(this.scale.width, this.scale.height);
     this.restoreInitialSelection();
 
+    this.debugOverlay = new RuntimeDebugOverlay(this, () => ({
+      scene: this.scene.key,
+      viewport: `${this.scale.width}x${this.scale.height}`,
+      camera: `z=${this.cameras.main.zoom.toFixed(2)} x=${Math.round(this.cameras.main.scrollX)} y=${Math.round(this.cameras.main.scrollY)}`,
+      mode: this.transitioning ? 'transitioning' : (this.selectedPlaceId ?? 'overview'),
+      objects: this.children.length,
+      detail: `places=${this.placeLayer?.length ?? 0} tweens=${this.tweens.getAllTweens().length}`,
+    }));
+
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
-      this.tweens.killAll();
-    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
   }
 
   update() {
+    const zoom = this.cameras.main.zoom;
+    if (Math.abs(zoom - this.lastHudZoom) < 0.0005) return;
     this.syncHudToCamera();
   }
 
@@ -240,6 +252,7 @@ export class PlanetHubScene extends Phaser.Scene {
     } else {
       this.cameras.main.centerOn(selectedCard.x, selectedCard.y);
       this.cameras.main.setZoom(1.08);
+      this.syncHudToCamera();
     }
   }
 
@@ -283,11 +296,19 @@ export class PlanetHubScene extends Phaser.Scene {
 
   private handleResize(gameSize: Phaser.Structs.Size) {
     this.cameras.main.setScroll(0, 0).setZoom(1);
+    this.lastHudZoom = Number.NaN;
     this.selectedPlaceId = undefined;
     this.overviewButton?.setAlpha(0);
     this.enterButton?.setAlpha(0);
     this.subtitle?.setText('Choose a place to explore');
     this.layout(gameSize.width, gameSize.height);
+  }
+
+  private handleShutdown() {
+    this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+    this.tweens.killAll();
+    this.debugOverlay?.destroy();
+    this.debugOverlay = undefined;
   }
 
   private syncHudToCamera() {
@@ -300,15 +321,26 @@ export class PlanetHubScene extends Phaser.Scene {
     const inverseZoom = 1 / zoom;
     const centerX = width / 2;
     const centerY = height / 2;
-    const fixedX = (screenX: number) => centerX + (screenX - centerX) * inverseZoom;
-    const fixedY = (screenY: number) => centerY + (screenY - centerY) * inverseZoom;
+    const titleY = compact ? 54 : 58;
+    const subtitleY = compact ? 94 : 108;
+    const buttonY = height - 18;
 
-    this.title.setScale(inverseZoom).setPosition(centerX, fixedY(compact ? 54 : 58));
-    this.subtitle.setScale(inverseZoom).setPosition(centerX, fixedY(compact ? 94 : 108));
-    this.enterButton.setScale(inverseZoom).setPosition(fixedX(18), fixedY(height - 18));
+    this.title
+      .setScale(inverseZoom)
+      .setPosition(centerX, centerY + (titleY - centerY) * inverseZoom);
+    this.subtitle
+      .setScale(inverseZoom)
+      .setPosition(centerX, centerY + (subtitleY - centerY) * inverseZoom);
+    this.enterButton
+      .setScale(inverseZoom)
+      .setPosition(centerX + (18 - centerX) * inverseZoom, centerY + (buttonY - centerY) * inverseZoom);
     this.overviewButton
       .setScale(inverseZoom)
-      .setPosition(fixedX(width - 18), fixedY(height - 18));
+      .setPosition(
+        centerX + (width - 18 - centerX) * inverseZoom,
+        centerY + (buttonY - centerY) * inverseZoom,
+      );
+    this.lastHudZoom = zoom;
   }
 
   private layout(width: number, height: number) {
