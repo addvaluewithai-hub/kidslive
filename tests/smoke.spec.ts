@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { HUB_PLACES, isCompactHubViewport, resolveHubPlacePosition } from '../src/game/places';
 
 test('boots the KidsLive shell without viewport overflow', async ({ page }) => {
   await page.goto('/');
@@ -14,7 +15,7 @@ test('boots the KidsLive shell without viewport overflow', async ({ page }) => {
   expect(hasHorizontalOverflow).toBe(false);
 });
 
-test('enters a representative place and returns without breaking the hub', async ({ page }, testInfo) => {
+test('all authored places enter and return without breaking the hub', async ({ page }, testInfo) => {
   await page.goto('/');
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
@@ -23,20 +24,7 @@ test('enters a representative place and returns without breaking the hub', async
   const viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected a configured browser viewport');
 
-  const compact = viewport.width < 700;
-  const centerX = viewport.width / 2;
-  const centerY = compact ? Math.max(360, viewport.height * 0.52) : Math.max(350, viewport.height * 0.54);
-  const spreadX = Math.min(compact ? 520 : 1040, viewport.width - (compact ? 32 : 120));
-  const spreadY = Math.min(compact ? 660 : 520, viewport.height - (compact ? 150 : 170));
-  const english = {
-    x: centerX - 0.34 * spreadX,
-    y: centerY - 0.2 * spreadY,
-  };
-  if (compact) {
-    english.x = centerX - 0.23 * spreadX;
-    english.y = centerY - 0.28 * spreadY;
-  }
-
+  const compact = isCompactHubViewport(viewport.width);
   const pressCanvas = async (position: { x: number; y: number }) => {
     if (compact) {
       await page.touchscreen.tap(position.x, position.y);
@@ -44,40 +32,43 @@ test('enters a representative place and returns without breaking the hub', async
       await canvas.click({ position });
     }
   };
-  const placeBack = compact
-    ? { x: 92, y: viewport.height - 40 }
-    : { x: 92, y: 76 };
+  const enterButton = { x: 92, y: viewport.height - 36 };
+  const overviewButton = { x: viewport.width - 74, y: viewport.height - 36 };
+  const placeBack = compact ? { x: 92, y: viewport.height - 40 } : { x: 92, y: 76 };
 
   const overview = await page.screenshot({ animations: 'disabled' });
 
-  await pressCanvas(english);
-  await page.waitForTimeout(320);
-  await pressCanvas({ x: 92, y: viewport.height - 36 });
-  await page.waitForTimeout(700);
+  for (const [index, place] of HUB_PLACES.entries()) {
+    const position = resolveHubPlacePosition(place, viewport.width, viewport.height);
+    await pressCanvas(position);
+    await page.waitForTimeout(320);
+    await pressCanvas(enterButton);
+    await page.waitForTimeout(700);
 
-  const place = await page.screenshot({ animations: 'disabled' });
-  expect(place.equals(overview)).toBe(false);
-  await testInfo.attach(`place-entry-${testInfo.project.name}`, {
-    body: place,
-    contentType: 'image/png',
-  });
+    if (index === 0 || index === HUB_PLACES.length - 1) {
+      const placeScreenshot = await page.screenshot({ animations: 'disabled' });
+      expect(placeScreenshot.equals(overview)).toBe(false);
+      await testInfo.attach(`place-${place.id}-${testInfo.project.name}`, {
+        body: placeScreenshot,
+        contentType: 'image/png',
+      });
+    }
 
-  await pressCanvas(placeBack);
-  await page.waitForTimeout(700);
+    await pressCanvas(placeBack);
+    await page.waitForTimeout(700);
+    await expect(canvas).toBeVisible();
+
+    if (index < HUB_PLACES.length - 1) {
+      await pressCanvas(overviewButton);
+      await page.waitForTimeout(320);
+    }
+  }
 
   const returnedHub = await page.screenshot({ animations: 'disabled' });
-  expect(returnedHub.equals(place)).toBe(false);
-  await testInfo.attach(`place-return-${testInfo.project.name}`, {
+  await testInfo.attach(`hub-after-all-places-${testInfo.project.name}`, {
     body: returnedHub,
     contentType: 'image/png',
   });
-
-  // Repeat once to catch scene/listener lifecycle regressions in the same browser session.
-  await pressCanvas({ x: 92, y: viewport.height - 36 });
-  await page.waitForTimeout(700);
-  await pressCanvas(placeBack);
-  await page.waitForTimeout(700);
-  await expect(canvas).toBeVisible();
 });
 
 test('captures current stage-gate visual evidence', async ({ page }, testInfo) => {
