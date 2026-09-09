@@ -41,7 +41,7 @@ Ordinary delivery sessions should optimize roughly for **80% building / 20% chec
 - a complete navigation flow;
 - a renderer/runtime subsystem wired end-to-end;
 - one authored interaction working through domain + presentation boundaries;
-- one persistence/reward capability with deterministic tests;
+- one persistence/reward capability with its deterministic tests;
 - one representative product state that can be opened and used.
 
 ### Usually too small for a delivery session by themselves
@@ -170,14 +170,18 @@ Includes the current spatial composition, place selection, camera focus/navigati
 **Delivered:** the authored place catalog is now the single source for place identity, responsive desktop/compact spatial positions, and derived asset packs, removing duplicated integration metadata between hub rendering, asset lifecycle, and browser exercise code. The representative browser traversal now selects, enters, returns from, and restores the hub across all six authored places on both desktop and touch/mobile projects. While integrating the six-place flow, the browser check exposed two test-contract defects rather than product regressions: the exhaustive desktop traversal needed an explicit realistic test budget, and mobile touchscreen coordinates needed conversion through the canvas page bounds rather than treating game coordinates as page coordinates. Both were corrected. Final CI on the completed implementation passes format/lint/typecheck/tests/build, the complete desktop/mobile six-place traversal, and Android debug APK packaging.
 
 ### A2-Q — Phase QA / critique
-**Status: NEXT**
+**Status: DONE**
 
 **Outcome:** perform the full evidence-based A2 review and leave a concrete blocking/non-blocking findings list. Do not treat this as another feature session.
 
+**Delivered:** reviewed acceptance, architecture boundaries, latest main CI, all eight current Playwright screenshots, resilience, performance risk, and safety/privacy impact. The review is recorded in `project/qa/A2-Q.md`. Two blocking findings were identified: focused hub composition visibly collides/clips with the fixed heading, especially on the representative mobile viewport, and the authored asset-error fallback has no deterministic failure-path evidence. Non-blocking follow-ups cover the current bundle-size warning, later representative-device performance evidence, and avoiding premature test synchronization machinery.
+
 ### A2-F — Fix / polish
-**Status: PLANNED**
+**Status: NEXT**
 
 **Outcome:** fix A2-Q findings, rerun focused checks/evidence, and leave A2 genuinely ready to close. If blockers remain, do not advance.
+
+**Required focus:** repair focused hub composition on desktop/mobile and deterministically exercise the authored asset failure/fallback/return path using the existing Playwright stack. Keep the session scoped to QA findings rather than new hub features.
 
 ### A2-P — Close A2 + plan A3
 **Status: PLANNED**
