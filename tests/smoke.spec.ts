@@ -18,7 +18,7 @@ test('enters a representative place and returns without breaking the hub', async
   await page.goto('/');
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(800);
 
   const viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected a configured browser viewport');
