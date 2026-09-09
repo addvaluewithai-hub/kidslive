@@ -22,6 +22,11 @@ export function formatRuntimeDebugSnapshot(snapshot: RuntimeDebugSnapshot): stri
   return lines.join('\n');
 }
 
+function isRuntimeDebugEnabled(): boolean {
+  if (!import.meta.env.DEV || typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('runtimeDebug') === '1';
+}
+
 export class RuntimeDebugOverlay {
   private readonly label?: Phaser.GameObjects.Text;
   private readonly refreshTimer?: Phaser.Time.TimerEvent;
@@ -31,7 +36,7 @@ export class RuntimeDebugOverlay {
     scene: Phaser.Scene,
     readSnapshot: () => RuntimeDebugSnapshot,
   ) {
-    if (!import.meta.env.DEV) return;
+    if (!isRuntimeDebugEnabled()) return;
 
     this.label = scene.add
       .text(scene.scale.width - 12, 12, '', {
