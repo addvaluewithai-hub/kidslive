@@ -1,25 +1,14 @@
 import Phaser from 'phaser';
-
-type HubPlace = {
-  id: string;
-  label: string;
-  subtitle: string;
-  color: number;
-};
+import { HUB_PLACES, getHubPlace, type HubPlace } from './places';
 
 type HubPosition = {
   x: number;
   y: number;
 };
 
-const HUB_PLACES: HubPlace[] = [
-  { id: 'english', label: 'English', subtitle: 'Words & stories', color: 0x68b8ff },
-  { id: 'science', label: 'Science', subtitle: 'Discover & test', color: 0x72d6a3 },
-  { id: 'math', label: 'Math', subtitle: 'Patterns & puzzles', color: 0xffc766 },
-  { id: 'chess', label: 'Chess', subtitle: 'Think ahead', color: 0xb59cff },
-  { id: 'art', label: 'Art', subtitle: 'Make & imagine', color: 0xff8eb5 },
-  { id: 'music', label: 'Music', subtitle: 'Listen & create', color: 0x65ded7 },
-];
+type PlanetHubSceneData = {
+  selectedPlaceId?: string;
+};
 
 const DESKTOP_POSITIONS: HubPosition[] = [
   { x: -0.34, y: -0.2 },
@@ -46,14 +35,24 @@ export class PlanetHubScene extends Phaser.Scene {
   private title?: Phaser.GameObjects.Text;
   private subtitle?: Phaser.GameObjects.Text;
   private overviewButton?: Phaser.GameObjects.Text;
+  private enterButton?: Phaser.GameObjects.Text;
   private selectedPlaceId?: string;
+  private initialSelectedPlaceId?: string;
+  private transitioning = false;
 
   constructor() {
     super('planet-hub');
   }
 
+  init(data: PlanetHubSceneData) {
+    this.initialSelectedPlaceId = data.selectedPlaceId;
+    this.selectedPlaceId = undefined;
+    this.transitioning = false;
+  }
+
   create() {
     this.cameras.main.setBackgroundColor('#071426');
+    this.cameras.main.fadeIn(220, 7, 20, 38);
 
     this.backdrop = this.add.container();
     this.buildBackdrop();
@@ -91,9 +90,25 @@ export class PlanetHubScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     this.overviewButton.on('pointerdown', () => this.showOverview());
 
+    this.enterButton = this.add
+      .text(0, 0, 'Enter place →', {
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: '#071426',
+        backgroundColor: '#f5f8ff',
+        padding: { x: 14, y: 10 },
+      })
+      .setOrigin(0, 1)
+      .setScrollFactor(0)
+      .setAlpha(0)
+      .setInteractive({ useHandCursor: true });
+    this.enterButton.on('pointerdown', () => this.enterSelectedPlace());
+
     this.placeLayer = this.add.container();
     this.buildPlaces();
     this.layout(this.scale.width, this.scale.height);
+    this.restoreInitialSelection();
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -174,35 +189,77 @@ export class PlanetHubScene extends Phaser.Scene {
     }
   }
 
-  private selectPlace(place: HubPlace, selectedCard: Phaser.GameObjects.Container) {
-    if (!this.placeLayer) return;
+  private restoreInitialSelection() {
+    if (!this.initialSelectedPlaceId || !this.placeLayer) return;
+
+    const place = getHubPlace(this.initialSelectedPlaceId);
+    const card = this.placeLayer.getByName(this.initialSelectedPlaceId) as
+      | Phaser.GameObjects.Container
+      | null;
+    this.initialSelectedPlaceId = undefined;
+
+    if (place && card) this.selectPlace(place, card, false);
+  }
+
+  private selectPlace(
+    place: HubPlace,
+    selectedCard: Phaser.GameObjects.Container,
+    animate = true,
+  ) {
+    if (!this.placeLayer || this.transitioning) return;
 
     this.selectedPlaceId = place.id;
     this.subtitle?.setText(`${place.label}: ${place.subtitle}`);
     this.overviewButton?.setAlpha(1);
+    this.enterButton?.setText(`Enter ${place.label} →`).setAlpha(1);
 
     this.placeLayer.each((child: Phaser.GameObjects.Container) => {
       const selected = child === selectedCard;
       this.tweens.killTweensOf(child);
-      this.tweens.add({
-        targets: child,
-        scale: selected ? 1.14 : 0.96,
-        alpha: selected ? 1 : 0.58,
-        duration: 180,
-        ease: 'Sine.Out',
-      });
+      if (animate) {
+        this.tweens.add({
+          targets: child,
+          scale: selected ? 1.14 : 0.96,
+          alpha: selected ? 1 : 0.58,
+          duration: 180,
+          ease: 'Sine.Out',
+        });
+      } else {
+        child.setScale(selected ? 1.14 : 0.96).setAlpha(selected ? 1 : 0.58);
+      }
     });
 
-    this.cameras.main.pan(selectedCard.x, selectedCard.y, 280, 'Sine.easeInOut');
-    this.cameras.main.zoomTo(1.08, 280, 'Sine.easeInOut');
+    if (animate) {
+      this.cameras.main.pan(selectedCard.x, selectedCard.y, 280, 'Sine.easeInOut');
+      this.cameras.main.zoomTo(1.08, 280, 'Sine.easeInOut');
+    } else {
+      this.cameras.main.centerOn(selectedCard.x, selectedCard.y);
+      this.cameras.main.setZoom(1.08);
+    }
+  }
+
+  private enterSelectedPlace() {
+    if (!this.selectedPlaceId || this.transitioning) return;
+    const place = getHubPlace(this.selectedPlaceId);
+    if (!place) return;
+
+    this.transitioning = true;
+    this.enterButton?.disableInteractive().setText(`Entering ${place.label}…`);
+    this.overviewButton?.disableInteractive();
+
+    this.cameras.main.fadeOut(180, 7, 20, 38);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.start('placeholder-place', { placeId: place.id });
+    });
   }
 
   private showOverview() {
-    if (!this.placeLayer) return;
+    if (!this.placeLayer || this.transitioning) return;
 
     this.selectedPlaceId = undefined;
     this.subtitle?.setText('Choose a place to explore');
     this.overviewButton?.setAlpha(0);
+    this.enterButton?.setAlpha(0);
 
     this.placeLayer.each((child: Phaser.GameObjects.Container) => {
       this.tweens.killTweensOf(child);
@@ -223,6 +280,7 @@ export class PlanetHubScene extends Phaser.Scene {
     this.cameras.main.setScroll(0, 0).setZoom(1);
     this.selectedPlaceId = undefined;
     this.overviewButton?.setAlpha(0);
+    this.enterButton?.setAlpha(0);
     this.subtitle?.setText('Choose a place to explore');
     this.layout(gameSize.width, gameSize.height);
   }
@@ -232,6 +290,7 @@ export class PlanetHubScene extends Phaser.Scene {
       !this.title ||
       !this.subtitle ||
       !this.overviewButton ||
+      !this.enterButton ||
       !this.placeLayer ||
       !this.backdrop ||
       !this.path
@@ -242,6 +301,7 @@ export class PlanetHubScene extends Phaser.Scene {
     const titleSize = compact ? 28 : 36;
     this.title.setFontSize(titleSize).setPosition(width / 2, compact ? 54 : 58).setOrigin(0.5, 0);
     this.subtitle.setPosition(width / 2, compact ? 94 : 108).setOrigin(0.5, 0);
+    this.enterButton.setPosition(18, height - 18);
     this.overviewButton.setPosition(width - 18, height - 18);
 
     this.backdrop.each((child: Phaser.GameObjects.GameObject) => {
