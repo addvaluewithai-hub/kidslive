@@ -19,6 +19,7 @@ jobs:
           node-version: '22.13.1'
           package-manager-cache: false
       - run: pnpm install --no-frozen-lockfile
+      - run: pnpm check:boundaries
       - run: pnpm test
       - run: pnpm build
 
