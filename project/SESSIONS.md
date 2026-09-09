@@ -112,7 +112,7 @@ A2 is using the new cadence retroactively. Work already completed before this ca
 Includes the current spatial composition, place selection, camera focus/navigation, responsive mobile/desktop layout, and overview behavior.
 
 ### A2-D2 — Enter/exit a place end-to-end
-**Status: NEXT**
+**Status: DONE**
 
 **Outcome:** from the Planet Hub, the user can choose a place, enter a real reusable placeholder place scene through an intentional transition, then return to the hub with expected state preserved.
 
@@ -125,8 +125,10 @@ Includes the current spatial composition, place selection, camera focus/navigati
 - repeated enter/return cycles do not accumulate duplicate listeners/display objects;
 - relevant tests/build/browser checks pass and the visible flow is reviewed.
 
+**Delivered:** all authored hub places now share one place catalog and reusable placeholder scene. Enter/return uses Phaser scene transitions, returns with the selected place and focused camera restored, and resize deliberately resets to overview. Browser coverage exercises English enter/return twice on desktop and touch/mobile viewports to catch lifecycle regressions; the fixed HUD remains usable through camera zoom.
+
 ### A2-D3 — Asset loading + lifecycle end-to-end
-**Status: PLANNED**
+**Status: NEXT**
 
 **Outcome:** hub/place navigation uses a reusable authored asset-loading path with explicit ownership and lifecycle behavior.
 
