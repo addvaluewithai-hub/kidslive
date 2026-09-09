@@ -34,7 +34,7 @@ export class RuntimeDebugOverlay {
     if (!import.meta.env.DEV) return;
 
     this.label = scene.add
-      .text(12, 12, '', {
+      .text(scene.scale.width - 12, 12, '', {
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
         fontSize: '11px',
         color: '#d7e4fa',
@@ -42,10 +42,12 @@ export class RuntimeDebugOverlay {
         padding: { x: 8, y: 6 },
         lineSpacing: 2,
       })
+      .setOrigin(1, 0)
       .setScrollFactor(0)
       .setDepth(10_000);
 
     const refresh = () => {
+      this.label?.setX(scene.scale.width - 12);
       const text = formatRuntimeDebugSnapshot(readSnapshot());
       if (text === this.lastText) return;
       this.lastText = text;
