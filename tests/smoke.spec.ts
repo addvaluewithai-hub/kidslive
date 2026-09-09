@@ -29,7 +29,9 @@ test('all authored places enter and return without breaking the hub', async ({ p
   const compact = isCompactHubViewport(viewport.width);
   const pressCanvas = async (position: { x: number; y: number }) => {
     if (compact) {
-      await page.touchscreen.tap(position.x, position.y);
+      const bounds = await canvas.boundingBox();
+      if (!bounds) throw new Error('Expected visible game canvas bounds');
+      await page.touchscreen.tap(bounds.x + position.x, bounds.y + position.y);
     } else {
       await canvas.click({ position });
     }
