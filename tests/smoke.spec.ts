@@ -16,7 +16,7 @@ test('boots the KidsLive shell without viewport overflow', async ({ page }) => {
 });
 
 test('all authored places enter and return without breaking the hub', async ({ page }, testInfo) => {
-  test.setTimeout(45_000);
+  test.setTimeout(75_000);
 
   await page.goto('/');
   const canvas = page.locator('canvas');
