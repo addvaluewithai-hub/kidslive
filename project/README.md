@@ -6,38 +6,66 @@ This folder is the durable project reference from architecture validation to pub
 KidsLive is a code-first, mobile-first interactive 2D learning universe where children travel between carefully authored learning environments with an AI character that can speak, act, move, and use bounded product tools.
 
 ## Current direction
-The product principles and domain architecture are locked, but the **world/rendering runtime is deliberately not locked yet**.
+The production runtime is now locked by physical-device evidence:
 
-Architecture Shootout A0 is comparing three candidates on the same physical Android device:
-- **Phaser + React** — fastest web/TypeScript workflow; current candidate uses optimized production patterns with smooth WebGL sampling restored.
-- **Godot 2D** — native game-engine candidate, authored from text/code and exported headlessly in GitHub Actions.
-- **Expo + React Native Skia** — native TypeScript/React candidate using Skia + Reanimated/Worklets for the world runtime.
+- **Expo + React Native + TypeScript** for the mobile/product application.
+- **React Native Skia** for the living 2D world.
+- **Reanimated/Worklets** for frame-critical animation and movement that should not flow through ordinary React state.
+- Pure TypeScript domain logic for curriculum, progression, assessment, rewards, permissions, and deterministic simulation.
+- AI behind bounded tutor/actor/tool contracts; the model never owns curriculum truth, rewards, or progress.
+- GitHub Actions as the reproducible build/test backbone.
 
-See `SHOOTOUT.md` for the fair comparison protocol and scorecard.
+The current Nova/Pixi prototype remains disposable and is not a stack constraint. The companion character will be reimplemented behind the actor contract using the selected runtime.
 
-What does **not** depend on the winner:
-- Experience/curriculum logic remains deterministic and renderer-independent.
-- AI remains behind bounded tutor/tool contracts; the model never owns curriculum truth, rewards, or progress.
-- Code is the source of truth; required proprietary/editor-only authoring workflows are avoided.
-- GitHub Actions remains the reproducible build/test backbone.
-- The current Nova/Pixi prototype is not a stack constraint and can be reimplemented behind the actor contract.
+See `SHOOTOUT.md` for the architecture bake-off and `DECISIONS.md` for D-008.
 
 ## Current status
-**A0 — Architecture Shootout is IN PROGRESS.**
+**A0 — Architecture & performance spike: DONE.**
 
-Evidence so far:
-- The first synthetic Phaser torture test found a useful failure wall (×4 jank, ×10 effective freeze).
-- The first realistic Phaser scene measured roughly 24 FPS steady / 13 FPS busy on the physical Android test device.
-- A production-pattern Phaser optimization pass made performance feel high/smooth but the user rejected the visibly pixelated rendering compromise.
-- The shootout therefore compares a visually sharp Phaser candidate against native Godot and native React Native Skia implementations at approximately the same product density.
+Same-phone Android shootout result:
+- Phaser + Capacitor: **60 FPS steady / 44 FPS busy**.
+- Godot native: **60 FPS steady / 50 FPS busy**.
+- React Native Skia: **60 FPS steady / 60 FPS busy**.
 
-Do not start A1 production foundation work until this shootout is tested on the same Android device and the runtime decision is recorded in `DECISIONS.md`.
+React Native Skia won because it held display-rate performance under the busy benchmark while also keeping the product UI, native capabilities, and world renderer in one TypeScript/React Native architecture.
+
+**A1 — Repository and development foundation: NEXT.**
+
+A1 should turn the Skia benchmark into a clean production skeleton rather than promoting the whole shootout branch as-is. The Phaser and Godot implementations are retained only as architecture evidence and should not become parallel production runtimes.
+
+## Architecture boundary
+
+```text
+Expo / React Native product shell
+  onboarding / profile / HUD / quizzes / parent UI / settings
+                 |
+          commands + events
+                 v
+React Native Skia world runtime
+  planet / environments / actor / camera / portals / effects / mini-games
+                 |
+          commands + events
+                 v
+Pure TypeScript domain
+  experience engine / assessment / progression / rewards / tool permissions
+                 |
+                 v
+Adapters
+  AI tutor / audio / persistence / analytics / backend / native capabilities
+```
+
+Rules:
+- Skia does not know curriculum truth.
+- React components do not own per-frame world coordinates/state.
+- AI does not own either.
+- Domain logic must run headless in tests.
+- Frame-critical animation belongs in Skia/Reanimated/Worklets, not React reconciliation.
 
 ## How to resume in a future conversation
 1. Read `project/README.md`.
-2. Read `project/DECISIONS.md` for decisions that should not be casually reopened.
+2. Read `project/DECISIONS.md`; D-008 locks the runtime unless real production evidence justifies reopening it.
 3. Read `project/TASKS.md`; continue the first task marked `NEXT` or `IN PROGRESS`.
-4. If A0 is still open, read `project/SHOOTOUT.md` and current benchmark/CI results before changing architecture.
+4. Read `project/SHOOTOUT.md` only if the runtime decision or performance evidence matters to the current task.
 5. Check current PRs and CI before writing code.
 6. Update this folder whenever architecture, scope, acceptance criteria, or launch assumptions change.
 
