@@ -75,6 +75,56 @@ test('all authored places enter and return without breaking the hub', async ({ p
   });
 });
 
+test('failed authored place art falls back and still returns safely', async ({ page }, testInfo) => {
+  let failedMarkerRequests = 0;
+  await page.route('**/assets/places/place-marker.svg', async (route) => {
+    failedMarkerRequests += 1;
+    await route.abort('failed');
+  });
+
+  await page.goto('/');
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible();
+  await page.waitForTimeout(800);
+
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error('Expected a configured browser viewport');
+
+  const compact = isCompactHubViewport(viewport.width);
+  const pressCanvas = async (position: { x: number; y: number }) => {
+    if (compact) {
+      const bounds = await canvas.boundingBox();
+      if (!bounds) throw new Error('Expected visible game canvas bounds');
+      await page.touchscreen.tap(bounds.x + position.x, bounds.y + position.y);
+    } else {
+      await canvas.click({ position });
+    }
+  };
+
+  const english = HUB_PLACES[0];
+  const overview = await page.screenshot({ animations: 'disabled' });
+  await pressCanvas(resolveHubPlacePosition(english, viewport.width, viewport.height));
+  await page.waitForTimeout(320);
+  await pressCanvas({ x: 92, y: viewport.height - 36 });
+  await page.waitForTimeout(700);
+
+  expect(failedMarkerRequests).toBeGreaterThan(0);
+  const failureState = await page.screenshot({ animations: 'disabled' });
+  expect(failureState.equals(overview)).toBe(false);
+  await testInfo.attach(`place-asset-fallback-${testInfo.project.name}`, {
+    body: failureState,
+    contentType: 'image/png',
+  });
+
+  const placeBack = compact ? { x: 92, y: viewport.height - 40 } : { x: 92, y: 76 };
+  await pressCanvas(placeBack);
+  await page.waitForTimeout(700);
+  await expect(canvas).toBeVisible();
+
+  const returnedHub = await page.screenshot({ animations: 'disabled' });
+  expect(returnedHub.equals(failureState)).toBe(false);
+});
+
 test('captures current stage-gate visual evidence', async ({ page }, testInfo) => {
   await page.goto('/');
   await expect(page.getByTestId('game-root')).toBeVisible();
