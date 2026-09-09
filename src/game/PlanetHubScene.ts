@@ -81,10 +81,14 @@ export class PlanetHubScene extends Phaser.Scene {
 
       planet.setInteractive({ useHandCursor: true });
       planet.on('pointerover', () => {
-        if (this.selectedPlaceId !== place.id) card.setScale(1.06);
+        if (this.selectedPlaceId !== place.id) {
+          card.setScale(this.selectedPlaceId ? 1.02 : 1.06);
+        }
       });
       planet.on('pointerout', () => {
-        if (this.selectedPlaceId !== place.id) card.setScale(1);
+        if (this.selectedPlaceId !== place.id) {
+          card.setScale(this.selectedPlaceId ? 0.96 : 1);
+        }
       });
       planet.on('pointerdown', () => this.selectPlace(place, card));
 
