@@ -7,6 +7,11 @@ type HubPlace = {
   color: number;
 };
 
+type HubPosition = {
+  x: number;
+  y: number;
+};
+
 const HUB_PLACES: HubPlace[] = [
   { id: 'english', label: 'English', subtitle: 'Words & stories', color: 0x68b8ff },
   { id: 'science', label: 'Science', subtitle: 'Discover & test', color: 0x72d6a3 },
@@ -16,7 +21,27 @@ const HUB_PLACES: HubPlace[] = [
   { id: 'music', label: 'Music', subtitle: 'Listen & create', color: 0x65ded7 },
 ];
 
+const DESKTOP_POSITIONS: HubPosition[] = [
+  { x: -0.34, y: -0.2 },
+  { x: 0, y: -0.32 },
+  { x: 0.34, y: -0.14 },
+  { x: -0.28, y: 0.24 },
+  { x: 0.08, y: 0.18 },
+  { x: 0.36, y: 0.3 },
+];
+
+const COMPACT_POSITIONS: HubPosition[] = [
+  { x: -0.23, y: -0.28 },
+  { x: 0.23, y: -0.2 },
+  { x: -0.2, y: 0.02 },
+  { x: 0.21, y: 0.1 },
+  { x: -0.22, y: 0.31 },
+  { x: 0.2, y: 0.38 },
+];
+
 export class PlanetHubScene extends Phaser.Scene {
+  private backdrop?: Phaser.GameObjects.Container;
+  private path?: Phaser.GameObjects.Graphics;
   private placeLayer?: Phaser.GameObjects.Container;
   private title?: Phaser.GameObjects.Text;
   private subtitle?: Phaser.GameObjects.Text;
@@ -28,6 +53,10 @@ export class PlanetHubScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor('#071426');
+
+    this.backdrop = this.add.container();
+    this.buildBackdrop();
+    this.path = this.add.graphics();
 
     this.title = this.add.text(0, 0, 'Your Learning Planet', {
       fontFamily: 'system-ui, sans-serif',
@@ -50,6 +79,33 @@ export class PlanetHubScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
       this.tweens.killAll();
+    });
+  }
+
+  private buildBackdrop() {
+    if (!this.backdrop) return;
+
+    const stars = [
+      [0.08, 0.2, 1.5, 0.34],
+      [0.17, 0.39, 1, 0.2],
+      [0.26, 0.16, 1, 0.28],
+      [0.38, 0.3, 1.5, 0.18],
+      [0.5, 0.18, 1, 0.25],
+      [0.62, 0.35, 1, 0.2],
+      [0.74, 0.14, 1.5, 0.3],
+      [0.88, 0.29, 1, 0.2],
+      [0.12, 0.66, 1, 0.22],
+      [0.31, 0.78, 1.5, 0.18],
+      [0.56, 0.7, 1, 0.26],
+      [0.79, 0.77, 1.5, 0.2],
+      [0.92, 0.58, 1, 0.28],
+    ] as const;
+
+    stars.forEach(([x, y, radius, alpha]) => {
+      const star = this.add.circle(0, 0, radius, 0xd9e8ff, alpha);
+      star.setData('normalizedX', x);
+      star.setData('normalizedY', y);
+      this.backdrop?.add(star);
     });
   }
 
@@ -130,31 +186,44 @@ export class PlanetHubScene extends Phaser.Scene {
   }
 
   private layout(width: number, height: number) {
-    if (!this.title || !this.subtitle || !this.placeLayer) return;
+    if (!this.title || !this.subtitle || !this.placeLayer || !this.backdrop || !this.path) return;
 
     const compact = width < 700;
     const titleSize = compact ? 28 : 36;
-    this.title.setFontSize(titleSize).setPosition(width / 2, compact ? 76 : 82).setOrigin(0.5, 0);
-    this.subtitle.setPosition(width / 2, compact ? 116 : 130).setOrigin(0.5, 0);
+    this.title.setFontSize(titleSize).setPosition(width / 2, compact ? 54 : 58).setOrigin(0.5, 0);
+    this.subtitle.setPosition(width / 2, compact ? 94 : 108).setOrigin(0.5, 0);
 
-    const columns = compact ? 2 : 3;
-    const rows = Math.ceil(HUB_PLACES.length / columns);
-    const availableWidth = Math.min(width - 48, compact ? 380 : 780);
-    const columnGap = availableWidth / columns;
-    const rowGap = compact ? 158 : 170;
-    const startY = compact ? 210 : 230;
-    const contentHeight = (rows - 1) * rowGap;
-    const maxStartY = Math.max(170, height - contentHeight - 125);
-    const resolvedStartY = Math.min(startY, maxStartY);
+    this.backdrop.each((child: Phaser.GameObjects.GameObject) => {
+      const star = child as Phaser.GameObjects.Arc;
+      const normalizedX = star.getData('normalizedX') as number;
+      const normalizedY = star.getData('normalizedY') as number;
+      star.setPosition(width * normalizedX, height * normalizedY);
+    });
+
+    const positions = compact ? COMPACT_POSITIONS : DESKTOP_POSITIONS;
+    const centerX = width / 2;
+    const centerY = compact ? Math.max(360, height * 0.52) : Math.max(350, height * 0.54);
+    const spreadX = Math.min(compact ? 520 : 1040, width - (compact ? 32 : 120));
+    const spreadY = Math.min(compact ? 660 : 520, height - (compact ? 150 : 170));
+    const resolvedPositions: Phaser.Math.Vector2[] = [];
 
     this.placeLayer.each((child: Phaser.GameObjects.Container) => {
       const index = child.getData('index') as number;
-      const column = index % columns;
-      const row = Math.floor(index / columns);
-      const rowCount = Math.min(columns, HUB_PLACES.length - row * columns);
-      const rowWidth = columnGap * rowCount;
-      const rowStartX = width / 2 - rowWidth / 2 + columnGap / 2;
-      child.setPosition(rowStartX + column * columnGap, resolvedStartY + row * rowGap);
+      const position = positions[index];
+      const x = centerX + position.x * spreadX;
+      const y = centerY + position.y * spreadY;
+      child.setPosition(x, y);
+      resolvedPositions.push(new Phaser.Math.Vector2(x, y));
     });
+
+    this.path.clear();
+    this.path.lineStyle(compact ? 2 : 3, 0x6d8fbe, 0.18);
+    this.path.beginPath();
+    resolvedPositions.forEach((position, index) => {
+      if (index === 0) this.path?.moveTo(position.x, position.y);
+      else this.path?.lineTo(position.x, position.y);
+    });
+    this.path.strokePath();
+    this.path.setDepth(-1);
   }
 }
