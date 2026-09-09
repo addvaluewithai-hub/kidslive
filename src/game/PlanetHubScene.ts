@@ -20,6 +20,7 @@ export class PlanetHubScene extends Phaser.Scene {
   private placeLayer?: Phaser.GameObjects.Container;
   private title?: Phaser.GameObjects.Text;
   private subtitle?: Phaser.GameObjects.Text;
+  private selectedPlaceId?: string;
 
   constructor() {
     super('planet-hub');
@@ -48,6 +49,7 @@ export class PlanetHubScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+      this.tweens.killAll();
     });
   }
 
@@ -78,13 +80,45 @@ export class PlanetHubScene extends Phaser.Scene {
         .setOrigin(0.5, 0);
 
       planet.setInteractive({ useHandCursor: true });
-      planet.on('pointerover', () => card.setScale(1.06));
-      planet.on('pointerout', () => card.setScale(1));
+      planet.on('pointerover', () => {
+        if (this.selectedPlaceId !== place.id) card.setScale(1.06);
+      });
+      planet.on('pointerout', () => {
+        if (this.selectedPlaceId !== place.id) card.setScale(1);
+      });
+      planet.on('pointerdown', () => this.selectPlace(place, card));
 
       card.add([glow, planet, highlight, label, subtitle]);
       card.setData('index', index);
       this.placeLayer.add(card);
     }
+  }
+
+  private selectPlace(place: HubPlace, selectedCard: Phaser.GameObjects.Container) {
+    if (!this.placeLayer) return;
+
+    this.selectedPlaceId = place.id;
+    this.subtitle?.setText(`${place.label}: ${place.subtitle}`);
+
+    this.placeLayer.each((child: Phaser.GameObjects.Container) => {
+      const selected = child === selectedCard;
+      this.tweens.killTweensOf(child);
+      this.tweens.add({
+        targets: child,
+        scale: selected ? 1.14 : 0.96,
+        alpha: selected ? 1 : 0.58,
+        duration: 180,
+        ease: 'Sine.Out',
+      });
+    });
+
+    this.tweens.add({
+      targets: this.cameras.main,
+      zoom: 1.025,
+      duration: 90,
+      yoyo: true,
+      ease: 'Sine.InOut',
+    });
   }
 
   private handleResize(gameSize: Phaser.Structs.Size) {
