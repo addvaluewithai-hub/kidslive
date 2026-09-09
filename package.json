@@ -7,12 +7,14 @@
   "scripts": {
     "dev": "vite",
     "check:boundaries": "node scripts/check-boundaries.mjs",
+    "format:check": "node scripts/check-style.mjs",
+    "lint": "pnpm check:boundaries && pnpm typecheck",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "build": "pnpm typecheck && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "e2e": "playwright test",
-    "ci": "pnpm check:boundaries && pnpm test && pnpm build && pnpm e2e",
+    "ci": "pnpm format:check && pnpm lint && pnpm test && pnpm build && pnpm e2e",
     "android:add": "cap add android",
     "android:sync": "cap sync android"
   },
