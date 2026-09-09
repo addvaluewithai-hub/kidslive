@@ -142,7 +142,7 @@ Includes the current spatial composition, place selection, camera focus/navigati
 **Delivered:** every authored place now resolves through a typed asset pack. The pack reuses one persistent portal-frame texture across place visits while each place marker is explicitly scene-owned and released on scene shutdown. `PlaceholderPlaceScene` queues only uncached textures, exposes loading progress and a safe authored-asset error state, renders the loaded SVG assets in the real place flow, and remains fully local/deterministic. Existing browser coverage entered and returned from English twice in the same session successfully, exercising cleanup/re-entry; desktop and mobile visual evidence showed the loaded portal/marker without clipping or broken return state.
 
 ### A2-D4 — Runtime visibility + mobile/runtime hardening
-**Status: NEXT**
+**Status: DONE**
 
 **Outcome:** the hub can be debugged and exercised confidently while remaining bounded and usable on representative mobile conditions.
 
@@ -153,8 +153,10 @@ Includes the current spatial composition, place selection, camera focus/navigati
 - touch targets and camera behavior are usable on the representative mobile viewport;
 - obvious unbounded update/allocation patterns are removed.
 
+**Delivered:** an opt-in development overlay (`?runtimeDebug=1`) now exposes scene, viewport, camera, mode/selection, object/tween counts, and place asset queue/cache/failure state on a bounded 250 ms cadence; normal development and production presentation stay clean. Hub HUD synchronization now runs only while camera zoom actually changes instead of rebuilding positioning work every frame. Both hub and place scenes explicitly remove resize listeners, stop scene tweens, and destroy debug state on shutdown; the place also releases scene-owned assets. `PlaceholderPlaceScene` now relayouts existing objects on resize/orientation changes instead of recreating them, and compact touch controls have larger hit areas with the place back action moved to a clear bottom-edge position. Visual review caught and fixed a mobile title/control overlap before completion. Final quality, browser/touch enter-return-reentry, build, and Android debug APK paths pass on the completed head.
+
 ### A2-D5 — Cohesive hub integration
-**Status: PLANNED**
+**Status: NEXT**
 
 **Outcome:** all A2 capabilities work together as one coherent Planet Hub foundation ready for the companion system to be added without rewriting hub fundamentals.
 
