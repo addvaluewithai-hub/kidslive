@@ -44,6 +44,9 @@ test('enters a representative place and returns without breaking the hub', async
       await canvas.click({ position });
     }
   };
+  const placeBack = compact
+    ? { x: 92, y: viewport.height - 40 }
+    : { x: 92, y: 76 };
 
   const overview = await page.screenshot({ animations: 'disabled' });
 
@@ -59,7 +62,7 @@ test('enters a representative place and returns without breaking the hub', async
     contentType: 'image/png',
   });
 
-  await pressCanvas({ x: 92, y: 76 });
+  await pressCanvas(placeBack);
   await page.waitForTimeout(700);
 
   const returnedHub = await page.screenshot({ animations: 'disabled' });
@@ -72,7 +75,7 @@ test('enters a representative place and returns without breaking the hub', async
   // Repeat once to catch scene/listener lifecycle regressions in the same browser session.
   await pressCanvas({ x: 92, y: viewport.height - 36 });
   await page.waitForTimeout(700);
-  await pressCanvas({ x: 92, y: 76 });
+  await pressCanvas(placeBack);
   await page.waitForTimeout(700);
   await expect(canvas).toBeVisible();
 });
