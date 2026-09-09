@@ -156,7 +156,7 @@ Includes the current spatial composition, place selection, camera focus/navigati
 **Delivered:** an opt-in development overlay (`?runtimeDebug=1`) now exposes scene, viewport, camera, mode/selection, object/tween counts, and place asset queue/cache/failure state on a bounded 250 ms cadence; normal development and production presentation stay clean. Hub HUD synchronization now runs only while camera zoom actually changes instead of rebuilding positioning work every frame. Both hub and place scenes explicitly remove resize listeners, stop scene tweens, and destroy debug state on shutdown; the place also releases scene-owned assets. `PlaceholderPlaceScene` now relayouts existing objects on resize/orientation changes instead of recreating them, and compact touch controls have larger hit areas with the place back action moved to a clear bottom-edge position. Visual review caught and fixed a mobile title/control overlap before completion. Final quality, browser/touch enter-return-reentry, build, and Android debug APK paths pass on the completed head.
 
 ### A2-D5 — Cohesive hub integration
-**Status: NEXT**
+**Status: DONE**
 
 **Outcome:** all A2 capabilities work together as one coherent Planet Hub foundation ready for the companion system to be added without rewriting hub fundamentals.
 
@@ -167,8 +167,10 @@ Includes the current spatial composition, place selection, camera focus/navigati
 - any rough integration gaps discovered while combining D1–D4 are resolved;
 - the phase is feature-complete enough to enter dedicated QA rather than adding more hub scope.
 
+**Delivered:** the authored place catalog is now the single source for place identity, responsive desktop/compact spatial positions, and derived asset packs, removing duplicated integration metadata between hub rendering, asset lifecycle, and browser exercise code. The representative browser traversal now selects, enters, returns from, and restores the hub across all six authored places on both desktop and touch/mobile projects. While integrating the six-place flow, the browser check exposed two test-contract defects rather than product regressions: the exhaustive desktop traversal needed an explicit realistic test budget, and mobile touchscreen coordinates needed conversion through the canvas page bounds rather than treating game coordinates as page coordinates. Both were corrected. Final CI on the completed implementation passes format/lint/typecheck/tests/build, the complete desktop/mobile six-place traversal, and Android debug APK packaging.
+
 ### A2-Q — Phase QA / critique
-**Status: PLANNED**
+**Status: NEXT**
 
 **Outcome:** perform the full evidence-based A2 review and leave a concrete blocking/non-blocking findings list. Do not treat this as another feature session.
 
