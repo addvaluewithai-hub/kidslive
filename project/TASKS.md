@@ -26,7 +26,7 @@ Foundation boundaries must avoid hard-coding the current child audience, compani
 **Done when:** a clean checkout reaches running web + installable Android build + complete CI through documented commands, with no benchmark-only code or hidden local setup, and the core package boundaries can support alternate character/theme/audience implementations without framework rewrites.
 
 ## A2 — Planet hub foundation
-**Status: NEXT**
+**Status: IN PROGRESS**
 Build the production planet hub: camera/touch behavior, responsive composition, six authored place placeholders, transitions, asset loading/lifecycle, debug overlay, and bounded memory/performance. Treat the hub as the user's persistent world entry point rather than a disposable level-select screen.
 
 ## A3 — Character/actor system
