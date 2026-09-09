@@ -9,7 +9,7 @@ The current product is child-first, but the core platform must remain replaceabl
 
 ## Current state
 
-**A0 architecture selection is DONE. A1 repository/development foundation is DONE. A2 Planet Hub foundation is NEXT.**
+**A0 architecture selection is DONE. A1 repository/development foundation is DONE. A2 Planet Hub foundation is IN PROGRESS.**
 
 Locked runtime:
 - Phaser 3 + TypeScript for the living world.
@@ -25,12 +25,19 @@ The working tree was deliberately cleaned after A0. Godot, React Native Skia, sy
 1. Read this file.
 2. Read `DECISIONS.md`.
 3. Read `ARCHITECTURE.md`.
-4. Read `TASKS.md` and continue the first `NEXT`/`IN PROGRESS` item.
-5. Read `TESTING.md` and `STAGE_GATES.md` before deciding a phase is complete.
-6. Check `main` CI and the latest available QA/stage-gate evidence before changing code.
-7. Work in a small current-phase slice, run/inspect its QA evidence, critique the result, and fix blocking findings.
-8. Do not advance to the next roadmap phase until the current phase's stage gate passes.
-9. Treat `main` as authoritative; old PR/branch names are historical evidence only.
+4. Read `TASKS.md` and identify the first `NEXT`/`IN PROGRESS` roadmap phase.
+5. Read `SESSIONS.md` and continue the first unfinished session target inside that phase.
+6. Check `main` CI before changing code so current failures or duplicate work are visible.
+7. Work toward the complete session objective, using multiple files/commits if useful. Do not stop merely because one small safe commit landed.
+8. Run lightweight checks relevant to the change; run visual QA only when user-visible surfaces changed.
+9. Read `TESTING.md` and `STAGE_GATES.md` when the current roadmap phase is close to completion, then perform the full phase gate.
+10. Do not advance to the next roadmap phase until the current phase's stage gate passes.
+11. Treat `main` as authoritative; old PR/branch names are historical evidence only.
+
+## Session principle
+A normal autonomous run should deliver one meaningful capability or a substantial portion of one, not one interface, config change, isolated visual tweak, or QA artifact. Small fixes belong inside the active session objective. `SESSIONS.md` is the authoritative decomposition for the current and near-term phases.
+
+Ordinary development should optimize roughly for **80% building / 20% checking**. Full multi-dimensional critique belongs at phase completion, not after every micro-change.
 
 ## Product principles
 1. Learning is authored; AI makes it alive.
