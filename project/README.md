@@ -9,13 +9,15 @@ The current product is child-first, but the core platform must remain replaceabl
 
 ## Current state
 
-**A0 architecture selection is DONE. A1 repository/development foundation is NEXT.**
+**A0 architecture selection is DONE. A1 repository/development foundation is DONE. A2 Planet Hub foundation is NEXT.**
 
 Locked runtime:
 - Phaser 3 + TypeScript for the living world.
 - React for product UI and overlays.
 - Capacitor for Android/iOS packaging and native bridges.
 - Pure TypeScript domain logic for curriculum, assessment, progression, rewards, and permissions.
+
+A1 established the production repository foundation, deterministic CI, explicit core/adaptor seams, documented web/Android workflows, and a clean Android debug APK build path. The stage-gate record is `gates/A1.md`.
 
 The working tree was deliberately cleaned after A0. Godot, React Native Skia, synthetic stress scenes, and shootout-specific build code are not production dependencies.
 
