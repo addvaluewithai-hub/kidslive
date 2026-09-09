@@ -1,11 +1,11 @@
 import Phaser from 'phaser';
-import { BootScene } from './BootScene';
+import { PlanetHubScene } from './PlanetHubScene';
 
 export function createGame(parent: HTMLElement) {
   return new Phaser.Game({
     type: Phaser.WEBGL,
     parent,
-    backgroundColor: '#080d1a',
+    backgroundColor: '#071426',
     antialias: true,
     pixelArt: false,
     roundPixels: false,
@@ -13,6 +13,6 @@ export function createGame(parent: HTMLElement) {
       mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [BootScene],
+    scene: [PlanetHubScene],
   });
 }
