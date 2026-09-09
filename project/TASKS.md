@@ -17,7 +17,7 @@ These are architectural constraints, not near-term scope commitments:
 Selected Phaser + React + Capacitor after physical Android comparison. Benchmark implementations are disposable evidence and have been removed from the working tree.
 
 ## A1 — Repository and development foundation
-**Status: NEXT**
+**Status: DONE**
 
 Turn the clean starter into the maintainable production skeleton: package boundaries, lint/format rules, environment handling, typed world/domain events, adapter interfaces/test doubles, mobile build path, test helpers, CI artifacts, and developer scripts.
 
@@ -26,7 +26,7 @@ Foundation boundaries must avoid hard-coding the current child audience, compani
 **Done when:** a clean checkout reaches running web + installable Android build + complete CI through documented commands, with no benchmark-only code or hidden local setup, and the core package boundaries can support alternate character/theme/audience implementations without framework rewrites.
 
 ## A2 — Planet hub foundation
-**Status: PLANNED**
+**Status: NEXT**
 Build the production planet hub: camera/touch behavior, responsive composition, six authored place placeholders, transitions, asset loading/lifecycle, debug overlay, and bounded memory/performance. Treat the hub as the user's persistent world entry point rather than a disposable level-select screen.
 
 ## A3 — Character/actor system
