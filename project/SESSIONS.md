@@ -128,7 +128,7 @@ Includes the current spatial composition, place selection, camera focus/navigati
 **Delivered:** all authored hub places now share one place catalog and reusable placeholder scene. Enter/return uses Phaser scene transitions, returns with the selected place and focused camera restored, and resize deliberately resets to overview. Browser coverage exercises English enter/return twice on desktop and touch/mobile viewports to catch lifecycle regressions; the fixed HUD remains usable through camera zoom.
 
 ### A2-D3 — Asset loading + lifecycle end-to-end
-**Status: NEXT**
+**Status: DONE**
 
 **Outcome:** hub/place navigation uses a reusable authored asset-loading path with explicit ownership and lifecycle behavior.
 
@@ -139,8 +139,10 @@ Includes the current spatial composition, place selection, camera focus/navigati
 - persistent vs scene-local asset ownership is clear;
 - the flow remains deterministic without live services.
 
+**Delivered:** every authored place now resolves through a typed asset pack. The pack reuses one persistent portal-frame texture across place visits while each place marker is explicitly scene-owned and released on scene shutdown. `PlaceholderPlaceScene` queues only uncached textures, exposes loading progress and a safe authored-asset error state, renders the loaded SVG assets in the real place flow, and remains fully local/deterministic. Existing browser coverage entered and returned from English twice in the same session successfully, exercising cleanup/re-entry; desktop and mobile visual evidence showed the loaded portal/marker without clipping or broken return state.
+
 ### A2-D4 — Runtime visibility + mobile/runtime hardening
-**Status: PLANNED**
+**Status: NEXT**
 
 **Outcome:** the hub can be debugged and exercised confidently while remaining bounded and usable on representative mobile conditions.
 
