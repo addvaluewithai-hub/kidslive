@@ -1,33 +1,16 @@
 import Phaser from 'phaser';
-import { HUB_PLACES, getHubPlace, type HubPlace } from './places';
+import {
+  HUB_PLACES,
+  getHubPlace,
+  isCompactHubViewport,
+  resolveHubPlacePosition,
+  type HubPlace,
+} from './places';
 import { RuntimeDebugOverlay } from './runtimeDebug';
-
-type HubPosition = {
-  x: number;
-  y: number;
-};
 
 type PlanetHubSceneData = {
   selectedPlaceId?: string;
 };
-
-const DESKTOP_POSITIONS: HubPosition[] = [
-  { x: -0.34, y: -0.2 },
-  { x: 0, y: -0.32 },
-  { x: 0.34, y: -0.14 },
-  { x: -0.28, y: 0.24 },
-  { x: 0.08, y: 0.18 },
-  { x: 0.36, y: 0.3 },
-];
-
-const COMPACT_POSITIONS: HubPosition[] = [
-  { x: -0.23, y: -0.28 },
-  { x: 0.23, y: -0.2 },
-  { x: -0.2, y: 0.02 },
-  { x: 0.21, y: 0.1 },
-  { x: -0.22, y: 0.31 },
-  { x: 0.2, y: 0.38 },
-];
 
 export class PlanetHubScene extends Phaser.Scene {
   private backdrop?: Phaser.GameObjects.Container;
@@ -164,7 +147,7 @@ export class PlanetHubScene extends Phaser.Scene {
   private buildPlaces() {
     if (!this.placeLayer) return;
 
-    for (const [index, place] of HUB_PLACES.entries()) {
+    for (const place of HUB_PLACES) {
       const card = this.add.container();
       card.setName(place.id);
 
@@ -201,7 +184,6 @@ export class PlanetHubScene extends Phaser.Scene {
       planet.on('pointerdown', () => this.selectPlace(place, card));
 
       card.add([glow, planet, highlight, label, subtitle]);
-      card.setData('index', index);
       this.placeLayer.add(card);
     }
   }
@@ -316,7 +298,7 @@ export class PlanetHubScene extends Phaser.Scene {
 
     const width = this.scale.width;
     const height = this.scale.height;
-    const compact = width < 700;
+    const compact = isCompactHubViewport(width);
     const zoom = this.cameras.main.zoom;
     const inverseZoom = 1 / zoom;
     const centerX = width / 2;
@@ -355,7 +337,7 @@ export class PlanetHubScene extends Phaser.Scene {
     )
       return;
 
-    const compact = width < 700;
+    const compact = isCompactHubViewport(width);
     const titleSize = compact ? 28 : 36;
     this.title.setFontSize(titleSize);
     this.syncHudToCamera();
@@ -367,20 +349,14 @@ export class PlanetHubScene extends Phaser.Scene {
       star.setPosition(width * normalizedX, height * normalizedY);
     });
 
-    const positions = compact ? COMPACT_POSITIONS : DESKTOP_POSITIONS;
-    const centerX = width / 2;
-    const centerY = compact ? Math.max(360, height * 0.52) : Math.max(350, height * 0.54);
-    const spreadX = Math.min(compact ? 520 : 1040, width - (compact ? 32 : 120));
-    const spreadY = Math.min(compact ? 660 : 520, height - (compact ? 150 : 170));
     const resolvedPositions: Phaser.Math.Vector2[] = [];
 
     this.placeLayer.each((child: Phaser.GameObjects.Container) => {
-      const index = child.getData('index') as number;
-      const position = positions[index];
-      const x = centerX + position.x * spreadX;
-      const y = centerY + position.y * spreadY;
-      child.setPosition(x, y).setScale(1).setAlpha(1);
-      resolvedPositions.push(new Phaser.Math.Vector2(x, y));
+      const place = getHubPlace(child.name);
+      if (!place) return;
+      const position = resolveHubPlacePosition(place, width, height);
+      child.setPosition(position.x, position.y).setScale(1).setAlpha(1);
+      resolvedPositions.push(new Phaser.Math.Vector2(position.x, position.y));
     });
 
     this.path.clear();
