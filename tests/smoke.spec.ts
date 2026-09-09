@@ -76,9 +76,7 @@ test('all authored places enter and return without breaking the hub', async ({ p
 });
 
 test('failed authored place art falls back and still returns safely', async ({ page }, testInfo) => {
-  let failedMarkerRequests = 0;
   await page.route('**/assets/places/place-marker.svg', async (route) => {
-    failedMarkerRequests += 1;
     await route.abort('failed');
   });
 
@@ -105,10 +103,15 @@ test('failed authored place art falls back and still returns safely', async ({ p
   const overview = await page.screenshot({ animations: 'disabled' });
   await pressCanvas(resolveHubPlacePosition(english, viewport.width, viewport.height));
   await page.waitForTimeout(320);
+
+  const failedAssetRequest = page.waitForRequest((request) =>
+    request.url().endsWith('/assets/places/place-marker.svg'),
+  );
   await pressCanvas({ x: 92, y: viewport.height - 36 });
+  const request = await failedAssetRequest;
+  expect(request.url()).toContain('/assets/places/place-marker.svg');
   await page.waitForTimeout(700);
 
-  expect(failedMarkerRequests).toBeGreaterThan(0);
   const failureState = await page.screenshot({ animations: 'disabled' });
   expect(failureState.equals(overview)).toBe(false);
   await testInfo.attach(`place-asset-fallback-${testInfo.project.name}`, {
