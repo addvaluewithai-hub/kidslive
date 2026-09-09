@@ -5,25 +5,27 @@ Statuses: `DONE`, `IN PROGRESS`, `NEXT`, `PLANNED`, `BLOCKED`.
 Each item is intentionally a meaningful deliverable, not a list of tiny implementation chores. Implementation details live in PRs/issues when needed.
 
 ## A0 — Architecture & performance spike
-**Status: IN PROGRESS — Phaser vs Godot vs React Native Skia shootout**
+**Status: DONE — React Native Skia selected**
 
-Choose the world/runtime direction using the same physical Android device and approximately the same production-density scene. See `SHOOTOUT.md` for the protocol and scorecard.
+The world/runtime decision was made with a same-phone Android shootout using three installable APKs at approximately the same production density. See `SHOOTOUT.md` for the protocol and scorecard.
 
-Evidence so far:
-- Browser CI/build/unit smoke for the Phaser path is green.
+Evidence:
 - Synthetic Phaser stress test found the failure wall: ×4 janks badly and ×10 effectively freezes.
-- First realistic production-density Phaser benchmark measured ~24 FPS steady and ~13 FPS busy on the physical Android test device.
-- A production-pattern Phaser optimization pass materially improved performance, but the resulting non-antialiased visual output looked too pixelated to accept as the product quality bar.
-- The fair final comparison therefore restores smooth sampling for Phaser and builds native Godot + native React Native Skia challengers from code with GitHub Actions APK artifacts.
+- First realistic production-density Phaser benchmark measured ~24 FPS steady / ~13 FPS busy.
+- A production-pattern Phaser optimization pass materially improved performance but initially bought speed with visibly pixelated output, which was rejected.
+- A fair final app-vs-app comparison then used sharp Phaser + Capacitor, native Godot, and native React Native Skia.
+- Same-phone result: **Phaser 60/44, Godot 60/50, React Native Skia 60/60** for steady/busy.
 
-**Next:** run all three candidates on the same Android device in steady and busy modes, record frame pacing + visual sharpness + touch feel, then choose one runtime. Do not keep multiple world engines after the decision.
+**Decision:** production uses Expo + React Native + TypeScript, React Native Skia for the living 2D world, and Reanimated/Worklets for frame-critical animation. Phaser and Godot remain disposable benchmark evidence only.
 
-**Done when:** `project/SHOOTOUT.md` has physical results for all three candidates, one option is selected, the result is recorded in `DECISIONS.md`, and the losing benchmark implementations are explicitly treated as disposable evidence rather than production architecture.
+**Done because:** physical results are recorded in `SHOOTOUT.md`, the winner is recorded in `DECISIONS.md`, and there is one production runtime direction.
 
 ## A1 — Repository and development foundation
-**Status: NEXT after A0 engine decision**
+**Status: NEXT**
 
-Turn the winning spike into the maintainable project skeleton: package boundaries, formatting/linting, environment handling, typed event contracts, test helpers, PR conventions, build artifacts, and developer scripts.
+Turn the winning Skia spike into the maintainable project skeleton: Expo/React Native app structure, package boundaries, formatting/linting, environment handling, typed event contracts, test helpers, PR conventions, reproducible Android build artifacts, and developer scripts.
+
+Important A1 cleanup: the temporary three-way benchmark code must not become the production architecture. Promote only the reusable Skia/React Native patterns we intentionally keep; isolate or remove Phaser/Godot shootout code after preserving evidence in `project/`.
 
 **Done when:** a clean checkout reaches running app + complete CI with one documented command path and no hidden local setup.
 
@@ -93,7 +95,7 @@ Choose and implement the minimal production backend based on proven product need
 ## A11 — Mobile packaging
 **Status: PLANNED**
 
-Package the validated runtime for iOS/Android using the mobile path selected by A0, then solve safe areas, lifecycle/backgrounding, audio focus, microphone permissions, keyboard/input, deep links, native storage, and build configuration.
+Harden the Expo/React Native mobile app for iOS/Android, then solve safe areas, lifecycle/backgrounding, audio focus, microphone permissions, keyboard/input, deep links, native storage, and release build configuration.
 
 **Done when:** internal builds on both platforms can complete the English vertical slice with parity to the development runtime.
 
