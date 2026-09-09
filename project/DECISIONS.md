@@ -49,3 +49,5 @@ Hosted CI is for correctness and deterministic budgets. Physical Android hardwar
 Do **not** embed PixiJS inside Phaser or run two rendering/game loops. The production companion will implement a renderer-independent `WorldActor` contract, with a `PhaserActor` implementation written in TypeScript.
 
 Reusable pieces from the old prototype may be ported if renderer-independent: personality/prompts, state names, movement math, audio/TTS logic, timing data, SVG/PNG assets, and behavioral rules. Pixi display objects, Pixi animation code, and Pixi renderer lifecycle are replaced with Phaser equivalents.
+
+Historical implementation reference only: KidsLive PR #1 consumed the shared PixiLive Nova SDK, whose corresponding SDK work was tracked in `addvaluewithai-hub/pixilive` PR #9. Inspect that source when implementing A3, but do not restore PixiJS as a production dependency.
