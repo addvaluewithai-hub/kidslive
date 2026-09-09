@@ -8,30 +8,23 @@ Use this as a compact ADR log. New decisions should include date, decision, why,
 The current Nova/PixiLive prototype was inexpensive to build and can be reimplemented. Existing character code is not a constraint on the world architecture.
 
 ## D-002 — Start with Phaser + TypeScript + React
-**Status:** Provisional, under final performance review — 2026-09-08
+**Status:** Superseded by D-008 — 2026-09-09
 
-We are validating Phaser as the 2D world/game layer because it gives scenes, camera, input, tweens, animation, particles, asset lifecycle, and game-loop primitives without building a game framework on top of a renderer.
+Phaser was the first serious runtime candidate because it supplied scenes, camera, input, tweens, particles, asset lifecycle, and a game loop without building a game framework over a raw renderer.
 
-React owns normal product UI. Phaser owns the living world. Pure TypeScript owns curriculum/domain state.
+Physical testing changed the decision. The initial realistic scene measured about 24 FPS steady / 13 FPS busy. A production-pattern optimization pass improved speed but created an unacceptable visual-quality tradeoff, so a fair three-way native APK shootout was run instead.
 
-### Evidence
-- Synthetic test: ×4 independent-sprite stress produced serious jank; ×10 effectively froze on the physical Android device.
-- First realistic production-density benchmark: approximately **24 FPS steady** and **13 FPS busy**. Subjective jank was light, but the measured performance is below the product budget and leaves insufficient headroom.
-- The realistic scene still contains avoidable expensive patterns (live vector Shape objects, nested Containers, always-live off-camera worlds), so this is considered a failure of the naive implementation rather than final proof against Phaser.
+Final same-phone result:
+- Phaser + Capacitor: **60 FPS steady / 44 FPS busy**.
+- Godot native: **60 FPS steady / 50 FPS busy**.
+- React Native Skia: **60 FPS steady / 60 FPS busy**.
 
-### Final gate
-One production-pattern optimization pass is allowed: bake static procedural art to textures, cull/sleep off-camera content, reduce unnecessary containers/per-frame JS, and keep pooled effects bounded without cutting intended product density.
-
-**Lock Phaser if:** the same device reaches roughly 50–60 FPS steady and 45+ FPS busy with stable pacing.
-
-**Reject Phaser if:** it remains materially below that target or requires heroic renderer/browser workarounds.
-
-**Primary fallback:** Godot. Do not drift into a long hybrid rescue architecture if the optimized gate fails.
+Phaser remains useful spike evidence but is not the production world runtime.
 
 ## D-003 — Capacitor is conditional on the web runtime winning A0
-**Status:** Provisional — 2026-09-08
+**Status:** Superseded by D-008 — 2026-09-09
 
-Capacitor remains the preferred mobile wrapper only if the Phaser/web runtime passes A0. If A0 selects Godot, this decision is superseded for the game/world runtime rather than forcing Godot into a hybrid wrapper.
+Capacitor was only intended if the web/Phaser runtime won A0. Because A0 selected React Native Skia, Capacitor is no longer the intended production mobile shell.
 
 ## D-004 — Experience Engine is framework-independent
 **Status:** Accepted — 2026-09-08
@@ -52,3 +45,36 @@ All AI integration must have scripted/fake adapters so pull requests are determi
 **Status:** Accepted — 2026-09-08
 
 Hosted GitHub runner FPS is not a release metric. PR CI checks deterministic budgets and functional regressions; a fixed real Android device becomes the trusted performance benchmark before the stack is considered locked.
+
+## D-008 — Use Expo + React Native + Skia for the production mobile/world runtime
+**Status:** Accepted — 2026-09-09
+
+KidsLive will use **Expo + React Native + TypeScript** as the mobile/product runtime, with **React Native Skia** for the living 2D world and **Reanimated/Worklets** for frame-critical animation.
+
+### Evidence
+
+The three candidates were built as installable Android APKs and tested on the same physical phone at approximately the same product density:
+
+- Phaser + Capacitor: **60 FPS steady / 44 FPS busy**.
+- Godot native: **60 FPS steady / 50 FPS busy**.
+- React Native Skia: **60 FPS steady / 60 FPS busy**.
+
+The per-engine metrics are not laboratory-identical, but Skia was the only candidate that remained at display-rate performance under both steady and busy load.
+
+### Why this wins beyond FPS
+
+- Native mobile rendering with no browser canvas/WebView world runtime.
+- Crisp rendering without the quality compromise encountered in the optimized Phaser spike.
+- One primary application language/ecosystem: TypeScript + React Native.
+- Product UI, navigation, lifecycle, permissions, audio, and native capabilities live in the same app architecture as the world.
+- Reanimated/Worklets keep per-frame state outside ordinary React reconciliation.
+- Skia is a renderer rather than a game engine, but KidsLive is primarily authored 2D interaction/animation rather than physics-heavy gameplay. We will own only the minimal world primitives we actually need: camera, scene/place lifecycle, actor, timeline, hotspots, and bounded pooled effects.
+
+### Alternatives rejected
+
+- **Phaser + Capacitor:** acceptable steady performance, but lower busy headroom and a previous sharpness/performance tradeoff increased browser-runtime risk.
+- **Godot:** excellent performance and strong 2D primitives, but introduces a second primary language/runtime and more app-to-engine integration for a product that also needs substantial native UI, AI, audio, parent, and account surfaces.
+
+### Reopen only if
+
+Real production evidence shows that representative Android hardware cannot meet the product budget with real assets/audio/world density, or Skia forces a large general-purpose game-engine layer. Framework preference alone is not sufficient reason to reopen this decision.
