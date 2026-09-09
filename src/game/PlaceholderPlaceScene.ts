@@ -204,7 +204,12 @@ export class PlaceholderPlaceScene extends Phaser.Scene {
       .setPosition(centerX, centerY + Math.min(width, height) * 0.22)
       .setFontSize(compact ? 15 : 17)
       .setWordWrapWidth(Math.min(520, width - 48));
-    this.backButton.setPosition(20, Math.max(58, Math.min(72, height * 0.08)));
+
+    if (compact) {
+      this.backButton.setOrigin(0, 1).setPosition(18, height - 18);
+    } else {
+      this.backButton.setOrigin(0, 0).setPosition(20, 58);
+    }
   }
 
   private returnToHub() {
