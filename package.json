@@ -6,12 +6,13 @@
   "packageManager": "pnpm@10.17.1",
   "scripts": {
     "dev": "vite",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "build": "pnpm typecheck && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "e2e": "playwright test",
-    "ci": "pnpm test && pnpm build && pnpm e2e",
+    "ci": "pnpm check:boundaries && pnpm test && pnpm build && pnpm e2e",
     "android:add": "cap add android",
     "android:sync": "cap sync android"
   },
