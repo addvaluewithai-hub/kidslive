@@ -22,9 +22,9 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
-  browser-smoke:
+  browser-stage-gate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -37,3 +37,13 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
+      - name: Upload Playwright QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-qa-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
