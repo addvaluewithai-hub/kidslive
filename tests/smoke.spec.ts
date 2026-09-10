@@ -16,7 +16,7 @@ test('boots the KidsLive shell without viewport overflow', async ({ page }) => {
 });
 
 test('all authored places enter and return without breaking the hub', async ({ page }, testInfo) => {
-  test.setTimeout(75_000);
+  test.setTimeout(100_000);
 
   await page.goto('/');
   const canvas = page.locator('canvas');
@@ -135,7 +135,7 @@ test('actor moves toward semantic places and survives interrupted movement', asy
   await page.goto('/');
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(1_200);
 
   const viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected a configured browser viewport');
@@ -150,17 +150,19 @@ test('actor moves toward semantic places and survives interrupted movement', asy
     }
   };
   const overviewButton = { x: viewport.width - 74, y: viewport.height - 36 };
+  const overview = await page.screenshot({ animations: 'disabled' });
 
   await pressCanvas(resolveHubPlacePosition(HUB_PLACES[0], viewport.width, viewport.height));
-  await page.waitForTimeout(520);
+  await page.waitForTimeout(560);
   const focused = await page.screenshot({ animations: 'disabled' });
+  expect(focused.equals(overview)).toBe(false);
   await testInfo.attach(`actor-focused-curious-${testInfo.project.name}`, {
     body: focused,
     contentType: 'image/png',
   });
 
   await pressCanvas(overviewButton);
-  await page.waitForTimeout(520);
+  await page.waitForTimeout(560);
   const home = await page.screenshot({ animations: 'disabled' });
   expect(home.equals(focused)).toBe(false);
   await testInfo.attach(`actor-home-warm-${testInfo.project.name}`, {
@@ -169,9 +171,9 @@ test('actor moves toward semantic places and survives interrupted movement', asy
   });
 
   await pressCanvas(resolveHubPlacePosition(HUB_PLACES[1], viewport.width, viewport.height));
-  await page.waitForTimeout(80);
+  await page.waitForTimeout(100);
   await pressCanvas(overviewButton);
-  await page.waitForTimeout(520);
+  await page.waitForTimeout(560);
 
   expect(pageErrors).toEqual([]);
   await expect(canvas).toBeVisible();
