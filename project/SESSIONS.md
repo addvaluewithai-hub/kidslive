@@ -111,20 +111,23 @@ Non-blocking A2 follow-ups:
 - successful Playwright evidence was directly reviewed on 1280×720 and 390×844: focused Nova visibly sits beside English and faces it with a curious expression, Overview restores a readable warm home state, labels remain unmirrored, and mobile composition remains usable.
 
 ### A3-D3 — Bounded perform/speak sequencing + interruption semantics
-**Status: NEXT**
+**Status: DONE**
 
-**Outcome:** the actor executes bounded action and speech-presentation commands in deterministic sequences, including interruption/cleanup, without a live AI/TTS dependency or authority leakage.
+**Outcome delivered:** the actor can now execute bounded movement, configured actions, and local speech presentation as deterministic awaited sequences, with explicit same-channel supersession and whole-actor interruption/cleanup semantics and no live AI/TTS dependency.
 
-**Done when:**
-- `perform(action)` maps generic actor actions to configured Phaser presentation with completion semantics;
-- `speak(text)` has a deterministic local/scripted presentation path suitable for A3 and no network/TTS requirement;
-- sequential/overlapping move/perform/speak commands have documented ordering/interruption/cancellation rules;
-- scene shutdown/disposal settles or cancels outstanding actor operations without dangling promises/tweens/listeners;
-- `FakeActor` reproduces command sequences deterministically for A4/A5 tests;
-- one visible scripted sequence exercises the behavior end-to-end and receives relevant visual review.
+**Evidence / implementation notes:**
+- `WorldActor` documents independent long-running movement/action/speech channels: a newer command cancels the previous unfinished command on the same channel with `ActorOperationCancelledError`, independent channels may overlap deliberately, and callers use `await` when strict sequence ordering is required;
+- added `interrupt(reason?)` to cancel all unfinished actor operations without disposing the actor, while `dispose()` permanently cancels operations and releases resources;
+- `FakeActor` now supports manual deterministic completion of movement, action, and speech, same-channel cancellation, whole-actor interruption, post-interrupt reuse, and disposal coverage for future A4/A5 tests;
+- `CharacterDefinition` now owns per-action duration/lift/scale presentation and bounded local speech timing/width configuration instead of hard-coding Nova-specific timing inside generic actor behavior;
+- `PhaserActor.perform()` uses configured completion-aware visual tweens; `speak()` shows a deterministic local speech bubble for a bounded configured duration with no network, TTS, or model provider;
+- action presentation is isolated from the outer movement container and facing visual, so move/action/look behavior can coexist without corrupting semantic position or readable labels;
+- hub selection now demonstrates a real awaited sequence: interrupt stale intent → move to the selected place → perform `think` → switch emotion → speak `Let's explore <place>!`; selecting another intent, Overview, resize, place entry, or scene shutdown cancels outstanding work cleanly;
+- CI run `34432950071` on implementation head `c30f81efc55a45cd6962762c78994319a888caaf` passed formatting/boundaries/typecheck, 23 unit tests, production build, Playwright desktop/mobile flows, and Android debug APK;
+- Playwright evidence was directly reviewed on 1280×720 and 390×844: the `Let's explore English!` speech bubble is readable above Nova while she sits beside English, labels remain readable, the compact mobile composition remains usable, and Overview removes the active speech presentation without browser errors.
 
 ### A3-D4 — Character definition/assets + hub/place lifecycle integration
-**Status: PLANNED**
+**Status: NEXT**
 
 **Outcome:** the companion system is demonstrably replaceable and coexists cleanly with A2 navigation; character visuals/config are authored data and actor ownership across hub/place transitions follows one deliberate policy.
 
