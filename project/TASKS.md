@@ -33,12 +33,14 @@ Build the production planet hub: camera/touch behavior, responsive composition, 
 **Gate:** `project/gates/A2.md` — PASS WITH FOLLOW-UP on 2026-09-10. Non-blocking follow-ups are deferred bundle/startup profiling, representative Android frame-pacing at actor/vertical-slice density, and stronger transition synchronization only if real CI flakiness appears.
 
 ## A3 — Character/actor system
-**Status: IN PROGRESS**
+**Status: DONE**
 
 Build a character-agnostic companion system in Phaser TypeScript behind `WorldActor`; port reusable renderer-independent behavior/assets from the Pixi prototype and add deterministic test actors. The first KidsLive companion is an implementation/configuration of the actor system, not an identity baked into domain logic. Character, voice, animation set, tone, and presentation must remain replaceable for future audiences and themes.
 
+**Gate:** `project/gates/A3.md` — PASS WITH FOLLOW-UP on 2026-09-10. Non-blocking follow-ups are measured bundle/startup profiling only if user-impact evidence appears, representative physical Android frame pacing at A6 density, and preserving replaceable voice/tone/persona seams in A5.
+
 ## A4 — Experience Engine v1
-**Status: PLANNED**
+**Status: IN PROGRESS**
 Authored step graph, events, assessment transitions, retries, hints, checkpoints/resume, tool permissions, and content validation in pure TypeScript. Experience definitions must describe educational intent independently from a specific character or visual skin.
 
 ## A5 — Tutor/AI orchestration v1
