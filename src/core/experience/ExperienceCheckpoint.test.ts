@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { ExperienceDefinition } from './ExperienceDefinition';
-import { ExperienceCheckpointError } from './ExperienceCheckpoint';
+import {
+  ExperienceCheckpointError,
+  type ExperienceCheckpointErrorCode,
+} from './ExperienceCheckpoint';
 import { ExperienceCommandError, ExperienceEngine } from './ExperienceEngine';
 import { ASSESSMENT_EXPERIENCE_FIXTURE } from './fixtures';
 
@@ -107,11 +110,14 @@ describe('ExperienceEngine checkpoints', () => {
       { ...checkpointAfterHint(), experienceId: 'some-other-experience' },
       'experience-mismatch',
     ],
-  ])('rejects %s without creating partially restored authority', (_name, checkpoint, code) => {
-    expect(() => ExperienceEngine.resume(ASSESSMENT_EXPERIENCE_FIXTURE, serialize(checkpoint))).toThrowError(
-      expect.objectContaining<Partial<ExperienceCheckpointError>>({ code }),
-    );
-  });
+  ] as const)(
+    'rejects %s without creating partially restored authority',
+    (_name, checkpoint, code: ExperienceCheckpointErrorCode) => {
+      expect(() =>
+        ExperienceEngine.resume(ASSESSMENT_EXPERIENCE_FIXTURE, serialize(checkpoint)),
+      ).toThrowError(expect.objectContaining<Partial<ExperienceCheckpointError>>({ code }));
+    },
+  );
 
   it('rejects authored-version incompatibility explicitly', () => {
     const nextDefinition: ExperienceDefinition = {
