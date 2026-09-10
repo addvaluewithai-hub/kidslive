@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
-import type { ActorAnchor } from '../core/actors/WorldActor';
+import {
+  isActorOperationCancelled,
+  type ActorAnchor,
+} from '../core/actors/WorldActor';
 import { KIDSLIVE_COMPANION } from './characterDefinitions';
 import { PhaserActor } from './PhaserActor';
 import {
@@ -16,6 +19,15 @@ type PlanetHubSceneData = {
 };
 
 const HUB_ACTOR_HOME: ActorAnchor = { kind: 'anchor', id: 'hub-home' };
+const HUB_ACTOR_CENTER: ActorAnchor = { kind: 'anchor', id: 'hub-center' };
+const placeActorAnchor = (placeId: string): ActorAnchor => ({
+  kind: 'anchor',
+  id: `hub-place:${placeId}:companion`,
+});
+const placeLookTarget = (placeId: string): ActorAnchor => ({
+  kind: 'anchor',
+  id: `hub-place:${placeId}:focus`,
+});
 
 export class PlanetHubScene extends Phaser.Scene {
   private backdrop?: Phaser.GameObjects.Container;
@@ -117,6 +129,8 @@ export class PlanetHubScene extends Phaser.Scene {
       this.resolveActorAnchor(anchor),
     );
     this.actor.setEmotion('warm');
+    this.actor.snapTo(HUB_ACTOR_HOME);
+    this.actor.lookAt(HUB_ACTOR_CENTER);
 
     this.layout(this.scale.width, this.scale.height);
     this.restoreInitialSelection();
@@ -235,6 +249,11 @@ export class PlanetHubScene extends Phaser.Scene {
     this.overviewButton?.setAlpha(1);
     this.enterButton?.setText(`Enter ${place.label} →`).setAlpha(1);
 
+    this.actor?.setEmotion('curious');
+    this.actor?.lookAt(placeLookTarget(place.id));
+    if (animate) this.moveActorTo(placeActorAnchor(place.id));
+    else this.actor?.snapTo(placeActorAnchor(place.id));
+
     this.placeLayer.each((child: Phaser.GameObjects.Container) => {
       const selected = child === selectedCard;
       this.tweens.killTweensOf(child);
@@ -283,6 +302,9 @@ export class PlanetHubScene extends Phaser.Scene {
     this.subtitle?.setText('Choose a place to explore');
     this.overviewButton?.setAlpha(0);
     this.enterButton?.setAlpha(0);
+    this.actor?.setEmotion('warm');
+    this.actor?.lookAt(HUB_ACTOR_CENTER);
+    this.moveActorTo(HUB_ACTOR_HOME);
 
     this.placeLayer.each((child: Phaser.GameObjects.Container) => {
       this.tweens.killTweensOf(child);
@@ -307,6 +329,9 @@ export class PlanetHubScene extends Phaser.Scene {
     this.enterButton?.setAlpha(0);
     this.subtitle?.setText('Choose a place to explore');
     this.layout(gameSize.width, gameSize.height);
+    this.actor?.setEmotion('warm');
+    this.actor?.snapTo(HUB_ACTOR_HOME);
+    this.actor?.lookAt(HUB_ACTOR_CENTER);
   }
 
   private handleShutdown() {
@@ -318,12 +343,43 @@ export class PlanetHubScene extends Phaser.Scene {
     this.debugOverlay = undefined;
   }
 
+  private moveActorTo(anchor: ActorAnchor) {
+    const movement = this.actor?.moveTo(anchor);
+    if (!movement) return;
+    void movement.catch((error: unknown) => {
+      if (!isActorOperationCancelled(error)) console.error(error);
+    });
+  }
+
   private resolveActorAnchor(anchor: ActorAnchor) {
-    if (anchor.id !== HUB_ACTOR_HOME.id) return undefined;
-    const compact = isCompactHubViewport(this.scale.width);
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const compact = isCompactHubViewport(width);
+
+    if (anchor.id === HUB_ACTOR_HOME.id) {
+      return {
+        x: compact ? width - 58 : width - 84,
+        y: compact ? 184 : 194,
+      };
+    }
+
+    if (anchor.id === HUB_ACTOR_CENTER.id) {
+      return { x: width / 2, y: height / 2 };
+    }
+
+    const match = /^hub-place:(.+):(companion|focus)$/.exec(anchor.id);
+    if (!match) return undefined;
+    const place = getHubPlace(match[1]);
+    if (!place) return undefined;
+    const position = resolveHubPlacePosition(place, width, height);
+
+    if (match[2] === 'focus') return position;
+
+    const side = position.x < width / 2 ? 1 : -1;
+    const xOffset = compact ? 58 : 76;
     return {
-      x: compact ? this.scale.width - 58 : this.scale.width - 84,
-      y: compact ? 184 : 194,
+      x: Phaser.Math.Clamp(position.x + side * xOffset, compact ? 52 : 68, width - (compact ? 52 : 68)),
+      y: Phaser.Math.Clamp(position.y + (compact ? 14 : 10), compact ? 192 : 188, height - 100),
     };
   }
 
@@ -396,7 +452,7 @@ export class PlanetHubScene extends Phaser.Scene {
       resolvedPositions.push(new Phaser.Math.Vector2(position.x, position.y));
     });
 
-    void this.actor?.moveTo(HUB_ACTOR_HOME);
+    this.actor?.reflow();
 
     this.path.clear();
     this.path.lineStyle(compact ? 2 : 3, 0x6d8fbe, 0.18);
