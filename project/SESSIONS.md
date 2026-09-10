@@ -73,106 +73,103 @@ A3-Q blockers around nondeterministic resize/re-entry evidence and missing direc
 Non-blocking A3 follow-ups:
 - profile/code-split only if measured loading evidence shows a real problem;
 - refresh physical Android frame pacing at representative A6 density;
-- keep A5 voice/tone/persona replaceable outside renderer semantics;
+- keep voice/tone/persona replaceable outside renderer semantics;
 - keep runtime debug UI development-only.
 
 ## A4 — Experience Engine v1
 
 **Status: DONE**
 
-A4 completed D1–D5, Q, F, and P. The final stage gate is `project/gates/A4.md` with **PASS WITH FOLLOW-UP**. The platform now has a pure-TypeScript authored experience engine with deterministic graph transitions, assessment/retry/hint authority, bounded tool intents, checkpoint/restart semantics, semantic resume verification, immutable serializable state/events, authored-policy validation, and guarded step/revision host commands.
+A4 completed D1–D5, Q, F, and P. The final stage gate is `project/gates/A4.md` with **PASS WITH FOLLOW-UP**. The platform has a pure-TypeScript authored experience engine with deterministic graph transitions, assessment/retry/hint authority, bounded tool intents, checkpoint/restart semantics, semantic resume verification, immutable serializable state/events, authored-policy validation, and guarded step/revision host commands.
 
-A4-Q identified four blocking gaps: public mutation bypasses, structurally valid but semantically forgeable checkpoints, caller-owned mutable authored definitions, and non-finite numeric tool parameters. A4-F closed all four and added adversarial regression evidence. Focused implementation CI `34489766907` passed format, package boundaries/typecheck, unit/integration tests, and production build on implementation head `316497cb5c7a9e2826dd0dde899b340312b59f31`.
-
-A4-P also corrected the documentation-only final-newline failure seen on CI `34490166471`; that run otherwise passed browser stage-gate and Android debug APK.
+A4-Q blockers around public mutation bypasses, semantically forgeable checkpoints, caller-owned mutable authored definitions, and non-finite numeric tool parameters were all closed in A4-F. Focused implementation CI `34489766907` passed.
 
 Non-blocking A4 follow-ups:
-- measure validation/runtime cost with representative authored graph/content density when A6/A15 make that evidence meaningful;
-- A5 must consume A4's guarded command/tool APIs instead of recreating educational truth in tutor/provider orchestration;
-- A11 persistence must keep checkpoint payloads untrusted and preserve semantic validation before restoration.
+- measure validation/runtime cost with representative authored graph/content density in A6/A15;
+- persistence in A11 must continue treating checkpoint payloads as untrusted input.
+
+## A5 — Tutor/AI orchestration v1
+
+**Status: DONE**
+
+A5 completed D1–D5, Q, F, and P. The final stage gate is `project/gates/A5.md` with **PASS WITH FOLLOW-UP**. The platform now has provider-neutral tutor contracts, deterministic scripted/failure/slow tutors, speech/text and `WorldActor` coordination, guarded A4 authority bridging, cancellation/timeout/failure containment, data-minimized lifecycle diagnostics, and a cohesive `TutorSession` composition root.
+
+A5-Q identified three blockers: cancellation could hang on a provider that ignored cancellation, a throwing authority-audit sink could disrupt behavior after A4 mutation, and browser evidence had a repeated desktop actor lifecycle timeout. A5-F closed the first two with deterministic regression coverage and current-main CI `34537307775` passed quality, browser stage-gate, and Android evidence, clearing the third without speculative runtime changes.
+
+Non-blocking A5 follow-ups:
+- exercise `TutorSession` inside the real A6 English-world runtime with representative interruption/failure states;
+- keep native audio-focus/microphone lifecycle in A12 rather than leaking device policy into tutor core;
+- keep production telemetry/privacy integration in A14 while preserving data-minimized diagnostics;
+- refresh physical Android frame pacing at A6 rendering density.
 
 ---
 
 # Current phase plan
 
-## A5 — Tutor/AI orchestration v1
+## A6 — English World vertical slice
 
 **Status: IN PROGRESS**
 
-**Phase outcome:** KidsLive has a provider-independent tutor orchestration layer that can consume authoritative A4 experience state/events, turn bounded tutor decisions into narration/actor behavior/approved engine requests, coordinate speech/text and interruption lifecycles, expose deterministic observability, and degrade safely under slow/failing providers without ever giving a model authority over curriculum truth, assessment, rewards, or arbitrary product state.
+**Phase outcome:** one small but genuinely complete English learning environment proves the product loop end-to-end: Planet Hub entry → authored lesson → embodied tutor/actor guidance → learner interaction → deterministic assessment/hints/retries → bounded completion/reward signal → visible changed Hub/world state → safe return/re-entry. A6 is a platform/product proof slice, not full English curriculum production and not a substitute for the reusable interaction, progression/economy, persistence, or content-pipeline phases that follow.
 
 **Architecture constraints:**
-- tutor/model providers are adapters behind framework-independent contracts; no domain rule depends on a specific vendor, SDK, prompt format, model name, or network response shape;
-- A4 remains the sole educational authority: tutor orchestration may inspect state/events and submit guarded commands/tool requests, but cannot invent correctness, retries, hints, completion, progression, or permissions;
-- voice, persona, tone, and presentation configuration remain replaceable and separate from actor renderer identity and curriculum definitions;
-- orchestration must not own Phaser objects directly; actor effects go through `WorldActor`, while speech/text/audio use explicit adapter contracts;
-- deterministic `ScriptedTutor`, failure, and slow/cancellable test doubles are required; CI must never call a live AI/TTS provider;
-- A5 may define provider-neutral observability/events but must not build production analytics/backend persistence, which remain later roadmap phases;
-- keep child-safety/tool authority enforceable in code boundaries rather than prompt wording alone.
+- A4 remains educational authority for lesson graph, assessment correctness, retries, hints, completion, and tool permissions;
+- A5 `TutorSession` makes the lesson alive but cannot decide correctness, completion, rewards, or arbitrary world mutations;
+- Phaser owns world rendering/input/lifecycle; React is reserved for product/accessibility-heavy overlays where that is materially better; domain rules stay pure TypeScript;
+- A6 may add only the minimum slice-specific interaction and completion/world-change seams needed to prove the loop. Do not pre-build generalized A7 interaction frameworks, A8 economy/progression, or A11 backend persistence;
+- the visible post-lesson world change must be driven by deterministic product state, not by tutor wording or a model tool side effect;
+- provider/speech behavior used by automated tests remains deterministic/offline; CI never depends on live AI/TTS;
+- because A6 materially changes rendering density and user-visible flow, delivery sessions that change those surfaces require representative desktop/mobile visual evidence, and the phase gate must consider physical Android frame pacing per `PERFORMANCE.md`/D-006.
 
-### A5-D1 — Provider-neutral tutor contract + deterministic orchestration kernel end-to-end
-**Status: DONE**
-
-Build the core tutor request/response contract and orchestration state machine around authoritative A4 snapshots/events. Add deterministic scripted/fake tutor adapters, stable turn/request IDs, explicit bounded tutor outputs, cancellation/session lifecycle, and a host seam that can accept narration/actor intentions without executing educational authority itself.
-
-**Done when:** a representative authored experience can drive multiple tutor turns through a provider-neutral orchestrator using only deterministic adapters; outputs are typed/bounded and immutable/serializable where appropriate; stale/cancelled/completed sessions fail closed; no provider SDK, Phaser object, React component, browser API, or live model is required; focused typecheck/tests/build are green.
-
-**Evidence:** provider-neutral contracts, deterministic `TutorOrchestrator`, `ScriptedTutor`, and `RecordingTutorHost` landed across commits `25db7147`, `fa2bdf56`, `b3838c98`, and `93f789d5`; strict test-fixture typing was corrected in `81ea96dd`. CI `34501896332` passed format, package boundaries/typecheck, unit/integration tests, and production build on the implementation head. No user-visible surface changed, so delivery visual QA was not required.
-
-### A5-D2 — Speech/text delivery + interruption and actor coordination
-**Status: DONE**
-
-Add provider-independent speech/text output contracts and coordinate them with `WorldActor` behavior so tutor turns can speak, display text intent, move/look/emote/perform bounded actor actions, and be interrupted/replaced cleanly. Include deterministic instant/slow/failure speech adapters and cancellation semantics that prevent late audio/actor completion from reviving stale turns.
-
-**Done when:** one tutor turn can coordinate text/speech and actor intentions end-to-end; a newer turn or explicit interruption deterministically cancels superseded work; slow/failing speech and actor operations settle into known states without hanging or mutating A4 authority; persona/tone/voice configuration remains replaceable; focused deterministic checks are green, with visual QA only if a user-visible surface is actually changed.
-
-**Evidence:** commit `4fa207a9` added bounded move/look actor cues, `TutorDeliveryCoordinator`, replaceable voice/speech/text contracts, deterministic instant/manual/failure speech adapters, orchestration-to-host interruption propagation, and integration evidence for actor/text/speech coordination, superseded slow speech, explicit actor interruption, display-only fallback, deterministic speech failure, voice-config isolation, and unchanged A4 authority. CI `34507905386` passed the focused quality job including format, package boundaries/typecheck/lint, unit/integration tests, and production build. No React/Phaser rendering/layout/navigation surface changed, so delivery visual QA was not required.
-
-### A5-D3 — Guarded Experience Engine command/tool bridge
-**Status: DONE**
-
-Connect bounded tutor decisions to A4 through the final guarded `dispatch()` and `requestTool()` APIs. Define explicit translation/authorization boundaries so tutor outputs may propose allowed learner-facing actions or product/world effects but can never submit correctness directly, bypass step/revision guards, broaden tool permissions, or execute arbitrary backend/native work.
-
-**Done when:** approved tutor proposals can cause legal A4 commands/tool intents through one audited bridge; unauthorized, malformed, stale, duplicate, or out-of-step proposals are rejected without authority mutation; engine rejection is observable to orchestration; tests prove a malicious/incorrect scripted tutor cannot override educational truth or undeclared permissions.
-
-**Evidence:** commits `72753832`, `e32ed83d`, and `c44bea50` added a typed single-proposal tutor authority contract, immutable proposal snapshotting, `TutorAuthorityBridge`, `GuardedTutorOutputHost`, structured audit records, runtime malformed-input rejection, and deterministic integration/adversarial coverage. Legal outcome/assessment/hint proposals reach only A4 `dispatch()`, legal tools reach only A4 `requestTool()`, approved tool intents are not executed by the bridge, and stale/duplicate/out-of-step/undeclared/malformed proposals fail closed without authority mutation or downstream delivery. CI `34514401082` passed format, package boundaries/typecheck, unit/integration tests, and production build in the focused quality job on implementation head `c44bea50`. No React/Phaser rendering/layout/navigation surface changed, so delivery visual QA was not required. The immediately preceding D2 bookkeeping CI failure remained an unrelated pre-existing desktop actor smoke timeout; its quality and Android jobs were green.
-
-### A5-D4 — Failure/slow-provider resilience + observable turn lifecycle
-**Status: DONE**
-
-Harden orchestration for provider timeout/failure/cancellation, malformed outputs, duplicate/late responses, speech failures, actor failures, and recoverable retries. Add provider-neutral structured lifecycle events/diagnostics with data-minimized payloads suitable for later analytics integration, plus deterministic failure/slow tutor fixtures.
-
-**Done when:** every provider/adapter failure path reaches a bounded terminal or recoverable orchestration state with no hung promises or stale side effects; late/duplicate responses cannot mutate current turns; diagnostics identify session/turn/provider-boundary failures without storing unnecessary learner content; deterministic failure/slow tests run without network access.
-
-**Evidence:** commits `89accb77`, `e8483873`, `6d579948`, `f1e1b121`, `84b5f49c`, `c1432a4d`, `0c70ed08`, `7c597795`, and `3979c9c3` added bounded provider/output/delivery failure results, manual provider timeouts, provider-neutral lifecycle diagnostics, deterministic `FailingTutor`/`SlowTutor`/manual-timeout fixtures, malformed-output rejection, inert late-provider output, recoverable retries, data-minimized failure records, adapter-failure containment, cancellation cleanup that survives misbehaving interruption adapters, and regression coverage preserving D3 authority-rejection observability. CI `34520437485` passed format, package boundaries/typecheck/lint, all unit/integration tests, and production build in the focused quality job on implementation head `3979c9c3`; Android production build also passed while the broader jobs were still finishing. No React/Phaser rendering/layout/navigation surface changed, so delivery visual QA was not required.
-
-### A5-D5 — Cohesive tutor session + orchestration hardening
-**Status: DONE**
-
-Exercise the whole A5 contract in one representative deterministic tutor session over the cohesive A4 experience: authored state/event observation, scripted narration, actor coordination, speech/text delivery, guarded assessment/hint/tool proposals, interruption, provider failure/recovery, completion, and disposal. Harden ordering, replay resistance, cleanup, and configuration isolation revealed by integration evidence.
-
-**Done when:** one deterministic end-to-end session proves the tutor makes the experience feel alive while A4 remains authoritative; uninterrupted and interrupted/recovered paths converge on valid deterministic authority; stale work after completion/disposal is inert; no live provider is needed; all A5 contracts remain provider/character/audience replaceable; focused typecheck/tests/build pass and any genuinely changed user-visible surface receives representative visual evidence.
-
-**Evidence:** commit `3f4a3d0c` added the production-facing `TutorSession` composition root that binds observation and authority mutation to one `ExperienceEngine`, layers the guarded A4 bridge in front of speech/text/actor delivery, and snapshots timeout configuration at the integration boundary. Commit `5a3674e8` added one cohesive deterministic A4→A5 session covering narration, actor emotion/movement/action, guarded outcome/assessment/hint/tool proposals, learner interruption during speech, provider failure with same-revision recovery, answer normalization/mastery, completion while speech is pending, stale-work cancellation, disposal, audit/diagnostic evidence, and persona/voice mutation isolation. CI exposed one scheduler-sensitive microtask assumption in that new test; commit `bf5ec160` replaced it with bounded microtask flushing without weakening the semantics. CI `34525739598` passed format, lint/package boundaries/typecheck, all unit/integration tests, and production build in the focused quality job on implementation head `bf5ec160`. No React/Phaser rendering/layout/navigation surface changed, so delivery visual QA was not required.
-
-### A5-Q — Phase QA / critique
-**Status: DONE**
-
-Run the dedicated A5 phase critique from `TESTING.md` and `STAGE_GATES.md`. Review architecture/provider isolation, educational authority, tool safety, interruption and failure resilience, observability/data minimization, persona/voice replaceability, deterministic CI, and any user-visible evidence created during A5. Record concrete blocking and non-blocking findings; do not add features.
-
-**Evidence:** `project/qa/A5-Q.md` records the phase critique against `TESTING.md` and `STAGE_GATES.md`. Q found three blockers: explicit cancellation does not settle a never-cooperating provider promise; a throwing authority-audit sink can disrupt downstream behavior after A4 authority has already mutated; and current `main` browser evidence is red on a repeated desktop actor lifecycle timeout that must be diagnosed or stabilized before phase closure. Current CI `34525896943` has quality and Android green; its failed browser job was re-run during Q to gather additional evidence. No A5-specific visual surface changed and no live provider is used.
-
-### A5-F — Fix / polish
-**Status: DONE**
-
-Aggressively fix A5-Q blockers and high-value regressions, rerun focused deterministic/failure/interruption evidence and any relevant visual evidence, and keep A5 open if a real authority/safety/resilience blocker remains.
-
-**Evidence:** A5-F closed all three A5-Q blockers. Commit `b409abef` makes authority audit best-effort so a throwing sink cannot change approved/rejected authority semantics or suppress downstream delivery. Commit `95faae19` races explicit cancellation against provider work, cancels timeout handles promptly, and snapshots standalone timeout configuration. Commit `aca0b2f0` adds deterministic regressions for explicit cancellation, supersede, dispose, timeout cleanup, and throwing-audit behavior with data-minimized diagnostics. Commit `37a2ca31` removes the Q-document trailing whitespace that was the sole quality failure on the prior bookkeeping baseline. CI `34536910453` passed format, package boundaries/typecheck/lint, unit/integration tests, production build, browser stage-gate, and Android debug APK. The previously red desktop actor lifecycle evidence is green again without product/runtime changes, so the Q failure did not reproduce as an A5 rendering regression. No A5 user-visible surface changed, so no additional visual baseline was required.
-
-### A5-P — Close A5 + plan A6
+### A6-D1 — English World runtime + authored lesson entry end-to-end
 **Status: NEXT**
 
-Only if A5 is genuinely ready: record `project/gates/A5.md`, mark A5 `DONE` and A6 current in `TASKS.md`, then decompose **A6 English World vertical slice** into at most five substantial end-to-end delivery sessions plus A6-Q/F/P. A6 remains a platform/product vertical slice, not full English curriculum production; the post-development curriculum phases stay deferred until the development roadmap is complete.
+Replace the English placeholder path with a production English-world scene/composition that is entered from the existing Planet Hub and owns one small validated A4 `ExperienceDefinition`. Wire scene lifecycle to one A4 engine plus A5 `TutorSession`, reuse the production companion actor, and establish deterministic world anchors/assets/loading/fallback behavior for the lesson without introducing curriculum breadth.
+
+**Done when:** selecting English on the Hub enters a real lesson environment rather than the generic placeholder; one authored lesson graph starts through A4 and produces an initial A5 tutor turn/actor behavior through production seams; leaving/re-entering does not leak scene/tutor/actor work; asset/load failure has deterministic fallback behavior; existing non-English places still use their prior lifecycle; focused typecheck/tests/build pass; desktop and mobile visual evidence covers Hub → English entry, initial lesson state, and fallback/loading state where applicable.
+
+### A6-D2 — Learner interaction + tutor-guided lesson loop
+**Status: PLANNED**
+
+Build the slice's actual learner interaction flow around the authored English lesson: present the minimum touch/keyboard-accessible interaction needed by this lesson, route learner actions through guarded A4 commands, reflect wrong/correct/hint/retry states visibly, and let A5 narration/speech/actor cues respond without owning educational truth. Keep the interaction slice-specific rather than prematurely generalizing A7.
+
+**Done when:** a learner can complete the lesson's teaching/practice path from visible prompts and interactions; wrong answers, retry limits, hints, and normalized correct answers are determined by A4 and represented coherently in the world/UI; interruption or tutor/provider failure does not block learner progress or mutate correctness; touch targets/readability work at desktop and mobile sizes; deterministic tests plus representative visual evidence cover happy path, wrong/retry/hint, and tutor-failure/display-only behavior.
+
+### A6-D3 — Deterministic completion reward + visible changed-world return
+**Status: PLANNED**
+
+Complete the product loop by translating authoritative lesson completion into one minimal deterministic A6 completion/reward receipt and one visible Hub/world change on return. The change may be a specific English-place upgrade/marker/decoration/unlock state for this slice, but must be stored outside Phaser display objects and must not become a generalized XP/currency/economy system ahead of A8 or backend sync ahead of A11.
+
+**Done when:** successful A4 completion emits exactly one idempotent slice completion grant; replay/re-entry cannot double-grant it; returning to the Hub visibly reflects the completed English-world state and re-entering English recognizes prior slice completion; incomplete/failed/abandoned lessons do not grant the change; tutor/tool output cannot forge the grant; deterministic integration tests prove idempotency and authority boundaries; desktop/mobile visual evidence shows before/after Hub state and completed-world re-entry.
+
+### A6-D4 — Vertical-slice resilience, responsive polish + lifecycle hardening
+**Status: PLANNED**
+
+Harden the complete Hub ↔ English lesson loop under repeated entry/exit, resize/orientation-sized layouts, interruption, slow/failing scripted tutor/speech, asset failure, scene shutdown, and rapid navigation. Polish the lesson's visual hierarchy, touch ergonomics, text readability, actor positioning, reduced-motion-friendly behavior where already supported, and cleanup so the slice behaves like a product flow rather than an integration demo.
+
+**Done when:** repeated Hub ↔ English cycles leave no stale tutor/actor/scene effects; rapid exit during narration/actor work is safe; mobile/desktop layouts remain readable and tappable; deterministic failure fixtures produce recoverable user-visible states without live services; existing Hub/other-place flows remain intact; focused browser evidence covers representative happy/failure/interruption/re-entry states and no unresolved lifecycle regression remains.
+
+### A6-D5 — Cohesive product proof + performance/evidence hardening
+**Status: PLANNED**
+
+Exercise and harden the whole A6 product loop as one coherent slice, close integration gaps between scene lifecycle, A4, A5, interaction UI, completion state, and Hub change, and gather representative evidence at the actual slice density. Do not add new curriculum breadth; spend the session making the single slice trustworthy, observable, and ready for phase QA.
+
+**Done when:** one deterministic end-to-end browser flow proves enter → teach/interact → wrong/hint/retry where relevant → assess → complete → grant once → return to visibly changed Hub → re-enter safely; desktop/mobile visual evidence is named and reproducible; build/typecheck/affected tests are green; representative Android build succeeds; physical Android frame-pacing is captured at A6 density when hardware is available, and lack of required device evidence is recorded honestly for Q rather than replaced with hosted-CI FPS.
+
+### A6-Q — Phase QA / critique
+**Status: PLANNED**
+
+Run the dedicated A6 critique from `TESTING.md` and `STAGE_GATES.md`. Evaluate the complete learning loop, educational authority, tutor embodiment, interaction clarity, before/after world change, lifecycle/resilience, responsive visuals, touch ergonomics, accessibility risk, asset/failure states, regression risk, and representative Android performance evidence. Record concrete blocking and non-blocking findings; do not add features.
+
+### A6-F — Fix / polish
+**Status: PLANNED**
+
+Aggressively fix A6-Q blockers and high-value product/visual/lifecycle regressions, rerun focused deterministic and visual evidence, and keep A6 open if the vertical slice is not genuinely trustworthy or required performance evidence remains blocking.
+
+### A6-P — Close A6 + plan A7
+**Status: PLANNED**
+
+Only if A6 is genuinely ready: record `project/gates/A6.md`, mark A6 `DONE` and A7 current in `TASKS.md`, then decompose **A7 Assessment & reusable interactions** into at most five substantial end-to-end delivery sessions plus A7-Q/F/P. Do not turn A7 planning into full-curriculum production or pull later progression/economy/backend scope forward.
 
 ---
 
