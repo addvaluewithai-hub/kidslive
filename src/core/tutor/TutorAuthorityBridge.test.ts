@@ -7,7 +7,6 @@ import {
   GuardedTutorOutputHost,
   RecordingTutorAuthorityAudit,
   TutorAuthorityBridge,
-  TutorAuthorityBridgeError,
 } from './TutorAuthorityBridge';
 import { TutorOrchestrator } from './TutorOrchestrator';
 
@@ -206,7 +205,7 @@ describe('TutorAuthorityBridge', () => {
     await expect(orchestrator.runTurn(source(engine))).rejects.toMatchObject({
       name: 'TutorAuthorityBridgeError',
       result: { status: 'rejected', engineCode: 'tool-not-allowed' },
-    } satisfies Partial<TutorAuthorityBridgeError>);
+    });
     expect(engine.state.revision).toBe(0);
     expect(engine.events).toHaveLength(1);
     expect(downstream.deliveries).toHaveLength(0);
