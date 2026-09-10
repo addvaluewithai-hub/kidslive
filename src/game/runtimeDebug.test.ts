@@ -10,7 +10,12 @@ describe('formatRuntimeDebugSnapshot', () => {
         camera: 'z=1.08 x=12 y=18',
         mode: 'english',
         objects: 24,
-        detail: 'places=6 tweens=0',
+        detail: 'places=6 actor=nova',
+        metrics: {
+          actors: 1,
+          tweens: 0,
+          resizeListeners: 1,
+        },
       }),
     ).toBe(
       [
@@ -19,7 +24,8 @@ describe('formatRuntimeDebugSnapshot', () => {
         'camera z=1.08 x=12 y=18',
         'mode english',
         'objects 24',
-        'places=6 tweens=0',
+        'places=6 actor=nova',
+        'actors=1 tweens=0 resizeListeners=1',
       ].join('\n'),
     );
   });
