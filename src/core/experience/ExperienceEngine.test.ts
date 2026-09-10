@@ -109,9 +109,24 @@ describe('validateExperience', () => {
 describe('ExperienceEngine graph runner', () => {
   it('runs both non-assessment branches deterministically to completion', () => {
     const direct = ExperienceEngine.start(BRANCHING_EXPERIENCE_FIXTURE);
-    direct.dispatch({ type: 'submit-outcome', outcomeId: 'continue' });
-    direct.dispatch({ type: 'submit-outcome', outcomeId: 'ready' });
-    const completed = direct.dispatch({ type: 'submit-outcome', outcomeId: 'finish' });
+    direct.dispatch({
+      type: 'submit-outcome',
+      stepId: 'welcome',
+      expectedRevision: 0,
+      outcomeId: 'continue',
+    });
+    direct.dispatch({
+      type: 'submit-outcome',
+      stepId: 'choose-path',
+      expectedRevision: 1,
+      outcomeId: 'ready',
+    });
+    const completed = direct.dispatch({
+      type: 'submit-outcome',
+      stepId: 'wrap-up',
+      expectedRevision: 2,
+      outcomeId: 'finish',
+    });
 
     expect(completed).toEqual({
       experienceId: 'a4-branching-demo',
@@ -161,7 +176,12 @@ describe('ExperienceEngine assessment authority', () => {
 
   it('normalizes and evaluates an immediate correct submission inside the engine', () => {
     const engine = atAssessment();
-    engine.dispatch({ type: 'submit-assessment', answer: '  MERCURY  ' });
+    engine.dispatch({
+      type: 'submit-assessment',
+      stepId: 'planet-check',
+      expectedRevision: 1,
+      answer: '  MERCURY  ',
+    });
 
     expect(engine.currentStep?.id).toBe('success');
     expect(engine.state.assessments).toEqual([
@@ -238,7 +258,12 @@ describe('ExperienceEngine assessment authority', () => {
     expect(engine.state).toEqual(stateBefore);
 
     engine.submitAssessment('Venus');
-    engine.dispatch({ type: 'use-hint', hintId: 'first-letter' });
+    engine.dispatch({
+      type: 'use-hint',
+      stepId: 'planet-check',
+      expectedRevision: 2,
+      hintId: 'first-letter',
+    });
     expect(() => engine.useHint('first-letter')).toThrowError(
       expect.objectContaining({ code: 'hint-already-used' }),
     );
