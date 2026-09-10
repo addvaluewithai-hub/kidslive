@@ -20,6 +20,8 @@ import {
   parseExperienceCheckpoint,
   type ExperienceCheckpoint,
 } from './ExperienceCheckpoint';
+import { snapshotExperienceDefinition } from './snapshotExperienceDefinition';
+import { assertCheckpointSemantics } from './validateCheckpointSemantics';
 import { assertValidExperience } from './validateExperience';
 
 export type ExperienceCommandErrorCode =
@@ -144,10 +146,17 @@ function validateToolParameters(
         `Tool "${tool.id}" does not declare parameter "${key}".`,
       );
     }
-    if (typeof parameters[key] !== declaration.type) {
+    const value = parameters[key];
+    if (typeof value !== declaration.type) {
       throw new ExperienceCommandError(
         'invalid-tool-parameters',
         `Tool "${tool.id}" parameter "${key}" must be a ${declaration.type}.`,
+      );
+    }
+    if (typeof value === 'number' && !Number.isFinite(value)) {
+      throw new ExperienceCommandError(
+        'invalid-tool-parameters',
+        `Tool "${tool.id}" parameter "${key}" must be a finite number.`,
       );
     }
   }
@@ -184,14 +193,17 @@ export class ExperienceEngine {
   }
 
   static start(definition: ExperienceDefinition): ExperienceEngine {
-    assertValidExperience(definition);
-    return new ExperienceEngine(definition);
+    const snapshot = snapshotExperienceDefinition(definition);
+    assertValidExperience(snapshot);
+    return new ExperienceEngine(snapshot);
   }
 
   static resume(definition: ExperienceDefinition, checkpointValue: unknown): ExperienceEngine {
-    assertValidExperience(definition);
-    const checkpoint = parseExperienceCheckpoint(definition, checkpointValue);
-    return new ExperienceEngine(definition, checkpoint.state, checkpoint.events);
+    const snapshot = snapshotExperienceDefinition(definition);
+    assertValidExperience(snapshot);
+    const checkpoint = parseExperienceCheckpoint(snapshot, checkpointValue);
+    assertCheckpointSemantics(snapshot, checkpoint);
+    return new ExperienceEngine(snapshot, checkpoint.state, checkpoint.events);
   }
 
   get state(): ExperienceState {
@@ -228,11 +240,11 @@ export class ExperienceEngine {
     this.assertCommandAuthority(command.stepId, command.expectedRevision);
     switch (command.type) {
       case 'submit-outcome':
-        return this.submitOutcome(command.outcomeId);
+        return this.applyOutcome(command.outcomeId);
       case 'submit-assessment':
-        return this.submitAssessment(command.answer);
+        return this.applyAssessment(command.answer);
       case 'use-hint':
-        return this.useHint(command.hintId);
+        return this.applyHint(command.hintId);
     }
   }
 
@@ -284,7 +296,7 @@ export class ExperienceEngine {
     return intent;
   }
 
-  submitOutcome(outcomeId: ExperienceOutcomeId): ExperienceState {
+  private applyOutcome(outcomeId: ExperienceOutcomeId): ExperienceState {
     const step = this.requireCurrentStep();
     if (step.kind === 'assessment') {
       throw new ExperienceCommandError(
@@ -306,7 +318,7 @@ export class ExperienceEngine {
     return this.applyTransition(step.id, outcomeId, revision);
   }
 
-  submitAssessment(answer: string): ExperienceState {
+  private applyAssessment(answer: string): ExperienceState {
     const step = this.requireAssessmentStep();
     if (answer.trim().length === 0) {
       throw new ExperienceCommandError(
@@ -368,7 +380,7 @@ export class ExperienceEngine {
     return this.applyTransition(step.id, outcomeId, revision);
   }
 
-  useHint(hintId: AssessmentHintId): ExperienceState {
+  private applyHint(hintId: AssessmentHintId): ExperienceState {
     const step = this.requireAssessmentStep();
     const record = getAssessmentRecord(this.currentState, step.id);
     if (record.result === 'correct' || record.result === 'exhausted') {
