@@ -10,6 +10,10 @@ import type {
   ExperienceState,
   ExperienceStep,
   ExperienceStepId,
+  ExperienceToolDeclaration,
+  ExperienceToolIntent,
+  ExperienceToolParameterValue,
+  ExperienceToolRequest,
 } from './ExperienceDefinition';
 import {
   EXPERIENCE_CHECKPOINT_FORMAT_VERSION,
@@ -26,7 +30,11 @@ export type ExperienceCommandErrorCode =
   | 'invalid-assessment-submission'
   | 'unknown-hint'
   | 'hint-not-available'
-  | 'hint-already-used';
+  | 'hint-already-used'
+  | 'unknown-tool'
+  | 'tool-not-allowed'
+  | 'stale-tool-request'
+  | 'invalid-tool-parameters';
 
 export class ExperienceCommandError extends Error {
   readonly code: ExperienceCommandErrorCode;
@@ -57,9 +65,18 @@ function freezeState(state: ExperienceState): ExperienceState {
   });
 }
 
+function freezeParameters(
+  parameters: Readonly<Record<string, ExperienceToolParameterValue>>,
+): Readonly<Record<string, ExperienceToolParameterValue>> {
+  return Object.freeze({ ...parameters });
+}
+
 function freezeEvent(event: ExperienceEvent): ExperienceEvent {
   if (event.type === 'assessment-submitted') {
     return Object.freeze({ ...event, usedHintIds: Object.freeze([...event.usedHintIds]) });
+  }
+  if (event.type === 'tool-intent-approved') {
+    return Object.freeze({ ...event, parameters: freezeParameters(event.parameters) });
   }
   return Object.freeze({ ...event }) as ExperienceEvent;
 }
@@ -113,9 +130,41 @@ function initialEvent(definition: ExperienceDefinition): ExperienceEvent {
   });
 }
 
+function validateToolParameters(
+  tool: ExperienceToolDeclaration,
+  parameters: Readonly<Record<string, ExperienceToolParameterValue>>,
+): void {
+  const declared = new Map(tool.parameters.map((parameter) => [parameter.id, parameter]));
+  for (const key of Object.keys(parameters)) {
+    const declaration = declared.get(key);
+    if (declaration === undefined) {
+      throw new ExperienceCommandError(
+        'invalid-tool-parameters',
+        `Tool "${tool.id}" does not declare parameter "${key}".`,
+      );
+    }
+    if (typeof parameters[key] !== declaration.type) {
+      throw new ExperienceCommandError(
+        'invalid-tool-parameters',
+        `Tool "${tool.id}" parameter "${key}" must be a ${declaration.type}.`,
+      );
+    }
+  }
+
+  for (const declaration of tool.parameters) {
+    if (declaration.required && !(declaration.id in parameters)) {
+      throw new ExperienceCommandError(
+        'invalid-tool-parameters',
+        `Tool "${tool.id}" requires parameter "${declaration.id}".`,
+      );
+    }
+  }
+}
+
 export class ExperienceEngine {
   private readonly definition: ExperienceDefinition;
   private readonly stepById: ReadonlyMap<ExperienceStepId, ExperienceStep>;
+  private readonly toolById: ReadonlyMap<string, ExperienceToolDeclaration>;
   private currentState: ExperienceState;
   private readonly eventLog: ExperienceEvent[];
 
@@ -126,6 +175,7 @@ export class ExperienceEngine {
   ) {
     this.definition = definition;
     this.stepById = new Map(definition.steps.map((step) => [step.id, step]));
+    this.toolById = new Map((definition.tools ?? []).map((tool) => [tool.id, tool]));
     this.currentState = restoredState === undefined ? initialState(definition) : freezeState(restoredState);
     this.eventLog = restoredEvents === undefined
       ? [initialEvent(definition)]
@@ -182,6 +232,54 @@ export class ExperienceEngine {
       case 'use-hint':
         return this.useHint(command.hintId);
     }
+  }
+
+  requestTool(request: ExperienceToolRequest): ExperienceToolIntent {
+    const step = this.requireCurrentStep();
+    if (request.stepId !== step.id || request.expectedRevision !== this.currentState.revision) {
+      throw new ExperienceCommandError(
+        'stale-tool-request',
+        `Tool request for step "${request.stepId}" revision ${request.expectedRevision} is stale; active authority is step "${step.id}" revision ${this.currentState.revision}.`,
+      );
+    }
+
+    const tool = this.toolById.get(request.toolId);
+    if (tool === undefined) {
+      throw new ExperienceCommandError(
+        'unknown-tool',
+        `Experience "${this.definition.id}" does not declare tool "${request.toolId}".`,
+      );
+    }
+    if (!(step.allowedToolIds ?? []).includes(tool.id)) {
+      throw new ExperienceCommandError(
+        'tool-not-allowed',
+        `Step "${step.id}" does not allow tool "${tool.id}".`,
+      );
+    }
+
+    validateToolParameters(tool, request.parameters);
+    const revision = this.currentState.revision + 1;
+    const parameters = freezeParameters(request.parameters);
+    const intent: ExperienceToolIntent = Object.freeze({
+      toolId: tool.id,
+      kind: tool.kind,
+      stepId: step.id,
+      parameters,
+      revision,
+    });
+
+    this.currentState = freezeState({ ...this.currentState, revision });
+    this.eventLog.push(
+      freezeEvent({
+        type: 'tool-intent-approved',
+        toolId: tool.id,
+        kind: tool.kind,
+        stepId: step.id,
+        parameters,
+        revision,
+      }),
+    );
+    return intent;
   }
 
   submitOutcome(outcomeId: ExperienceOutcomeId): ExperienceState {
