@@ -338,7 +338,6 @@ export class TutorOrchestrator {
     | { readonly kind: 'failed'; readonly code: 'provider-failed' | 'provider-timeout' }
     | { readonly kind: 'cancelled' }
   > {
-    let timeoutHandle: { cancel(): void } | null = null;
     const providerPromise = Promise.resolve()
       .then(() => this.provider.generate(request, token))
       .then(
@@ -346,17 +345,20 @@ export class TutorOrchestrator {
         () => ({ kind: token.cancelled ? 'cancelled' as const : 'failed' as const, code: 'provider-failed' as const }),
       );
 
-    if (this.providerTimeout === undefined) return providerPromise;
+    const providerTimeout = this.providerTimeout;
+    if (providerTimeout === undefined) return providerPromise;
 
+    let resolveTimeout: ((result: { readonly kind: 'failed'; readonly code: 'provider-timeout' }) => void) | undefined;
     const timeoutPromise = new Promise<{ readonly kind: 'failed'; readonly code: 'provider-timeout' }>((resolve) => {
-      timeoutHandle = this.providerTimeout?.scheduler.schedule(this.providerTimeout.delayMs, () => {
-        token.cancel('Tutor provider timed out');
-        resolve({ kind: 'failed', code: 'provider-timeout' });
-      }) ?? null;
+      resolveTimeout = resolve;
+    });
+    const timeoutHandle = providerTimeout.scheduler.schedule(providerTimeout.delayMs, () => {
+      token.cancel('Tutor provider timed out');
+      resolveTimeout?.({ kind: 'failed', code: 'provider-timeout' });
     });
 
     const result = await Promise.race([providerPromise, timeoutPromise]);
-    timeoutHandle?.cancel();
+    timeoutHandle.cancel();
     return result;
   }
 
