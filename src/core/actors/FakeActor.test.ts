@@ -63,7 +63,7 @@ describe('FakeActor', () => {
       { type: 'moveTo', target: anchor('somewhere') },
       { type: 'dispose' },
     ]);
-    await expect(actor.moveTo(anchor('elsewhere'))).rejects.toThrow('Actor has been disposed');
+    expect(() => actor.moveTo(anchor('elsewhere'))).toThrow('Actor has been disposed');
     expect(() => actor.setEmotion('warm')).toThrow('Actor has been disposed');
   });
 });
