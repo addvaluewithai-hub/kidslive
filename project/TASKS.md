@@ -49,6 +49,8 @@ Provider-independent tutor contracts, scripted/failure/slow test tutors, speech/
 **Status: PLANNED**
 One small complete learning environment from planet entry through authored lesson, interactions, feedback/reward, and return to changed planet state. Prove the core loop: enter world → learn/interact → deterministic assessment → reward → visible persistent change → return.
 
+This is a platform/product proof slice, **not the full English curriculum**. Full curriculum production begins only after the development roadmap is complete.
+
 ## A7 — Assessment & reusable interactions
 **Status: PLANNED**
 Choice, matching/sorting, text/voice where appropriate, hints/retries, normalization, deterministic scoring.
@@ -114,3 +116,40 @@ Only after the single-user product, safety model, and personal-world value are p
 ## A22 — Shared places / multiplayer experiments
 **Status: PLANNED — LONG-TERM VISION**
 Explore users meeting in bounded shared places, co-presence, cooperative activities, or richer world visits. Realtime multiplayer is one possible implementation, not a product assumption. Any experiment must preserve deterministic learning authority, privacy, age-appropriate identity, permission controls, moderation, abuse prevention, and the ability to disable social systems without breaking the core learning/personal-world experience.
+
+# Post-development curriculum production
+
+Curriculum production begins **only after A0–A22 are complete**. These phases must not interrupt, reorder, or expand the current development roadmap. Until A22 is finished, curriculum work below is planning-only future scope.
+
+Each full curriculum gets its **own roadmap phase** so curriculum design, authored lessons, assessment coverage, progression mapping, content QA, accessibility, and release readiness can be treated as one coherent body of work rather than mixed across subjects.
+
+Curriculum phases should use the same session cadence as development phases: up to five substantial delivery sessions, then dedicated QA, Fix/Polish, and Planning/transition sessions. The detailed five-session decomposition should be created only when the immediately preceding phase reaches its Planning session.
+
+The initial curriculum sequence follows the six authored learning places already present in the product. The exact subject order may be revised at the end of A22 without changing the rule that one complete curriculum occupies one phase.
+
+## A23 — English curriculum production
+**Status: PLANNED — AFTER DEVELOPMENT**
+Build the full English curriculum on top of the completed platform: curriculum map, authored units/lessons, deterministic assessments, progression/reward integration, companion/tutor embodiment, content validation, accessibility, and curriculum-level QA. Reuse A6 evidence but do not treat the A6 vertical slice as curriculum completion.
+
+## A24 — Science curriculum production
+**Status: PLANNED — AFTER DEVELOPMENT**
+Build the full Science curriculum as its own authored program using the shared experience, assessment, progression, tutor, world, and content pipelines without subject-specific platform rewrites.
+
+## A25 — Math curriculum production
+**Status: PLANNED — AFTER DEVELOPMENT**
+Build the full Math curriculum as its own authored program with deterministic mastery/assessment semantics, reusable interactions, progression integration, and curriculum-level QA.
+
+## A26 — Chess curriculum production
+**Status: PLANNED — AFTER DEVELOPMENT**
+Build the full Chess curriculum as its own authored program, validating that the platform can support materially different instructional structure and interactions while preserving shared learning authority and progression boundaries.
+
+## A27 — Art curriculum production
+**Status: PLANNED — AFTER DEVELOPMENT**
+Build the full Art curriculum as its own authored program, including appropriate creative interactions, authored guidance, progression, accessibility, and deterministic product authority where scoring/rewards are involved.
+
+## A28 — Music curriculum production
+**Status: PLANNED — AFTER DEVELOPMENT**
+Build the full Music curriculum as its own authored program, including audio-aware interactions, authored instruction, progression, accessibility/captioning needs, and deterministic assessment/reward boundaries where applicable.
+
+## Additional curricula
+Any curriculum added beyond the initial six must be appended as **one new roadmap phase per curriculum**. Do not combine multiple full curricula into a single phase merely to shorten the roadmap.
