@@ -173,14 +173,22 @@ Non-blocking A3 follow-ups:
 - no React/Phaser/rendering/navigation surface changed, so delivery visual QA was intentionally not run.
 
 ### A4-Q — Phase QA / critique
-**Status: NEXT**
+**Status: DONE**
 
-Perform the dedicated A4 phase-level critique from `TESTING.md` and `STAGE_GATES.md`. Review deterministic correctness, graph/content validation, assessment authority, retry/hint semantics, checkpoint/resume resilience, tool-permission enforcement, API immutability, architecture boundaries, safety implications, and readiness for A5. Record concrete blocking and non-blocking findings; do not add A5 tutor features.
+**QA record:** `project/qa/A4-Q.md` on reviewed main `58a79c75c42468d4729fe433e3e17a355e06224b`.
+
+**Evidence/critique outcome:** latest main CI `34476700575` was green across quality, browser stage-gate, and Android debug APK, and A4 introduced no user-visible rendering/audio surface requiring new visual or device-performance evidence. Phase-level adversarial contract review nevertheless found four blockers that must be fixed before A4 can close or A5 can begin:
+- public `submitOutcome` / `submitAssessment` / `useHint` mutators bypass the step/revision guard enforced by `dispatch()`, leaving a weaker external authority path;
+- checkpoint parsing validates structure and monotonic revisions but does not prove restored state/event history is semantically producible by the authored graph, allowing fabricated/skipped educational authority on resume;
+- the engine retains externally mutable authored-definition references after one-time validation, so caller mutation can invalidate transition/assessment/tool authority during a run;
+- numeric tool parameters accept `NaN`/infinite values even though approved intents/events/checkpoints are claimed to be JSON-safe.
+
+Non-blocking follow-ups remain large-content performance measurement when representative authored graphs exist, preserving the final guarded A4 API as A5's only authority path, and treating checkpoints as validated untrusted input when A11 persistence arrives.
 
 ### A4-F — Fix / polish
-**Status: PLANNED**
+**Status: NEXT**
 
-Aggressively fix A4-Q blockers and directly related regressions/polish, then rerun focused deterministic evidence. Do not add unrelated A5/A6 scope. If an engine-authority, validation, resume, or permission blocker remains, record the exception and keep A4 open.
+Fix the four A4-Q authority/resilience blockers and directly related regressions only: collapse educational mutation onto one guarded step/revision API; make resume semantically verify that checkpoint state/events represent legal authored execution; defensively snapshot/freeze authored definitions so caller mutation cannot change active authority; reject non-finite numeric tool parameters. Add adversarial regression evidence for stale/replayed direct mutations, fabricated/skipped checkpoint mastery/paths/revisions/hints/tools/completion, caller-definition mutation, and JSON round-tripping, then rerun focused package-boundary/typecheck/lint, experience tests, and production build. Do not add A5/A6 features. If any authority or checkpoint semantic blocker remains, keep A4 open as an explicit exception.
 
 ### A4-P — Close A4 + plan A5
 **Status: PLANNED**
