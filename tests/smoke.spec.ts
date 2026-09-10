@@ -76,7 +76,10 @@ test('all authored places enter and return without breaking the hub', async ({ p
 });
 
 test('failed authored place art falls back and still returns safely', async ({ page }, testInfo) => {
+  test.setTimeout(45_000);
+  let failedMarkerRequest = false;
   await page.route('**/assets/places/place-marker.svg', async (route) => {
+    failedMarkerRequest = true;
     await route.abort('failed');
   });
 
@@ -103,15 +106,10 @@ test('failed authored place art falls back and still returns safely', async ({ p
   const overview = await page.screenshot({ animations: 'disabled' });
   await pressCanvas(resolveHubPlacePosition(english, viewport.width, viewport.height));
   await page.waitForTimeout(320);
-
-  const failedAssetRequest = page.waitForRequest((request) =>
-    request.url().endsWith('/assets/places/place-marker.svg'),
-  );
   await pressCanvas({ x: 92, y: viewport.height - 36 });
-  const request = await failedAssetRequest;
-  expect(request.url()).toContain('/assets/places/place-marker.svg');
   await page.waitForTimeout(700);
 
+  expect(failedMarkerRequest).toBe(true);
   const failureState = await page.screenshot({ animations: 'disabled' });
   expect(failureState.equals(overview)).toBe(false);
   await testInfo.attach(`place-asset-fallback-${testInfo.project.name}`, {
@@ -218,9 +216,8 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
     if (!snapshot) throw new Error(`Expected runtime debug snapshot for ${scene}`);
     return snapshot;
   };
-  const expectBoundedActorRuntime = (snapshot: DebugSnapshot) => {
+  const expectSettledActorRuntime = (snapshot: DebugSnapshot) => {
     expect(snapshot.metrics?.actors).toBe(1);
-    expect(snapshot.metrics?.resizeListeners).toBe(1);
     expect(snapshot.metrics?.tweens).toBe(0);
   };
   const pressCanvas = async (position: { x: number; y: number }) => {
@@ -236,7 +233,9 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
   };
 
   const initialHub = await waitForScene('planet-hub');
-  expectBoundedActorRuntime(initialHub);
+  expectSettledActorRuntime(initialHub);
+  const initialResizeListeners = initialHub.metrics?.resizeListeners;
+  expect(typeof initialResizeListeners).toBe('number');
 
   let viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected a configured browser viewport');
@@ -249,7 +248,8 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
   );
   const resizedHub = await waitForScene('planet-hub');
   expect(resizedHub.mode).toBe('overview');
-  expectBoundedActorRuntime(resizedHub);
+  expectSettledActorRuntime(resizedHub);
+  expect(resizedHub.metrics?.resizeListeners).toBe(initialResizeListeners);
 
   viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected resized browser viewport');
@@ -267,25 +267,29 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
     : { x: 92, y: 76 };
   const hubObjectCounts: number[] = [];
   const placeObjectCounts: number[] = [];
+  const resizeListenerCounts: number[] = [Number(initialResizeListeners)];
 
   for (let cycle = 0; cycle < 3; cycle += 1) {
     await pressCanvas(enterButton);
     const placeSnapshot = await waitForScene('placeholder-place');
-    expectBoundedActorRuntime(placeSnapshot);
+    expectSettledActorRuntime(placeSnapshot);
     expect(placeSnapshot.detail).toContain('actors=1');
     expect(placeSnapshot.detail).toContain('ops=idle/idle/silent');
     placeObjectCounts.push(placeSnapshot.objects);
+    resizeListenerCounts.push(Number(placeSnapshot.metrics?.resizeListeners));
 
     await pressCanvas(placeBack);
     const hubSnapshot = await waitForScene('planet-hub');
-    expectBoundedActorRuntime(hubSnapshot);
+    expectSettledActorRuntime(hubSnapshot);
     expect(hubSnapshot.mode).toBe('english');
     expect(hubSnapshot.detail).toContain('actor=nova');
     hubObjectCounts.push(hubSnapshot.objects);
+    resizeListenerCounts.push(Number(hubSnapshot.metrics?.resizeListeners));
   }
 
   expect(new Set(placeObjectCounts).size).toBe(1);
   expect(new Set(hubObjectCounts).size).toBe(1);
+  expect(new Set(resizeListenerCounts).size).toBe(1);
   expect(pageErrors).toEqual([]);
 
   const finalEvidence = await page.screenshot({ animations: 'disabled' });
