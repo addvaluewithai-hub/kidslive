@@ -157,19 +157,23 @@ Non-blocking A3 follow-ups:
 - no React/Phaser/rendering/navigation surface changed, so delivery visual QA was intentionally not run.
 
 ### A4-D5 — Cohesive representative experience + engine hardening
-**Status: NEXT**
+**Status: DONE**
 
-Exercise the full A4 engine coherently with one representative authored experience fixture that combines branching, deterministic assessment, retry, hint use, approved/denied tool intents, checkpoint/resume, restart, completion, and event/state inspection. Harden command ordering, stale/duplicate submissions, terminal-state behavior, immutability boundaries, and deterministic replay-equivalence where applicable. Keep this as engine integration evidence, not an A6 visual lesson.
+**Outcome delivered:** hardened the host-facing command path against delayed/duplicate educational mutations and added one cohesive representative A4 fixture/test flow that exercises graph branching, approved/denied tools, assessment retry, hint use, checkpoint/resume, deterministic continuation, restart, completion, terminal rejection, and immutable inspection as one engine contract.
 
-**Done when:**
-- one end-to-end fixture proves the complete A4 contract from validation/start through assessment/retry/hint/tool intent/checkpoint/resume to deterministic completion;
-- duplicate/stale/terminal commands cannot double-apply attempts, hints, transitions, or completion;
-- resumed execution is equivalent to uninterrupted execution for authoritative state/outcome under the documented contract;
-- public engine APIs remain framework/provider/audience/character agnostic and are ready for A5 tutor orchestration and A6 world hosting;
-- focused unit/integration/typecheck/build evidence is green; add browser/visual evidence only if A4 integration intentionally changes an existing user-visible surface.
+**Implementation/evidence notes:**
+- every host-facing `ExperienceCommand` now carries active `stepId` plus `expectedRevision`; `dispatch()` verifies both against current authority before any mutation and rejects stale/delayed/replayed commands with `stale-command` without changing state or event history;
+- tool requests retain the equivalent step/revision guard, so duplicate approved effects and delayed tool intents fail closed just like educational commands;
+- `COHESIVE_A4_EXPERIENCE_FIXTURE` combines a real practice/direct branch, a typed world effect, a three-attempt normalized assessment with hint policy, success/review branches, and a success-only product effect without introducing renderer, tutor, provider, or audience-specific details;
+- integration evidence deliberately replays the same assessment command, hint command, and tool request and proves they cannot double-apply; unauthorized tool requests also leave authority unchanged;
+- a JSON checkpoint is taken after incorrect attempt + hint, resumed into a new engine, then completed; final authoritative state and ordered events are exactly equal to an uninterrupted execution of the same accepted command/effect sequence;
+- restart discards prior attempts/hints/tool history/revision and proves a clean alternate direct branch can complete from revision zero; a pre-restart command is stale against the new run;
+- completed experiences reject terminal commands without adding a second completion event, while state/events/tool parameters/checkpoints remain frozen and JSON-safe for future A5/A6 hosts;
+- focused CI evidence: run `34476462578` quality job passed format, package-boundary/typecheck lint, all unit tests, and production build on implementation head `10af0bbb1de036c5fec439d028daf96bfae80dde`;
+- no React/Phaser/rendering/navigation surface changed, so delivery visual QA was intentionally not run.
 
 ### A4-Q — Phase QA / critique
-**Status: PLANNED**
+**Status: NEXT**
 
 Perform the dedicated A4 phase-level critique from `TESTING.md` and `STAGE_GATES.md`. Review deterministic correctness, graph/content validation, assessment authority, retry/hint semantics, checkpoint/resume resilience, tool-permission enforcement, API immutability, architecture boundaries, safety implications, and readiness for A5. Record concrete blocking and non-blocking findings; do not add A5 tutor features.
 
