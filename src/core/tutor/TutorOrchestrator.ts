@@ -5,6 +5,7 @@ import type {
   ExperienceState,
   ExperienceToolParameterValue,
 } from '../experience/ExperienceDefinition';
+import { TutorAuthorityBridgeError } from './TutorAuthorityBridge';
 import type {
   TutorActorCue,
   TutorAuthorityProposal,
@@ -254,8 +255,12 @@ export class TutorOrchestrator {
     if (this.activeTurn === null) return false;
     const { turnId, requestId, token } = this.activeTurn;
     token.cancel(reason);
-    this.host.interrupt(turnId, reason);
     this.activeTurn = null;
+    try {
+      this.host.interrupt(turnId, reason);
+    } catch {
+      // Host interruption is best-effort; cancellation authority remains local.
+    }
     this.record({ type: 'turn-cancelled', sessionId: this.sessionId, turnId, requestId });
     return true;
   }
@@ -317,7 +322,8 @@ export class TutorOrchestrator {
 
     try {
       await this.host.publish(delivery);
-    } catch {
+    } catch (error) {
+      if (error instanceof TutorAuthorityBridgeError) throw error;
       if (token.cancelled || !this.isCurrentTurn(turnId, token)) {
         return this.cancelledResult(turnId, token);
       }
@@ -338,12 +344,17 @@ export class TutorOrchestrator {
     | { readonly kind: 'failed'; readonly code: 'provider-failed' | 'provider-timeout' }
     | { readonly kind: 'cancelled' }
   > {
-    const providerPromise = Promise.resolve()
-      .then(() => this.provider.generate(request, token))
-      .then(
-        (output) => ({ kind: 'output' as const, output }),
-        () => ({ kind: token.cancelled ? 'cancelled' as const : 'failed' as const, code: 'provider-failed' as const }),
-      );
+    let generated: Promise<TutorOutput>;
+    try {
+      generated = this.provider.generate(request, token);
+    } catch {
+      return { kind: token.cancelled ? 'cancelled' : 'failed', code: 'provider-failed' };
+    }
+
+    const providerPromise = generated.then(
+      (output) => ({ kind: 'output' as const, output }),
+      () => ({ kind: token.cancelled ? 'cancelled' as const : 'failed' as const, code: 'provider-failed' as const }),
+    );
 
     const providerTimeout = this.providerTimeout;
     if (providerTimeout === undefined) return providerPromise;
