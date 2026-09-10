@@ -126,19 +126,23 @@ Non-blocking A3 follow-ups:
 - no React/Phaser/rendering/navigation surface changed, so delivery visual QA was intentionally not run.
 
 ### A4-D3 — Checkpoints, resume, restart + version-safe recovery
-**Status: NEXT**
+**Status: DONE**
 
-Deliver resumability end-to-end: define checkpoint snapshots containing only authoritative engine state, deterministic serialization/restoration, restart semantics, safe handling of completed experiences, and explicit rejection/recovery behavior for malformed, mismatched-experience, or incompatible-version snapshots. Use deterministic in-memory test storage only; do not implement A11 backend sync.
+**Outcome delivered:** added a versioned, framework-independent checkpoint contract with deterministic JSON round-tripping, exact state/event-history restoration, restart semantics, completed-run restoration, and fail-closed validation for malformed, mismatched, incompatible, or impossible snapshots.
 
-**Done when:**
-- a representative multi-step/assessment experience can checkpoint mid-flow, recreate the engine, resume at the exact authoritative state, and continue to the same deterministic result as uninterrupted execution;
-- attempts, hints, current step, completion state, and relevant event/order semantics survive resume without duplication;
-- restart intentionally clears run state according to a documented contract;
-- corrupt/mismatched/incompatible checkpoints fail safely with typed errors or explicit recovery results rather than partially applying state;
-- focused tests/typecheck/build pass.
+**Implementation/evidence notes:**
+- `ExperienceCheckpoint` is an explicit format-versioned envelope containing experience identity/version plus immutable authoritative engine state and ordered run events; no backend/provider/storage implementation was introduced;
+- `ExperienceEngine.checkpoint()` emits JSON-safe frozen snapshots, and `ExperienceEngine.resume()` validates the authored definition and the entire checkpoint before constructing restored authority;
+- resume restores current step, revision, assessment attempts/results, consumed hints, completion state, and prior ordered events without replaying or duplicating historical events;
+- checkpoint parsing rejects malformed fields/events, unsupported checkpoint format versions, mismatched experience ids, incompatible authored versions, unknown current steps, duplicate/invalid assessment state, undeclared hints, non-sequential attempts, impossible attempt counts, and inconsistent event revisions/status;
+- `restart()` deliberately resets the same engine to the authored initial step with revision 0, empty assessment/hint state, and one fresh `experience-started` event, discarding the previous run history by contract;
+- integration tests serialize through JSON as deterministic in-memory storage evidence, recreate the engine mid-assessment after an incorrect attempt + hint, continue both resumed and uninterrupted runs, and prove identical final state/events; completed checkpoints and invalid recovery paths are also covered;
+- the first test commit exposed a test-only error-code inference failure; it was corrected without weakening assertions;
+- focused CI evidence: run `34465429623` quality job passed format, package-boundary/typecheck lint, unit tests, and production build on implementation head `0a5ceeebaa62e14e3f00d9aa4f719172d4fc4548`;
+- no React/Phaser/rendering/navigation surface changed, so delivery visual QA was intentionally not run.
 
 ### A4-D4 — Tool permissions + authored content validation boundary
-**Status: PLANNED**
+**Status: NEXT**
 
 Add bounded tool/effect declarations and permission enforcement as an engine-level authority seam for later A5/A6 hosts. Definitions declare which educational/product effects a step may request; runtime requests are validated against the active step/state and emitted as typed approved intents rather than executing renderer/backend/model work directly. Expand content validation to catch contradictory policies, invalid assessment/hint/retry configuration, impossible completion paths, and undeclared tool references.
 
