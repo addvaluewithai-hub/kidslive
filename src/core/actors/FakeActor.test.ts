@@ -52,18 +52,76 @@ describe('FakeActor', () => {
     expect(actor.currentAnchor).toEqual(anchor('math-companion'));
   });
 
-  it('disposes idempotently, cancels movement, and rejects later commands', async () => {
-    const actor = new FakeActor({ manualMovement: true });
+  it('runs awaited action and speech as deterministic sequence steps', async () => {
+    const actor = new FakeActor({ manualActions: true, manualSpeech: true });
+    const action = actor.perform('think');
+    let actionSettled = false;
+    void action.then(() => {
+      actionSettled = true;
+    });
+
+    expect(actor.completeSpeech()).toBe(false);
+    expect(actor.completeAction()).toBe(true);
+    await action;
+    expect(actionSettled).toBe(true);
+    expect(actor.lastAction).toBe('think');
+
+    const speech = actor.speak('Let us explore English!');
+    expect(actor.lastSpokenText).toBeUndefined();
+    expect(actor.completeSpeech()).toBe(true);
+    await speech;
+    expect(actor.lastSpokenText).toBe('Let us explore English!');
+  });
+
+  it('cancels only the superseded channel while independent channels can overlap', async () => {
+    const actor = new FakeActor({ manualMovement: true, manualActions: true, manualSpeech: true });
+    const movement = actor.moveTo(anchor('english-companion'));
+    const firstAction = actor.perform('think');
+    const speech = actor.speak('English is this way.');
+    const secondAction = actor.perform('greet');
+
+    await expect(firstAction).rejects.toBeInstanceOf(ActorOperationCancelledError);
+    expect(actor.completeMovement()).toBe(true);
+    expect(actor.completeSpeech()).toBe(true);
+    expect(actor.completeAction()).toBe(true);
+    await Promise.all([movement, speech, secondAction]);
+
+    expect(actor.currentAnchor).toEqual(anchor('english-companion'));
+    expect(actor.lastSpokenText).toBe('English is this way.');
+    expect(actor.lastAction).toBe('greet');
+  });
+
+  it('interrupts all unfinished channels without disposing the actor', async () => {
+    const actor = new FakeActor({ manualMovement: true, manualActions: true, manualSpeech: true });
     const movement = actor.moveTo(anchor('somewhere'));
+    const action = actor.perform('explain');
+    const speech = actor.speak('Still working...');
+
+    actor.interrupt('Scene intent changed');
+
+    await expect(movement).rejects.toBeInstanceOf(ActorOperationCancelledError);
+    await expect(action).rejects.toBeInstanceOf(ActorOperationCancelledError);
+    await expect(speech).rejects.toBeInstanceOf(ActorOperationCancelledError);
+    expect(actor.commands.at(-1)).toEqual({ type: 'interrupt', reason: 'Scene intent changed' });
+
+    await actor.perform('greet');
+    expect(actor.lastAction).toBe('greet');
+  });
+
+  it('disposes idempotently, cancels all operations, and rejects later commands', async () => {
+    const actor = new FakeActor({ manualMovement: true, manualActions: true, manualSpeech: true });
+    const movement = actor.moveTo(anchor('somewhere'));
+    const action = actor.perform('think');
+    const speech = actor.speak('Goodbye');
     actor.dispose();
     actor.dispose();
 
     await expect(movement).rejects.toBeInstanceOf(ActorOperationCancelledError);
-    expect(actor.commands).toEqual([
-      { type: 'moveTo', target: anchor('somewhere') },
-      { type: 'dispose' },
-    ]);
+    await expect(action).rejects.toBeInstanceOf(ActorOperationCancelledError);
+    await expect(speech).rejects.toBeInstanceOf(ActorOperationCancelledError);
+    expect(actor.commands.at(-1)).toEqual({ type: 'dispose' });
     expect(() => actor.moveTo(anchor('elsewhere'))).toThrow('Actor has been disposed');
     expect(() => actor.setEmotion('warm')).toThrow('Actor has been disposed');
+    expect(() => actor.interrupt()).toThrow('Actor has been disposed');
   });
 });
