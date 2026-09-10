@@ -12,6 +12,15 @@ import type { CharacterDefinition } from './characterDefinitions';
 export type ActorWorldPoint = { x: number; y: number };
 export type ActorAnchorResolver = (anchor: ActorAnchor) => ActorWorldPoint | undefined;
 
+export type PhaserActorDebugState = {
+  id: string;
+  anchor: string;
+  lookTarget: string;
+  movement: string;
+  action: string;
+  speech: boolean;
+};
+
 type ActiveMovement = {
   target: ActorAnchor;
   tween: Phaser.Tweens.Tween;
@@ -59,12 +68,16 @@ export class PhaserActor implements WorldActor {
 
     const shadow = scene.add.ellipse(0, 46, 66, 18, 0x000000, 0.25);
     this.glow = scene.add.circle(0, 0, 43, definition.palette.primary, 0.16);
-    const body = scene.add.ellipse(0, 12, 58, 70, definition.palette.secondary, 1);
+    const shell = scene.textures.exists(definition.visual.shellTextureKey)
+      ? scene.add
+          .image(0, 2, definition.visual.shellTextureKey)
+          .setDisplaySize(76, 102)
+          .setTint(definition.palette.secondary)
+      : scene.add.ellipse(0, 12, 58, 70, definition.palette.secondary, 1);
     this.face = scene.add.circle(0, -13, 27, definition.palette.primary, 1);
     const leftEye = scene.add.circle(-9, -17, 4, definition.palette.eye, 1);
     const rightEye = scene.add.circle(9, -17, 4, definition.palette.eye, 1);
     this.mouth = scene.add.ellipse(0, -4, 14, 5, definition.palette.eye, 0.82);
-    const antenna = scene.add.rectangle(0, -48, 4, 22, definition.palette.accent, 1);
     const antennaTip = scene.add.circle(0, -61, 7, definition.palette.accent, 1);
     const badge = scene.add.circle(0, 20, 8, definition.palette.accent, 1);
     const name = scene.add
@@ -95,12 +108,11 @@ export class PhaserActor implements WorldActor {
     this.visual.add([
       shadow,
       this.glow,
-      body,
+      shell,
       this.face,
       leftEye,
       rightEye,
       this.mouth,
-      antenna,
       antennaTip,
       badge,
     ]);
@@ -108,6 +120,17 @@ export class PhaserActor implements WorldActor {
     this.container.add([this.presentation, this.speechText]);
     this.container.setScale(definition.scale);
     this.setEmotion('neutral');
+  }
+
+  getDebugState(): PhaserActorDebugState {
+    return {
+      id: this.definition.id,
+      anchor: this.currentAnchor?.id ?? 'none',
+      lookTarget: this.lookTarget?.id ?? 'none',
+      movement: this.activeMovement?.target.id ?? 'idle',
+      action: this.activeAction?.action ?? 'idle',
+      speech: Boolean(this.activeSpeech),
+    };
   }
 
   moveTo(target: ActorAnchor): Promise<void> {
