@@ -46,11 +46,13 @@ Authored step graph, events, assessment transitions, retries, hints, checkpoints
 **Gate:** `project/gates/A4.md` — PASS WITH FOLLOW-UP on 2026-09-10. Non-blocking follow-ups are representative large-content performance measurement in A6/A15, preserving the guarded A4 authority API as A5's only educational mutation boundary, and treating checkpoints as untrusted input when A11 persistence arrives.
 
 ## A5 — Tutor/AI orchestration v1
-**Status: IN PROGRESS**
-Provider-independent tutor contracts, scripted/failure/slow test tutors, speech/text adapter, tool permissions, interruption handling, and event observability. Tutor persona/tone should be configurable separately from curriculum truth and actor rendering.
+**Status: DONE**
+Provider-independent tutor contracts, scripted/failure/slow test tutors, speech/text adapter, tool permissions, interruption handling, and event observability. Tutor persona/tone is configurable separately from curriculum truth and actor rendering.
+
+**Gate:** `project/gates/A5.md` — PASS WITH FOLLOW-UP on 2026-09-11. A5 closed with provider-neutral orchestration, guarded A4 authority bridging, cancellation/timeout/failure containment, data-minimized lifecycle diagnostics, and deterministic offline provider/speech fixtures. Non-blocking follow-ups are real vertical-slice runtime integration and representative Android frame pacing in A6, native audio lifecycle in A12, and production telemetry/privacy integration in A14.
 
 ## A6 — English World vertical slice
-**Status: PLANNED**
+**Status: IN PROGRESS**
 One small complete learning environment from planet entry through authored lesson, interactions, feedback/reward, and return to changed planet state. Prove the core loop: enter world → learn/interact → deterministic assessment → reward → visible persistent change → return.
 
 This is a platform/product proof slice, **not the full English curriculum**. Full curriculum production begins only after the development roadmap is complete.
