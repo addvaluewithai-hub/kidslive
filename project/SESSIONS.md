@@ -147,14 +147,16 @@ Harden orchestration for provider timeout/failure/cancellation, malformed output
 **Evidence:** commits `89accb77`, `e8483873`, `6d579948`, `f1e1b121`, `84b5f49c`, `c1432a4d`, `0c70ed08`, `7c597795`, and `3979c9c3` added bounded provider/output/delivery failure results, manual provider timeouts, provider-neutral lifecycle diagnostics, deterministic `FailingTutor`/`SlowTutor`/manual-timeout fixtures, malformed-output rejection, inert late-provider output, recoverable retries, data-minimized failure records, adapter-failure containment, cancellation cleanup that survives misbehaving interruption adapters, and regression coverage preserving D3 authority-rejection observability. CI `34520437485` passed format, package boundaries/typecheck/lint, all unit/integration tests, and production build in the focused quality job on implementation head `3979c9c3`; Android production build also passed while the broader jobs were still finishing. No React/Phaser rendering/layout/navigation surface changed, so delivery visual QA was not required.
 
 ### A5-D5 — Cohesive tutor session + orchestration hardening
-**Status: NEXT**
+**Status: DONE**
 
 Exercise the whole A5 contract in one representative deterministic tutor session over the cohesive A4 experience: authored state/event observation, scripted narration, actor coordination, speech/text delivery, guarded assessment/hint/tool proposals, interruption, provider failure/recovery, completion, and disposal. Harden ordering, replay resistance, cleanup, and configuration isolation revealed by integration evidence.
 
 **Done when:** one deterministic end-to-end session proves the tutor makes the experience feel alive while A4 remains authoritative; uninterrupted and interrupted/recovered paths converge on valid deterministic authority; stale work after completion/disposal is inert; no live provider is needed; all A5 contracts remain provider/character/audience replaceable; focused typecheck/tests/build pass and any genuinely changed user-visible surface receives representative visual evidence.
 
+**Evidence:** commit `3f4a3d0c` added the production-facing `TutorSession` composition root that binds observation and authority mutation to one `ExperienceEngine`, layers the guarded A4 bridge in front of speech/text/actor delivery, and snapshots timeout configuration at the integration boundary. Commit `5a3674e8` added one cohesive deterministic A4→A5 session covering narration, actor emotion/movement/action, guarded outcome/assessment/hint/tool proposals, learner interruption during speech, provider failure with same-revision recovery, answer normalization/mastery, completion while speech is pending, stale-work cancellation, disposal, audit/diagnostic evidence, and persona/voice mutation isolation. CI exposed one scheduler-sensitive microtask assumption in that new test; commit `bf5ec160` replaced it with bounded microtask flushing without weakening the semantics. CI `34525739598` passed format, lint/package boundaries/typecheck, all unit/integration tests, and production build in the focused quality job on implementation head `bf5ec160`. No React/Phaser rendering/layout/navigation surface changed, so delivery visual QA was not required.
+
 ### A5-Q — Phase QA / critique
-**Status: PLANNED**
+**Status: NEXT**
 
 Run the dedicated A5 phase critique from `TESTING.md` and `STAGE_GATES.md`. Review architecture/provider isolation, educational authority, tool safety, interruption and failure resilience, observability/data minimization, persona/voice replaceability, deterministic CI, and any user-visible evidence created during A5. Record concrete blocking and non-blocking findings; do not add features.
 
