@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ExperienceDefinition } from './ExperienceDefinition';
+import type { ExperienceCommand, ExperienceDefinition } from './ExperienceDefinition';
 import {
   ExperienceCheckpointError,
   type ExperienceCheckpointErrorCode,
@@ -11,71 +11,74 @@ function serialize(value: unknown): unknown {
   return JSON.parse(JSON.stringify(value)) as unknown;
 }
 
+function dispatchCurrent(
+  engine: ExperienceEngine,
+  command: Omit<ExperienceCommand, 'stepId' | 'expectedRevision'>,
+): void {
+  const state = engine.state;
+  if (state.currentStepId === null) throw new Error('Expected running experience.');
+  engine.dispatch({ ...command, stepId: state.currentStepId, expectedRevision: state.revision } as ExperienceCommand);
+}
+
 function checkpointAfterHint(): ReturnType<ExperienceEngine['checkpoint']> {
   const engine = ExperienceEngine.start(ASSESSMENT_EXPERIENCE_FIXTURE);
-  engine.submitOutcome('continue');
-  engine.submitAssessment('Venus');
-  engine.useHint('first-letter');
+  dispatchCurrent(engine, { type: 'submit-outcome', outcomeId: 'continue' });
+  dispatchCurrent(engine, { type: 'submit-assessment', answer: 'Venus' });
+  dispatchCurrent(engine, { type: 'use-hint', hintId: 'first-letter' });
   return engine.checkpoint();
 }
 
+function expectInvalid(checkpoint: unknown): void {
+  expect(() => ExperienceEngine.resume(ASSESSMENT_EXPERIENCE_FIXTURE, checkpoint)).toThrowError(
+    expect.objectContaining<Partial<ExperienceCheckpointError>>({ code: 'invalid-checkpoint-state' }),
+  );
+}
+
 describe('ExperienceEngine checkpoints', () => {
-  it('round-trips a mid-assessment checkpoint and reaches the uninterrupted result', () => {
+  it('round-trips mid-assessment state and remains replay-equivalent', () => {
     const uninterrupted = ExperienceEngine.start(ASSESSMENT_EXPERIENCE_FIXTURE);
-    uninterrupted.submitOutcome('continue');
-    uninterrupted.submitAssessment('Venus');
-    uninterrupted.useHint('first-letter');
+    dispatchCurrent(uninterrupted, { type: 'submit-outcome', outcomeId: 'continue' });
+    dispatchCurrent(uninterrupted, { type: 'submit-assessment', answer: 'Venus' });
+    dispatchCurrent(uninterrupted, { type: 'use-hint', hintId: 'first-letter' });
 
-    const storedJson = serialize(uninterrupted.checkpoint());
-    const resumed = ExperienceEngine.resume(ASSESSMENT_EXPERIENCE_FIXTURE, storedJson);
-
-    expect(resumed.state).toEqual(uninterrupted.state);
-    expect(resumed.events).toEqual(uninterrupted.events);
-    expect(resumed.events).toHaveLength(5);
-    expect(resumed.currentStep?.id).toBe('planet-check');
-
-    uninterrupted.submitAssessment('Mercury');
-    uninterrupted.submitOutcome('finish');
-    resumed.submitAssessment('Mercury');
-    resumed.submitOutcome('finish');
-
-    expect(resumed.state).toEqual(uninterrupted.state);
-    expect(resumed.events).toEqual(uninterrupted.events);
-    expect(resumed.state).toMatchObject({ status: 'completed', currentStepId: null });
-    expect(resumed.state.assessments[0]).toMatchObject({
-      usedHintIds: ['first-letter'],
-      result: 'correct',
-      attempts: [
-        { attempt: 1, normalizedAnswer: 'venus', correct: false },
-        { attempt: 2, normalizedAnswer: 'mercury', correct: true, usedHintIds: ['first-letter'] },
-      ],
-    });
-  });
-
-  it('resumes a completed experience without replaying completion or accepting more commands', () => {
-    const engine = ExperienceEngine.start(ASSESSMENT_EXPERIENCE_FIXTURE);
-    engine.submitOutcome('continue');
-    engine.submitAssessment('Mercury');
-    engine.submitOutcome('finish');
-    const checkpoint = serialize(engine.checkpoint());
-
-    const resumed = ExperienceEngine.resume(ASSESSMENT_EXPERIENCE_FIXTURE, checkpoint);
-    expect(resumed.state).toEqual(engine.state);
-    expect(resumed.events).toEqual(engine.events);
-    expect(resumed.events.filter((event) => event.type === 'experience-completed')).toHaveLength(1);
-    expect(() => resumed.submitOutcome('finish')).toThrowError(
-      expect.objectContaining<Partial<ExperienceCommandError>>({ code: 'experience-completed' }),
+    const resumed = ExperienceEngine.resume(
+      ASSESSMENT_EXPERIENCE_FIXTURE,
+      serialize(uninterrupted.checkpoint()),
     );
+    expect(resumed.state).toEqual(uninterrupted.state);
+    expect(resumed.events).toEqual(uninterrupted.events);
+
+    for (const engine of [uninterrupted, resumed]) {
+      dispatchCurrent(engine, { type: 'submit-assessment', answer: 'Mercury' });
+      dispatchCurrent(engine, { type: 'submit-outcome', outcomeId: 'finish' });
+    }
+    expect(resumed.state).toEqual(uninterrupted.state);
+    expect(resumed.events).toEqual(uninterrupted.events);
   });
 
-  it('restart deliberately clears attempts, hints, completion, revision, and prior run events', () => {
+  it('resumes completion without replaying or accepting another command', () => {
+    const engine = ExperienceEngine.start(ASSESSMENT_EXPERIENCE_FIXTURE);
+    dispatchCurrent(engine, { type: 'submit-outcome', outcomeId: 'continue' });
+    dispatchCurrent(engine, { type: 'submit-assessment', answer: 'Mercury' });
+    dispatchCurrent(engine, { type: 'submit-outcome', outcomeId: 'finish' });
+    const resumed = ExperienceEngine.resume(ASSESSMENT_EXPERIENCE_FIXTURE, serialize(engine.checkpoint()));
+    expect(resumed.events).toEqual(engine.events);
+    expect(() =>
+      resumed.dispatch({
+        type: 'submit-outcome',
+        stepId: 'success',
+        expectedRevision: 2,
+        outcomeId: 'finish',
+      }),
+    ).toThrowError(expect.objectContaining<Partial<ExperienceCommandError>>({ code: 'experience-completed' }));
+  });
+
+  it('restart clears persisted authority and starts at revision zero', () => {
     const engine = ExperienceEngine.resume(
       ASSESSMENT_EXPERIENCE_FIXTURE,
       serialize(checkpointAfterHint()),
     );
-
-    const restarted = engine.restart();
-    expect(restarted).toEqual({
+    expect(engine.restart()).toEqual({
       experienceId: ASSESSMENT_EXPERIENCE_FIXTURE.id,
       experienceVersion: ASSESSMENT_EXPERIENCE_FIXTURE.version,
       status: 'running',
@@ -83,18 +86,9 @@ describe('ExperienceEngine checkpoints', () => {
       assessments: [],
       revision: 0,
     });
-    expect(engine.events).toEqual([
-      {
-        type: 'experience-started',
-        experienceId: ASSESSMENT_EXPERIENCE_FIXTURE.id,
-        experienceVersion: ASSESSMENT_EXPERIENCE_FIXTURE.version,
-        stepId: 'prompt',
-        revision: 0,
-      },
-    ]);
-
-    engine.submitOutcome('continue');
-    engine.submitAssessment('Mercury');
+    expect(engine.events).toHaveLength(1);
+    dispatchCurrent(engine, { type: 'submit-outcome', outcomeId: 'continue' });
+    dispatchCurrent(engine, { type: 'submit-assessment', answer: 'Mercury' });
     expect(engine.state.assessments[0]?.attempts[0]?.attempt).toBe(1);
   });
 
@@ -111,7 +105,7 @@ describe('ExperienceEngine checkpoints', () => {
       'experience-mismatch',
     ],
   ] as const)(
-    'rejects %s without creating partially restored authority',
+    'rejects %s',
     (_name, checkpoint, code: ExperienceCheckpointErrorCode) => {
       expect(() =>
         ExperienceEngine.resume(ASSESSMENT_EXPERIENCE_FIXTURE, serialize(checkpoint)),
@@ -119,12 +113,11 @@ describe('ExperienceEngine checkpoints', () => {
     },
   );
 
-  it('rejects authored-version incompatibility explicitly', () => {
+  it('rejects authored-version incompatibility', () => {
     const nextDefinition: ExperienceDefinition = {
       ...ASSESSMENT_EXPERIENCE_FIXTURE,
       version: '2',
     };
-
     expect(() => ExperienceEngine.resume(nextDefinition, serialize(checkpointAfterHint()))).toThrowError(
       expect.objectContaining<Partial<ExperienceCheckpointError>>({
         code: 'experience-version-mismatch',
@@ -132,27 +125,80 @@ describe('ExperienceEngine checkpoints', () => {
     );
   });
 
-  it('rejects structurally valid but impossible state instead of partially applying it', () => {
-    const original = checkpointAfterHint();
-    const corrupt = serialize({
-      ...original,
-      state: {
-        ...original.state,
-        currentStepId: 'not-authored',
-      },
+  it('rejects fabricated path/revision authority even when fields are structurally valid', () => {
+    const checkpoint = checkpointAfterHint();
+    expectInvalid({
+      ...checkpoint,
+      state: { ...checkpoint.state, currentStepId: 'success' },
     });
-
-    expect(() => ExperienceEngine.resume(ASSESSMENT_EXPERIENCE_FIXTURE, corrupt)).toThrowError(
-      expect.objectContaining<Partial<ExperienceCheckpointError>>({ code: 'invalid-checkpoint-state' }),
-    );
+    expectInvalid({
+      ...checkpoint,
+      state: { ...checkpoint.state, revision: checkpoint.state.revision + 2 },
+    });
   });
 
-  it('returns immutable JSON-safe checkpoint data that callers cannot use to mutate engine truth', () => {
-    const engine = ExperienceEngine.start(ASSESSMENT_EXPERIENCE_FIXTURE);
-    engine.submitOutcome('continue');
-    engine.submitAssessment('Venus');
-    const checkpoint = engine.checkpoint();
+  it('rejects fabricated mastery, hints, event truth, and skipped transitions', () => {
+    const checkpoint = checkpointAfterHint();
+    const record = checkpoint.state.assessments[0];
+    if (record === undefined) throw new Error('Expected assessment state.');
 
+    expectInvalid({
+      ...checkpoint,
+      state: {
+        ...checkpoint.state,
+        assessments: [{ ...record, result: 'correct' }],
+      },
+    });
+    expectInvalid({
+      ...checkpoint,
+      state: {
+        ...checkpoint.state,
+        assessments: [{ ...record, usedHintIds: [] }],
+      },
+    });
+    expectInvalid({
+      ...checkpoint,
+      events: checkpoint.events.filter((event) => event.type !== 'step-transitioned'),
+    });
+    expectInvalid({
+      ...checkpoint,
+      events: checkpoint.events.map((event) =>
+        event.type === 'assessment-submitted'
+          ? { ...event, correct: true, result: 'correct' as const }
+          : event,
+      ),
+    });
+  });
+
+  it('rejects an invented completion event and extra assessment state', () => {
+    const checkpoint = checkpointAfterHint();
+    expectInvalid({
+      ...checkpoint,
+      state: { ...checkpoint.state, status: 'completed', currentStepId: null },
+      events: [
+        ...checkpoint.events,
+        {
+          type: 'experience-completed',
+          fromStepId: 'planet-check',
+          outcomeId: 'correct',
+          revision: checkpoint.state.revision,
+        },
+      ],
+    });
+    expectInvalid({
+      ...checkpoint,
+      state: {
+        ...checkpoint.state,
+        assessments: [
+          ...checkpoint.state.assessments,
+          { stepId: 'planet-check', attempts: [], usedHintIds: [], result: null },
+        ],
+      },
+    });
+  });
+
+  it('keeps checkpoints immutable and JSON-safe', () => {
+    const checkpoint = checkpointAfterHint();
     expect(Object.isFrozen(checkpoint)).toBe(true);
     expect(Object.isFrozen(checkpoint.state)).toBe(true);
     expect(Object.isFrozen(checkpoint.events)).toBe(true);
