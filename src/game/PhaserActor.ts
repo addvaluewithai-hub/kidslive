@@ -19,15 +19,33 @@ type ActiveMovement = {
   reject: (error: Error) => void;
 };
 
+type ActiveAction = {
+  action: ActorAction;
+  tween: Phaser.Tweens.Tween;
+  resolve: () => void;
+  reject: (error: Error) => void;
+};
+
+type ActiveSpeech = {
+  text: string;
+  timer: Phaser.Time.TimerEvent;
+  resolve: () => void;
+  reject: (error: Error) => void;
+};
+
 export class PhaserActor implements WorldActor {
   readonly container: Phaser.GameObjects.Container;
+  private readonly presentation: Phaser.GameObjects.Container;
   private readonly visual: Phaser.GameObjects.Container;
   private readonly face: Phaser.GameObjects.Arc;
   private readonly mouth: Phaser.GameObjects.Ellipse;
   private readonly glow: Phaser.GameObjects.Arc;
+  private readonly speechText: Phaser.GameObjects.Text;
   private currentAnchor?: ActorAnchor;
   private lookTarget?: ActorTarget;
   private activeMovement?: ActiveMovement;
+  private activeAction?: ActiveAction;
+  private activeSpeech?: ActiveSpeech;
   private disposed = false;
 
   constructor(
@@ -36,6 +54,7 @@ export class PhaserActor implements WorldActor {
     private readonly resolveAnchor: ActorAnchorResolver,
   ) {
     this.container = scene.add.container().setName(`actor:${definition.id}`).setDepth(20);
+    this.presentation = scene.add.container();
     this.visual = scene.add.container();
 
     const shadow = scene.add.ellipse(0, 46, 66, 18, 0x000000, 0.25);
@@ -59,6 +78,20 @@ export class PhaserActor implements WorldActor {
       })
       .setOrigin(0.5, 0);
 
+    this.speechText = scene.add
+      .text(0, -82, '', {
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#071426',
+        backgroundColor: '#f5f8fff2',
+        align: 'center',
+        padding: { x: 10, y: 8 },
+        wordWrap: { width: definition.speechPresentation.maxWidth },
+      })
+      .setOrigin(0.5, 1)
+      .setVisible(false);
+
     this.visual.add([
       shadow,
       this.glow,
@@ -71,7 +104,8 @@ export class PhaserActor implements WorldActor {
       antennaTip,
       badge,
     ]);
-    this.container.add([this.visual, name]);
+    this.presentation.add([this.visual, name]);
+    this.container.add([this.presentation, this.speechText]);
     this.container.setScale(definition.scale);
     this.setEmotion('neutral');
   }
@@ -135,15 +169,62 @@ export class PhaserActor implements WorldActor {
     this.refreshLookDirection();
   }
 
-  async speak(_text: string) {
+  speak(text: string): Promise<void> {
     this.assertActive();
+    this.cancelSpeech('Actor speech superseded by a newer speak request');
+
+    const trimmed = text.trim();
+    if (!trimmed) {
+      this.speechText.setVisible(false).setText('');
+      return Promise.resolve();
+    }
+
+    this.speechText.setText(trimmed).setVisible(true).setAlpha(1);
+    const speech = this.definition.speechPresentation;
+    const duration = Phaser.Math.Clamp(
+      trimmed.length * speech.msPerCharacter,
+      speech.minDurationMs,
+      speech.maxDurationMs,
+    );
+
+    return new Promise<void>((resolve, reject) => {
+      const timer = this.scene.time.delayedCall(duration, () => {
+        if (this.activeSpeech?.timer !== timer) return;
+        this.activeSpeech = undefined;
+        this.speechText.setVisible(false).setText('');
+        resolve();
+      });
+      this.activeSpeech = { text: trimmed, timer, resolve, reject };
+    });
   }
 
-  async perform(action: ActorAction) {
+  perform(action: ActorAction): Promise<void> {
     this.assertActive();
     if (!this.definition.supportedActions.includes(action)) {
-      throw new Error(`Unsupported actor action: ${action}`);
+      return Promise.reject(new Error(`Unsupported actor action: ${action}`));
     }
+
+    this.cancelAction('Actor action superseded by a newer perform request');
+    const presentation = this.definition.actionPresentation[action];
+
+    return new Promise<void>((resolve, reject) => {
+      const tween = this.scene.tweens.add({
+        targets: this.presentation,
+        y: -presentation.lift,
+        scaleX: presentation.scale,
+        scaleY: presentation.scale,
+        duration: Math.max(1, Math.round(presentation.durationMs / 2)),
+        ease: action === 'celebrate' ? 'Back.Out' : 'Sine.InOut',
+        yoyo: true,
+        onComplete: () => {
+          if (this.activeAction?.tween !== tween) return;
+          this.activeAction = undefined;
+          this.resetActionPresentation();
+          resolve();
+        },
+      });
+      this.activeAction = { action, tween, resolve, reject };
+    });
   }
 
   setEmotion(emotion: ActorEmotion) {
@@ -158,11 +239,20 @@ export class PhaserActor implements WorldActor {
     this.glow.setAlpha(expression.glowAlpha);
   }
 
+  interrupt(reason = 'Actor operations interrupted') {
+    this.assertActive();
+    this.cancelMovement(reason);
+    this.cancelAction(reason);
+    this.cancelSpeech(reason);
+  }
+
   dispose() {
     if (this.disposed) return;
     this.cancelMovement('Actor disposed during movement');
+    this.cancelAction('Actor disposed during action');
+    this.cancelSpeech('Actor disposed during speech');
     this.disposed = true;
-    this.scene.tweens.killTweensOf(this.container);
+    this.scene.tweens.killTweensOf([this.container, this.presentation]);
     this.container.destroy(true);
   }
 
@@ -198,6 +288,28 @@ export class PhaserActor implements WorldActor {
     this.activeMovement = undefined;
     movement.tween.stop();
     movement.reject(new ActorOperationCancelledError(reason));
+  }
+
+  private cancelAction(reason: string) {
+    const action = this.activeAction;
+    if (!action) return;
+    this.activeAction = undefined;
+    action.tween.stop();
+    this.resetActionPresentation();
+    action.reject(new ActorOperationCancelledError(reason));
+  }
+
+  private cancelSpeech(reason: string) {
+    const speech = this.activeSpeech;
+    if (!speech) return;
+    this.activeSpeech = undefined;
+    speech.timer.remove(false);
+    this.speechText.setVisible(false).setText('');
+    speech.reject(new ActorOperationCancelledError(reason));
+  }
+
+  private resetActionPresentation() {
+    this.presentation.setPosition(0, 0).setScale(1);
   }
 
   private refreshLookDirection() {
