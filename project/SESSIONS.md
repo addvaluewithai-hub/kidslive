@@ -55,7 +55,7 @@ Only after the current phase is genuinely ready to close: record the gate, updat
 
 **Status: DONE**
 
-A2 completed D1–D5, Q, F, and P. The final stage gate is `project/gates/A2.md` with **PASS WITH FOLLOW-UP**. The Planet Hub now provides stable scene/catalog/navigation/asset lifecycle foundations for A3.
+A2 completed D1–D5, Q, F, and P. The final stage gate is `project/gates/A2.md` with **PASS WITH FOLLOW-UP**. The Planet Hub provides stable scene/catalog/navigation/asset lifecycle foundations.
 
 Non-blocking A2 follow-ups:
 - revisit bundle startup/code-splitting only when evidence shows a real loading problem;
@@ -66,39 +66,23 @@ Non-blocking A2 follow-ups:
 
 **Status: DONE**
 
-A3 completed D1–D5, Q, F, and P. The final stage gate is `project/gates/A3.md` with **PASS WITH FOLLOW-UP**. The production runtime now has a renderer-independent `WorldActor`, deterministic `FakeActor`, configurable character identity/assets, production `PhaserActor`, bounded movement/look/emotion/action/speech behavior, explicit interruption/disposal semantics, and stable active-scene ownership across Hub → Place → Hub.
+A3 completed D1–D5, Q, F, and P. The final stage gate is `project/gates/A3.md` with **PASS WITH FOLLOW-UP**. The runtime has a renderer-independent `WorldActor`, deterministic `FakeActor`, configurable character identity/assets, production `PhaserActor`, bounded movement/look/emotion/action/speech behavior, interruption/disposal semantics, and stable active-scene ownership across Hub → Place → Hub.
 
-A3-Q found two blocking evidence gaps: nondeterministic lifecycle observation around resize/re-entry and missing direct coverage for failed companion art. A3-F resolved both without weakening lifecycle assertions or adding A4 scope, and also synchronized the existing six-place traversal on actual scene state after a deliberate rerun exposed a screenshot timing race.
-
-Final A3 evidence:
-- implementation CI `34450624817` on `5971e2253f829ace99d273e1163700ac4e0405d5` passed format/lint/tests/build, the complete desktop/mobile Playwright gate, and Android debug APK;
-- closure-baseline CI `34451067873` on `b453504e8139901395411b60fbdc673cc29d6905` also passed;
-- forced `/assets/characters/companion-shell.svg` failure is exercised on desktop/mobile through Hub → Place → Hub with one actor, zero settled tweens, idle place operations, and no page errors;
-- settled lifecycle evidence asserts one actor, zero tweens, and stable resize-listener counts through resize and three repeated ownership cycles;
-- representative desktop/mobile visual artifacts were reviewed for regular, focused/speech, resized, Place, return, and character-fallback states.
+A3-Q blockers around nondeterministic resize/re-entry evidence and missing direct companion-art failure coverage were resolved in A3-F. Final implementation CI `34450624817` and closure baseline `34451067873` passed.
 
 Non-blocking A3 follow-ups:
-- keep the bundle/startup warning visible and profile/code-split only when measured loading evidence shows a real problem;
-- refresh physical Android frame pacing when A6 provides representative production-density world/actor content under D-006;
-- A5 must keep voice/tone/persona replaceable outside renderer semantics rather than hard-coding Nova/KidsLive identity;
-- keep the runtime debug overlay development-only.
-
-### A3-P — Close A3 + plan A4
-**Status: DONE**
-
-**Outcome delivered:** A3 passed its stage gate, roadmap/project handoff now marks A3 complete and A4 current, and A4 Experience Engine v1 is decomposed below into five substantial pure-TypeScript delivery outcomes followed by Q/F/P.
-
-**Planning notes:**
-- recorded `project/gates/A3.md` as **PASS WITH FOLLOW-UP** after verifying both A3-Q blockers were resolved and current-main CI was green;
-- marked A3 `DONE` and A4 `IN PROGRESS` in `TASKS.md`, and updated the project resume handoff in `README.md`;
-- A4 planning preserves D-003/D-004: authored educational truth and transitions remain deterministic pure TypeScript, while renderer/tutor/provider concerns stay outside the engine;
-- A4 does not build the A5 live/scripted tutor orchestration or the A6 English World vertical slice; it establishes the authored engine contracts those phases can consume.
+- profile/code-split only if measured loading evidence shows a real problem;
+- refresh physical Android frame pacing at representative A6 density;
+- keep A5 voice/tone/persona replaceable outside renderer semantics;
+- keep runtime debug UI development-only.
 
 ---
 
 # Current phase plan
 
 ## A4 — Experience Engine v1
+
+**Status: IN PROGRESS**
 
 **Phase outcome:** KidsLive has a framework-independent authored experience engine that can validate and run deterministic step graphs, process bounded learner inputs and assessment transitions, apply retries/hints, checkpoint and resume safely, enforce declared tool permissions, and expose typed state/events suitable for later tutor/world hosts without giving AI or rendering code authority over educational truth.
 
@@ -111,19 +95,22 @@ Non-blocking A3 follow-ups:
 - A4 should consume existing typed-event/actor seams only through framework-independent contracts where useful, without moving Phaser lifecycle into domain code.
 
 ### A4-D1 — Authored definition contract + deterministic graph runner end-to-end
-**Status: NEXT**
+**Status: DONE**
 
-Build the foundational Experience Engine as one coherent capability: typed authored experience/step/transition definitions, stable ids/version metadata, deterministic initial state, graph traversal, explicit completion state, typed engine commands/events, and structural validation for missing/duplicate/unreachable/invalid transition references. Include a representative authored fixture that runs through a non-trivial branch entirely in pure TypeScript.
+**Outcome delivered:** added the foundational pure-TypeScript Experience Engine contract, structural validator, authoritative deterministic graph runner, typed commands/events, immutable serializable state snapshots, and a representative branching authored fixture.
 
-**Done when:**
-- callers can validate an authored experience, start it, submit a bounded non-assessment step outcome, follow deterministic transitions, and reach completion without renderer/provider dependencies;
-- invalid graphs fail with actionable deterministic validation errors before execution;
-- engine state is inspectable/serializable enough for later sessions without exposing mutable internal authority;
-- unit/integration tests cover valid branching, invalid references, duplicate ids, unreachable steps, illegal commands/transitions, and completion behavior;
-- typecheck, affected tests, and production build pass; no visual QA is required unless this session unexpectedly changes a user-visible surface.
+**Implementation/evidence notes:**
+- `ExperienceDefinition` defines stable experience/version/step/outcome ids, instruction/activity steps, explicit authored transitions, typed commands, state, and engine events;
+- preflight validation catches empty identity/version, empty graphs, duplicate step ids/outcomes, missing initial steps, invalid transition targets, and unreachable authored steps with deterministic path/id-oriented diagnostics;
+- `ExperienceEngine.start()` refuses invalid definitions before execution; legal outcomes deterministically transition or complete, while unknown outcomes and terminal commands reject without mutating state/event history;
+- state/event getters return frozen copies so callers can inspect/serialize engine truth without receiving mutable authority;
+- representative fixture proves both direct and practice-loop branches through explicit completion;
+- tests cover valid branching, duplicate ids, bad references, duplicate outcomes, unreachable steps, missing initial state, illegal outcomes, terminal behavior, ordered events, and immutable/JSON-serializable snapshots;
+- focused CI evidence: run `34454645616` quality job passed format, package-boundary/typecheck lint, all unit tests, and production build on implementation head `0d6f278df044529669cade4e438b8ad9e619784d`;
+- no user-visible React/Phaser surface changed, so delivery visual QA was intentionally not added.
 
 ### A4-D2 — Assessment transitions, retries, hints + mastery-safe state
-**Status: PLANNED**
+**Status: NEXT**
 
 Extend the runner so authored assessment steps own deterministic answer/evaluation rules, retry limits/policies, hint availability/consumption, attempt history, and success/failure branching while keeping presentation independent. Build the full flow rather than one assessment type: submission → normalized evaluation → attempt record → retry/hint policy → transition/completion, with deterministic fixtures for correct, incorrect, retry, exhausted, and hint paths.
 
