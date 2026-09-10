@@ -3,6 +3,7 @@ import type {
   ExperienceDefinition,
   ExperienceStep,
   ExperienceStepId,
+  ExperienceToolDeclaration,
 } from './ExperienceDefinition';
 
 export type ExperienceValidationIssueCode =
@@ -14,11 +15,19 @@ export type ExperienceValidationIssueCode =
   | 'duplicate-outcome'
   | 'invalid-transition-target'
   | 'unreachable-step'
+  | 'no-completion-path'
   | 'assessment-no-accepted-answers'
+  | 'assessment-invalid-accepted-answer'
   | 'assessment-invalid-max-attempts'
   | 'assessment-missing-outcome'
+  | 'assessment-conflicting-outcomes'
   | 'duplicate-hint-id'
-  | 'assessment-invalid-hint-policy';
+  | 'assessment-invalid-hint-policy'
+  | 'duplicate-tool-id'
+  | 'invalid-tool-declaration'
+  | 'duplicate-tool-parameter'
+  | 'undeclared-step-tool'
+  | 'duplicate-step-tool';
 
 export interface ExperienceValidationIssue {
   readonly code: ExperienceValidationIssueCode;
@@ -26,6 +35,8 @@ export interface ExperienceValidationIssue {
   readonly stepId?: ExperienceStepId;
   readonly outcomeId?: string;
   readonly targetStepId?: ExperienceStepId;
+  readonly toolId?: string;
+  readonly parameterId?: string;
 }
 
 export interface ExperienceValidationReport {
@@ -43,6 +54,12 @@ export class ExperienceDefinitionValidationError extends Error {
   }
 }
 
+function normalizeAcceptedAnswer(answer: string, step: AssessmentExperienceStep): string {
+  return step.assessment.normalization === 'trim-casefold'
+    ? answer.trim().toLocaleLowerCase('en-US')
+    : answer;
+}
+
 function inspectAssessment(
   step: AssessmentExperienceStep,
   outcomes: ReadonlySet<string>,
@@ -56,11 +73,33 @@ function inspectAssessment(
     });
   }
 
+  const normalizedAnswers = new Set<string>();
+  for (const answer of step.assessment.acceptedAnswers) {
+    const normalized = normalizeAcceptedAnswer(answer, step);
+    if (normalized.trim().length === 0 || normalizedAnswers.has(normalized)) {
+      issues.push({
+        code: 'assessment-invalid-accepted-answer',
+        stepId: step.id,
+        message: `Assessment step "${step.id}" contains an empty or duplicate accepted answer after normalization.`,
+      });
+    }
+    normalizedAnswers.add(normalized);
+  }
+
   if (!Number.isInteger(step.assessment.maxAttempts) || step.assessment.maxAttempts < 1) {
     issues.push({
       code: 'assessment-invalid-max-attempts',
       stepId: step.id,
       message: `Assessment step "${step.id}" maxAttempts must be a positive integer.`,
+    });
+  }
+
+  if (step.assessment.correctOutcomeId === step.assessment.exhaustedOutcomeId) {
+    issues.push({
+      code: 'assessment-conflicting-outcomes',
+      stepId: step.id,
+      outcomeId: step.assessment.correctOutcomeId,
+      message: `Assessment step "${step.id}" must use different outcomes for correct and exhausted results.`,
     });
   }
 
@@ -137,6 +176,83 @@ function inspectTransitions(
   if (step.kind === 'assessment') inspectAssessment(step, outcomes, issues);
 }
 
+function inspectTools(
+  definition: ExperienceDefinition,
+  issues: ExperienceValidationIssue[],
+): ReadonlySet<string> {
+  const declaredToolIds = new Set<string>();
+  for (const tool of definition.tools ?? []) {
+    if (declaredToolIds.has(tool.id)) {
+      issues.push({
+        code: 'duplicate-tool-id',
+        toolId: tool.id,
+        message: `Tool id "${tool.id}" is declared more than once.`,
+      });
+    }
+    declaredToolIds.add(tool.id);
+    inspectToolDeclaration(tool, issues);
+  }
+
+  for (const step of definition.steps) {
+    const allowed = new Set<string>();
+    for (const toolId of step.allowedToolIds ?? []) {
+      if (allowed.has(toolId)) {
+        issues.push({
+          code: 'duplicate-step-tool',
+          stepId: step.id,
+          toolId,
+          message: `Step "${step.id}" allows tool "${toolId}" more than once.`,
+        });
+      }
+      allowed.add(toolId);
+      if (!declaredToolIds.has(toolId)) {
+        issues.push({
+          code: 'undeclared-step-tool',
+          stepId: step.id,
+          toolId,
+          message: `Step "${step.id}" allows undeclared tool "${toolId}".`,
+        });
+      }
+    }
+  }
+
+  return declaredToolIds;
+}
+
+function inspectToolDeclaration(
+  tool: ExperienceToolDeclaration,
+  issues: ExperienceValidationIssue[],
+): void {
+  if (tool.id.trim().length === 0) {
+    issues.push({
+      code: 'invalid-tool-declaration',
+      toolId: tool.id,
+      message: 'Tool id must not be empty.',
+    });
+  }
+
+  const parameterIds = new Set<string>();
+  for (const parameter of tool.parameters) {
+    if (parameterIds.has(parameter.id)) {
+      issues.push({
+        code: 'duplicate-tool-parameter',
+        toolId: tool.id,
+        parameterId: parameter.id,
+        message: `Tool "${tool.id}" declares parameter "${parameter.id}" more than once.`,
+      });
+    }
+    parameterIds.add(parameter.id);
+    if (parameter.id.trim().length === 0) {
+      issues.push({
+        code: 'invalid-tool-declaration',
+        toolId: tool.id,
+        parameterId: parameter.id,
+        message: `Tool "${tool.id}" has an empty parameter id.`,
+      });
+    }
+  }
+}
+
 function findReachableSteps(
   definition: ExperienceDefinition,
   stepById: ReadonlyMap<ExperienceStepId, ExperienceStep>,
@@ -162,6 +278,30 @@ function findReachableSteps(
   }
 
   return reachable;
+}
+
+function findCompletionCapableSteps(
+  definition: ExperienceDefinition,
+  stepById: ReadonlyMap<ExperienceStepId, ExperienceStep>,
+): ReadonlySet<ExperienceStepId> {
+  const completionCapable = new Set<ExperienceStepId>();
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    for (const step of definition.steps) {
+      if (completionCapable.has(step.id) || !stepById.has(step.id)) continue;
+      const canComplete = step.transitions.some(
+        (transition) => transition.to === 'complete' || completionCapable.has(transition.to),
+      );
+      if (canComplete) {
+        completionCapable.add(step.id);
+        changed = true;
+      }
+    }
+  }
+
+  return completionCapable;
 }
 
 export function validateExperience(definition: ExperienceDefinition): ExperienceValidationReport {
@@ -202,6 +342,7 @@ export function validateExperience(definition: ExperienceDefinition): Experience
 
   const stepIds = new Set(stepById.keys());
   for (const step of definition.steps) inspectTransitions(step, stepIds, issues);
+  inspectTools(definition, issues);
 
   const reachable = findReachableSteps(definition, stepById);
   for (const step of definition.steps) {
@@ -210,6 +351,17 @@ export function validateExperience(definition: ExperienceDefinition): Experience
         code: 'unreachable-step',
         stepId: step.id,
         message: `Step "${step.id}" is unreachable from initial step "${definition.initialStepId}".`,
+      });
+    }
+  }
+
+  const completionCapable = findCompletionCapableSteps(definition, stepById);
+  for (const stepId of reachable) {
+    if (!completionCapable.has(stepId)) {
+      issues.push({
+        code: 'no-completion-path',
+        stepId,
+        message: `Reachable step "${stepId}" has no authored path to experience completion.`,
       });
     }
   }
