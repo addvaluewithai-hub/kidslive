@@ -1,19 +1,17 @@
 import Phaser from 'phaser';
+import { queueAssetPack } from './assetPacks';
+import { KIDSLIVE_COMPANION } from './characterDefinitions';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('boot');
   }
 
-  create() {
-    const { centerX, centerY } = this.cameras.main;
+  preload() {
+    queueAssetPack(this, KIDSLIVE_COMPANION.assetPack);
+  }
 
-    this.add
-      .text(centerX, centerY, 'Production foundation ready', {
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: '20px',
-        color: '#dfe8ff',
-      })
-      .setOrigin(0.5);
+  create() {
+    this.scene.start('planet-hub');
   }
 }
