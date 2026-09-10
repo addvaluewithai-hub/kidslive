@@ -138,14 +138,16 @@ Connect bounded tutor decisions to A4 through the final guarded `dispatch()` and
 **Evidence:** commits `72753832`, `e32ed83d`, and `c44bea50` added a typed single-proposal tutor authority contract, immutable proposal snapshotting, `TutorAuthorityBridge`, `GuardedTutorOutputHost`, structured audit records, runtime malformed-input rejection, and deterministic integration/adversarial coverage. Legal outcome/assessment/hint proposals reach only A4 `dispatch()`, legal tools reach only A4 `requestTool()`, approved tool intents are not executed by the bridge, and stale/duplicate/out-of-step/undeclared/malformed proposals fail closed without authority mutation or downstream delivery. CI `34514401082` passed format, package boundaries/typecheck, unit/integration tests, and production build in the focused quality job on implementation head `c44bea50`. No React/Phaser rendering/layout/navigation surface changed, so delivery visual QA was not required. The immediately preceding D2 bookkeeping CI failure remained an unrelated pre-existing desktop actor smoke timeout; its quality and Android jobs were green.
 
 ### A5-D4 — Failure/slow-provider resilience + observable turn lifecycle
-**Status: NEXT**
+**Status: DONE**
 
 Harden orchestration for provider timeout/failure/cancellation, malformed outputs, duplicate/late responses, speech failures, actor failures, and recoverable retries. Add provider-neutral structured lifecycle events/diagnostics with data-minimized payloads suitable for later analytics integration, plus deterministic failure/slow tutor fixtures.
 
 **Done when:** every provider/adapter failure path reaches a bounded terminal or recoverable orchestration state with no hung promises or stale side effects; late/duplicate responses cannot mutate current turns; diagnostics identify session/turn/provider-boundary failures without storing unnecessary learner content; deterministic failure/slow tests run without network access.
 
+**Evidence:** commits `89accb77`, `e8483873`, `6d579948`, `f1e1b121`, `84b5f49c`, `c1432a4d`, `0c70ed08`, `7c597795`, and `3979c9c3` added bounded provider/output/delivery failure results, manual provider timeouts, provider-neutral lifecycle diagnostics, deterministic `FailingTutor`/`SlowTutor`/manual-timeout fixtures, malformed-output rejection, inert late-provider output, recoverable retries, data-minimized failure records, adapter-failure containment, cancellation cleanup that survives misbehaving interruption adapters, and regression coverage preserving D3 authority-rejection observability. CI `34520437485` passed format, package boundaries/typecheck/lint, all unit/integration tests, and production build in the focused quality job on implementation head `3979c9c3`; Android production build also passed while the broader jobs were still finishing. No React/Phaser rendering/layout/navigation surface changed, so delivery visual QA was not required.
+
 ### A5-D5 — Cohesive tutor session + orchestration hardening
-**Status: PLANNED**
+**Status: NEXT**
 
 Exercise the whole A5 contract in one representative deterministic tutor session over the cohesive A4 experience: authored state/event observation, scripted narration, actor coordination, speech/text delivery, guarded assessment/hint/tool proposals, interruption, provider failure/recovery, completion, and disposal. Harden ordering, replay resistance, cleanup, and configuration isolation revealed by integration evidence.
 
