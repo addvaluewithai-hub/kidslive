@@ -162,7 +162,12 @@ describe('TutorDeliveryCoordinator', () => {
     const speech = new FailingSpeechAdapter(new Error('speech-offline'));
     const runtime = createRuntime(output, speech);
 
-    await expect(runtime.orchestrator.runTurn(runtime.engine)).rejects.toThrow('speech-offline');
+    await expect(runtime.orchestrator.runTurn(runtime.engine)).resolves.toMatchObject({
+      status: 'failed',
+      phase: 'delivery',
+      code: 'delivery-failed',
+      recoverable: true,
+    });
     expect(runtime.host.activeTurnId).toBeNull();
     expect(runtime.text.presentations[0]?.text).toBe('This adapter will fail.');
     expect(runtime.engine.state).toMatchObject({ currentStepId: 'welcome', revision: 0 });
