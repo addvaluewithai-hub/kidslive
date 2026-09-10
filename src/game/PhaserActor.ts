@@ -14,7 +14,7 @@ export type ActorAnchorResolver = (anchor: ActorAnchor) => ActorWorldPoint | und
 export class PhaserActor implements WorldActor {
   readonly container: Phaser.GameObjects.Container;
   private readonly face: Phaser.GameObjects.Arc;
-  private readonly mouth: Phaser.GameObjects.Arc;
+  private readonly mouth: Phaser.GameObjects.Ellipse;
   private disposed = false;
 
   constructor(
