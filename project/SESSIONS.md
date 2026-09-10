@@ -156,12 +156,14 @@ Exercise the whole A5 contract in one representative deterministic tutor session
 **Evidence:** commit `3f4a3d0c` added the production-facing `TutorSession` composition root that binds observation and authority mutation to one `ExperienceEngine`, layers the guarded A4 bridge in front of speech/text/actor delivery, and snapshots timeout configuration at the integration boundary. Commit `5a3674e8` added one cohesive deterministic A4→A5 session covering narration, actor emotion/movement/action, guarded outcome/assessment/hint/tool proposals, learner interruption during speech, provider failure with same-revision recovery, answer normalization/mastery, completion while speech is pending, stale-work cancellation, disposal, audit/diagnostic evidence, and persona/voice mutation isolation. CI exposed one scheduler-sensitive microtask assumption in that new test; commit `bf5ec160` replaced it with bounded microtask flushing without weakening the semantics. CI `34525739598` passed format, lint/package boundaries/typecheck, all unit/integration tests, and production build in the focused quality job on implementation head `bf5ec160`. No React/Phaser rendering/layout/navigation surface changed, so delivery visual QA was not required.
 
 ### A5-Q — Phase QA / critique
-**Status: NEXT**
+**Status: DONE**
 
 Run the dedicated A5 phase critique from `TESTING.md` and `STAGE_GATES.md`. Review architecture/provider isolation, educational authority, tool safety, interruption and failure resilience, observability/data minimization, persona/voice replaceability, deterministic CI, and any user-visible evidence created during A5. Record concrete blocking and non-blocking findings; do not add features.
 
+**Evidence:** `project/qa/A5-Q.md` records the phase critique against `TESTING.md` and `STAGE_GATES.md`. Q found three blockers: explicit cancellation does not settle a never-cooperating provider promise; a throwing authority-audit sink can disrupt downstream behavior after A4 authority has already mutated; and current `main` browser evidence is red on a repeated desktop actor lifecycle timeout that must be diagnosed or stabilized before phase closure. Current CI `34525896943` has quality and Android green; its failed browser job was re-run during Q to gather additional evidence. No A5-specific visual surface changed and no live provider is used.
+
 ### A5-F — Fix / polish
-**Status: PLANNED**
+**Status: NEXT**
 
 Aggressively fix A5-Q blockers and high-value regressions, rerun focused deterministic/failure/interruption evidence and any relevant visual evidence, and keep A5 open if a real authority/safety/resilience blocker remains.
 
