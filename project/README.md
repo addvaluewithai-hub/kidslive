@@ -9,7 +9,7 @@ The current product is child-first, but the core platform must remain replaceabl
 
 ## Current state
 
-**A0 architecture selection is DONE. A1 repository/development foundation is DONE. A2 Planet Hub foundation is DONE. A3 Character/actor system is IN PROGRESS.**
+**A0 architecture selection is DONE. A1 repository/development foundation is DONE. A2 Planet Hub foundation is DONE. A3 Character/actor system is DONE. A4 Experience Engine v1 is IN PROGRESS.**
 
 Locked runtime:
 - Phaser 3 + TypeScript for the living world.
@@ -20,6 +20,8 @@ Locked runtime:
 A1 established the production repository foundation, deterministic CI, explicit core/adaptor seams, documented web/Android workflows, and a clean Android debug APK build path. The stage-gate record is `gates/A1.md`.
 
 A2 established the production Planet Hub foundation: six authored places, responsive camera/touch navigation, reusable enter/return scene lifecycle, typed asset packs with deterministic failure behavior, development runtime visibility, and bounded cleanup/re-entry behavior. The stage-gate record is `gates/A2.md`.
+
+A3 established the character-agnostic actor foundation: renderer-independent `WorldActor`, deterministic `FakeActor`, configurable character definitions/assets, production `PhaserActor`, bounded movement/look/emotion/action/speech behavior, interruption semantics, and stable Hub/Place ownership/fallback behavior. The stage-gate record is `gates/A3.md`.
 
 The working tree was deliberately cleaned after A0. Godot, React Native Skia, synthetic stress scenes, and shootout-specific build code are not production dependencies.
 
