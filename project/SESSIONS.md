@@ -110,19 +110,23 @@ Non-blocking A3 follow-ups:
 - no user-visible React/Phaser surface changed, so delivery visual QA was intentionally not added.
 
 ### A4-D2 — Assessment transitions, retries, hints + mastery-safe state
-**Status: NEXT**
+**Status: DONE**
 
-Extend the runner so authored assessment steps own deterministic answer/evaluation rules, retry limits/policies, hint availability/consumption, attempt history, and success/failure branching while keeping presentation independent. Build the full flow rather than one assessment type: submission → normalized evaluation → attempt record → retry/hint policy → transition/completion, with deterministic fixtures for correct, incorrect, retry, exhausted, and hint paths.
+**Outcome delivered:** added engine-owned assessment steps and deterministic learner submission semantics end-to-end: authored normalization/correct-answer policy, bounded attempts, retry-vs-exhaustion behavior, authored hint availability, persistent assessment history, typed events, and success/failure graph branching without exposing educational authority to renderer or tutor code.
 
-**Done when:**
-- assessment correctness and retry/hint transitions are engine-owned and cannot be changed by actor/tutor/rendering code;
-- attempt history and current mastery-relevant result are deterministic and serializable;
-- hints are authored/policy-bounded, cannot be consumed illegally, and do not silently mutate assessment truth;
-- representative fixtures cover immediate success, retry-to-success, exhausted attempts, hint-assisted progression, and invalid submissions;
-- focused tests/typecheck/build pass with no live provider dependency.
+**Implementation/evidence notes:**
+- `ExperienceDefinition` now distinguishes assessment steps and declares accepted answers, deterministic normalization, maximum attempts, correct/exhausted outcome ids, and authored hints with availability thresholds;
+- assessment commands are separate from ordinary authored outcomes, so callers cannot submit `correct`/`exhausted` directly to bypass engine evaluation;
+- submissions normalize and evaluate inside `ExperienceEngine`, append immutable attempt history, remain on-step while retries are available, and transition only on authoritative correctness or attempt exhaustion;
+- assessment state persists per step with attempts, used hints, and the current mastery-relevant result (`retrying`, `correct`, or `exhausted`), and nested snapshots/events are frozen and JSON-serializable for A4-D3;
+- hints are engine-authorized: unknown, premature, duplicate, post-resolution, and non-assessment hint requests reject without mutating state or event history; successful hint use is recorded and subsequent attempts capture which hints were used;
+- validation now rejects essential unsafe assessment definitions such as no accepted answers, non-positive attempt limits, missing configured assessment outcomes, duplicate hint ids, and impossible hint availability values; broader graph/policy validation remains in A4-D4;
+- representative fixture/tests cover immediate normalized success, retry-to-success, three-attempt exhaustion, hint-assisted success, direct-outcome bypass attempts, unknown/premature/duplicate hints, empty submissions, nested immutability, and malformed assessment policy;
+- focused CI evidence: run `34460581636` quality job passed style, package-boundary/typecheck lint, all unit tests, and production build on implementation head `a9dcda56e11dbfe1750e8abfaba0ad6ed2a2039e`;
+- no React/Phaser/rendering/navigation surface changed, so delivery visual QA was intentionally not run.
 
 ### A4-D3 — Checkpoints, resume, restart + version-safe recovery
-**Status: PLANNED**
+**Status: NEXT**
 
 Deliver resumability end-to-end: define checkpoint snapshots containing only authoritative engine state, deterministic serialization/restoration, restart semantics, safe handling of completed experiences, and explicit rejection/recovery behavior for malformed, mismatched-experience, or incompatible-version snapshots. Use deterministic in-memory test storage only; do not implement A11 backend sync.
 
