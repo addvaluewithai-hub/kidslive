@@ -72,7 +72,19 @@ export class RuntimeDebugOverlay {
 
     const refresh = () => {
       this.label?.setX(scene.scale.width - 12);
-      const snapshot = readSnapshot();
+      const source = readSnapshot();
+      const actorObjects = scene.children
+        .getChildren()
+        .filter((child) => child.name.startsWith('actor:')).length;
+      const snapshot: RuntimeDebugSnapshot = {
+        ...source,
+        metrics: {
+          actors: actorObjects,
+          tweens: scene.tweens.getTweens().length,
+          resizeListeners: scene.scale.listenerCount(Phaser.Scale.Events.RESIZE),
+          ...source.metrics,
+        },
+      };
       this.lastScene = snapshot.scene;
       window.__KIDSLIVE_RUNTIME_DEBUG__ = snapshot;
       const text = formatRuntimeDebugSnapshot(snapshot);
