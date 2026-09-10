@@ -179,6 +179,122 @@ test('actor runs scripted action and speech and survives interruption', async ({
   await expect(canvas).toBeVisible();
 });
 
+test('cohesive actor flow stays bounded through resize and repeated scene ownership', async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(60_000);
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  await page.goto('/?runtimeDebug=1');
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible();
+
+  type DebugSnapshot = {
+    scene: string;
+    mode: string;
+    objects: number;
+    detail?: string;
+    metrics?: Record<string, string | number | boolean>;
+  };
+  const readSnapshot = () =>
+    page.evaluate(
+      () =>
+        (window as Window & { __KIDSLIVE_RUNTIME_DEBUG__?: DebugSnapshot })
+          .__KIDSLIVE_RUNTIME_DEBUG__,
+    );
+  const waitForScene = async (scene: string) => {
+    await page.waitForFunction(
+      (expectedScene) =>
+        (
+          window as Window & {
+            __KIDSLIVE_RUNTIME_DEBUG__?: { scene: string };
+          }
+        ).__KIDSLIVE_RUNTIME_DEBUG__?.scene === expectedScene,
+      scene,
+    );
+    await page.waitForTimeout(300);
+    const snapshot = await readSnapshot();
+    if (!snapshot) throw new Error(`Expected runtime debug snapshot for ${scene}`);
+    return snapshot;
+  };
+  const expectBoundedActorRuntime = (snapshot: DebugSnapshot) => {
+    expect(snapshot.metrics?.actors).toBe(1);
+    expect(snapshot.metrics?.resizeListeners).toBe(1);
+    expect(snapshot.metrics?.tweens).toBe(0);
+  };
+  const pressCanvas = async (position: { x: number; y: number }) => {
+    const viewport = page.viewportSize();
+    if (!viewport) throw new Error('Expected a configured browser viewport');
+    if (isCompactHubViewport(viewport.width)) {
+      const bounds = await canvas.boundingBox();
+      if (!bounds) throw new Error('Expected visible game canvas bounds');
+      await page.touchscreen.tap(bounds.x + position.x, bounds.y + position.y);
+    } else {
+      await canvas.click({ position });
+    }
+  };
+
+  const initialHub = await waitForScene('planet-hub');
+  expectBoundedActorRuntime(initialHub);
+
+  let viewport = page.viewportSize();
+  if (!viewport) throw new Error('Expected a configured browser viewport');
+  await pressCanvas(resolveHubPlacePosition(HUB_PLACES[0], viewport.width, viewport.height));
+  await page.waitForTimeout(100);
+
+  const compact = isCompactHubViewport(viewport.width);
+  await page.setViewportSize(
+    compact ? { width: 430, height: 760 } : { width: 960, height: 680 },
+  );
+  const resizedHub = await waitForScene('planet-hub');
+  expect(resizedHub.mode).toBe('overview');
+  expectBoundedActorRuntime(resizedHub);
+
+  viewport = page.viewportSize();
+  if (!viewport) throw new Error('Expected resized browser viewport');
+  await pressCanvas(resolveHubPlacePosition(HUB_PLACES[0], viewport.width, viewport.height));
+  await page.waitForTimeout(1_050);
+
+  const activeSequence = await readSnapshot();
+  expect(activeSequence?.scene).toBe('planet-hub');
+  expect(activeSequence?.metrics?.actors).toBe(1);
+  expect(activeSequence?.detail).toContain('actor=nova');
+
+  const enterButton = { x: 92, y: viewport.height - 36 };
+  const placeBack = isCompactHubViewport(viewport.width)
+    ? { x: 92, y: viewport.height - 40 }
+    : { x: 92, y: 76 };
+  const hubObjectCounts: number[] = [];
+  const placeObjectCounts: number[] = [];
+
+  for (let cycle = 0; cycle < 3; cycle += 1) {
+    await pressCanvas(enterButton);
+    const placeSnapshot = await waitForScene('placeholder-place');
+    expectBoundedActorRuntime(placeSnapshot);
+    expect(placeSnapshot.detail).toContain('actors=1');
+    expect(placeSnapshot.detail).toContain('ops=idle/idle/silent');
+    placeObjectCounts.push(placeSnapshot.objects);
+
+    await pressCanvas(placeBack);
+    const hubSnapshot = await waitForScene('planet-hub');
+    expectBoundedActorRuntime(hubSnapshot);
+    expect(hubSnapshot.mode).toBe('english');
+    expect(hubSnapshot.detail).toContain('actor=nova');
+    hubObjectCounts.push(hubSnapshot.objects);
+  }
+
+  expect(new Set(placeObjectCounts).size).toBe(1);
+  expect(new Set(hubObjectCounts).size).toBe(1);
+  expect(pageErrors).toEqual([]);
+
+  const finalEvidence = await page.screenshot({ animations: 'disabled' });
+  await testInfo.attach(`actor-cohesive-runtime-${testInfo.project.name}`, {
+    body: finalEvidence,
+    contentType: 'image/png',
+  });
+});
+
 test('captures current stage-gate visual evidence', async ({ page }, testInfo) => {
   await page.goto('/');
   await expect(page.getByTestId('game-root')).toBeVisible();
