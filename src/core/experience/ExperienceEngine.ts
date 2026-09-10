@@ -33,6 +33,7 @@ export type ExperienceCommandErrorCode =
   | 'hint-already-used'
   | 'unknown-tool'
   | 'tool-not-allowed'
+  | 'stale-command'
   | 'stale-tool-request'
   | 'invalid-tool-parameters';
 
@@ -224,6 +225,7 @@ export class ExperienceEngine {
   }
 
   dispatch(command: ExperienceCommand): ExperienceState {
+    this.assertCommandAuthority(command.stepId, command.expectedRevision);
     switch (command.type) {
       case 'submit-outcome':
         return this.submitOutcome(command.outcomeId);
@@ -393,6 +395,16 @@ export class ExperienceEngine {
     });
     this.eventLog.push(freezeEvent({ type: 'hint-used', stepId: step.id, hintId, revision }));
     return this.state;
+  }
+
+  private assertCommandAuthority(stepId: ExperienceStepId, expectedRevision: number): void {
+    const step = this.requireCurrentStep();
+    if (stepId !== step.id || expectedRevision !== this.currentState.revision) {
+      throw new ExperienceCommandError(
+        'stale-command',
+        `Command for step "${stepId}" revision ${expectedRevision} is stale; active authority is step "${step.id}" revision ${this.currentState.revision}.`,
+      );
+    }
   }
 
   private requireCurrentStep(): ExperienceStep {
