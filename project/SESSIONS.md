@@ -127,20 +127,24 @@ Non-blocking A2 follow-ups:
 - Playwright evidence was directly reviewed on 1280×720 and 390×844: the `Let's explore English!` speech bubble is readable above Nova while she sits beside English, labels remain readable, the compact mobile composition remains usable, and Overview removes the active speech presentation without browser errors.
 
 ### A3-D4 — Character definition/assets + hub/place lifecycle integration
-**Status: NEXT**
+**Status: DONE**
 
-**Outcome:** the companion system is demonstrably replaceable and coexists cleanly with A2 navigation; character visuals/config are authored data and actor ownership across hub/place transitions follows one deliberate policy.
+**Outcome delivered:** character identity now includes authored visual assets behind replaceable definitions, and one deliberate active-scene ownership policy carries the companion cleanly through Hub → Place → Hub without sharing Phaser instances across scene boundaries.
 
-**Done when:**
-- character definition contains identity/presentation assets and supported actions/emotions without leaking child-specific terminology into generic contracts;
-- only justified reusable art/timing/behavior data from the historical prototype is ported through A2-compatible asset lifecycle seams;
-- prove replaceability with a lightweight alternate/test character definition using the same `PhaserActor` implementation;
-- define and implement companion ownership across hub → place → hub with no duplicate actors/listeners/assets after repeated traversal;
-- runtime debug visibility exposes sufficient actor state to diagnose lifecycle/command issues without production clutter;
-- desktop/mobile enter/return/re-entry succeeds with actor lifecycle active.
+**Evidence / implementation notes:**
+- `CharacterDefinition` now owns a persistent authored asset pack and visual texture key in addition to palette, actions, emotions, movement, action, and speech presentation data;
+- added a newly authored generic `companion-shell.svg` through the existing A2 `queueAssetPack` lifecycle seam; historical Pixi/Nova review again justified reusing behavior vocabulary/timing concepts only, not Pixi display code or renderer assets that would couple the new runtime;
+- startup now uses `BootScene` to preload the active companion's persistent assets once before entering the hub; `PhaserActor` consumes the loaded shell when present and retains a primitive fallback if character art fails;
+- added `TEST_COMPANION` (`Ember`) with a distinct identity/palette/asset key but the same `CharacterDefinition`/`PhaserActor` contract, plus deterministic coverage proving the renderer-facing definition is not Nova-specific;
+- actor ownership is explicitly **active-scene scoped**: the Hub owns one actor while active, the Place owns one actor while active, every shutdown disposes its actor and cancels operations, and the character texture cache remains persistent across transitions;
+- `PlaceholderPlaceScene` now renders the companion, keeps it responsive through semantic place anchors/reflow, interrupts it before leaving, and disposes it before releasing scene-owned place art;
+- `PhaserActor.getDebugState()` exposes renderer-local id/anchor/look/active operation state; Place runtime debug also reports actor object count and asset/cache/failure state without production UI clutter;
+- existing six-place Playwright traversal now exercises actor create/dispose/recreate across every enter/return cycle on desktop and mobile, including the authored-place failure fallback path;
+- CI run `34436700371` on implementation head `a2cc6ffd5a00b59b8b05809058d27368fa22b952` passed format/lint/tests/build, browser desktop/mobile flows, and Android debug APK;
+- Playwright artifacts were directly reviewed: Nova is visible and readable inside English and Music on 1280×720 and 390×844, remains clear of the mobile back control, the forced place-art fallback remains usable with the actor present, and returned hub captures after repeated traversal show no visible duplicate actor regression.
 
 ### A3-D5 — Cohesive actor integration + representative runtime hardening
-**Status: PLANNED**
+**Status: NEXT**
 
 **Outcome:** all A3 capabilities work together as one companion foundation ready for A4 Experience Engine commands without actor/runtime rewrites.
 
