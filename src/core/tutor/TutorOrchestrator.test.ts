@@ -130,10 +130,13 @@ describe('TutorOrchestrator', () => {
   });
 
   it('snapshots requests and deliveries into immutable JSON-safe values', async () => {
-    const mutableOutput = {
-      narration: [{ text: 'Original narration', mode: 'display-only' as const }],
-      actorCues: [{ type: 'action' as const, action: 'idle' as const }],
-    };
+    const narration: Array<{ text: string; mode: 'display-only' }> = [
+      { text: 'Original narration', mode: 'display-only' },
+    ];
+    const actorCues: Array<{ type: 'action'; action: 'idle' | 'celebrate' }> = [
+      { type: 'action', action: 'idle' },
+    ];
+    const mutableOutput: TutorOutput = { narration, actorCues };
     const provider = new ScriptedTutor([mutableOutput]);
     const { orchestrator, host } = createOrchestrator(provider);
     const engine = ExperienceEngine.start(COHESIVE_A4_EXPERIENCE_FIXTURE);
@@ -142,8 +145,8 @@ describe('TutorOrchestrator', () => {
     expect(result.status).toBe('delivered');
     if (result.status !== 'delivered') throw new Error('Expected delivered tutor turn.');
 
-    mutableOutput.narration[0]!.text = 'Caller changed this later';
-    mutableOutput.actorCues[0]!.action = 'celebrate';
+    narration[0]!.text = 'Caller changed this later';
+    actorCues[0]!.action = 'celebrate';
 
     expect(result.delivery.output.narration[0]?.text).toBe('Original narration');
     expect(result.delivery.output.actorCues[0]).toEqual({ type: 'action', action: 'idle' });
