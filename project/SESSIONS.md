@@ -142,19 +142,22 @@ Non-blocking A3 follow-ups:
 - no React/Phaser/rendering/navigation surface changed, so delivery visual QA was intentionally not run.
 
 ### A4-D4 — Tool permissions + authored content validation boundary
-**Status: NEXT**
+**Status: DONE**
 
-Add bounded tool/effect declarations and permission enforcement as an engine-level authority seam for later A5/A6 hosts. Definitions declare which educational/product effects a step may request; runtime requests are validated against the active step/state and emitted as typed approved intents rather than executing renderer/backend/model work directly. Expand content validation to catch contradictory policies, invalid assessment/hint/retry configuration, impossible completion paths, and undeclared tool references.
+**Outcome delivered:** added a bounded engine-owned tool/effect authority seam for later A5/A6 hosts plus stronger authored-policy validation. Experiences can declare typed world/product effects and parameter contracts; individual steps explicitly allow a subset; runtime requests are checked against active step identity and engine revision before producing immutable approved intents. The engine still executes no renderer, backend, native, or model work.
 
-**Done when:**
-- unauthorized or out-of-state tool/effect requests are deterministically rejected and cannot mutate engine truth;
-- approved requests produce typed intents/events suitable for a future host adapter without importing Phaser/model/backend code;
-- validation reports actionable path/id-specific diagnostics for malformed policy, assessment, transition, and tool declarations;
-- tests include allowed/denied tool requests, stale-step requests, malformed declarations, and graph/policy combinations that cannot complete safely;
-- focused tests/typecheck/build pass and CI remains provider-free.
+**Implementation/evidence notes:**
+- `ExperienceDefinition` now supports framework-independent tool declarations with stable ids, `world-effect`/`product-effect` kinds, typed primitive parameter declarations, and per-step `allowedToolIds`;
+- `ExperienceEngine.requestTool()` requires the request's step id and expected revision to match current authority, rejects unknown/unauthorized/stale requests and missing/unknown/wrong-type parameters without state/event mutation, and returns an immutable `ExperienceToolIntent` only after authorization;
+- approved intent issuance advances engine revision as authority bookkeeping and appends a typed `tool-intent-approved` event, while leaving educational step/assessment truth unchanged; the host remains responsible for executing or presenting the approved effect;
+- approved tool events are JSON-safe and checkpoint/resume parsing preserves them, so a future host can reconstruct authoritative intent history without provider-specific state;
+- validation now reports duplicate/invalid tool declarations, duplicate parameters, undeclared/duplicate step permissions, contradictory assessment result outcomes, empty/duplicate normalized accepted answers, and reachable graph regions with no path to completion using step/tool/parameter ids where relevant;
+- focused tests cover allowed typed intents, denied/unknown tools, malformed parameters, stale revision and stale-step requests, checkpoint round-trip, malformed tool declarations, impossible completion cycles, and contradictory assessment policy;
+- focused CI evidence: run `34471085528` quality job passed format, package-boundary/typecheck lint, all unit tests, and production build on implementation head `fbbaeaadc961b2033e520d8c0f7940549d7bf929`;
+- no React/Phaser/rendering/navigation surface changed, so delivery visual QA was intentionally not run.
 
 ### A4-D5 — Cohesive representative experience + engine hardening
-**Status: PLANNED**
+**Status: NEXT**
 
 Exercise the full A4 engine coherently with one representative authored experience fixture that combines branching, deterministic assessment, retry, hint use, approved/denied tool intents, checkpoint/resume, restart, completion, and event/state inspection. Harden command ordering, stale/duplicate submissions, terminal-state behavior, immutability boundaries, and deterministic replay-equivalence where applicable. Keep this as engine integration evidence, not an A6 visual lesson.
 
