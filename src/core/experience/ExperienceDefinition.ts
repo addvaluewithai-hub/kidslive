@@ -3,15 +3,33 @@ export type ExperienceVersion = string;
 export type ExperienceStepId = string;
 export type ExperienceOutcomeId = string;
 export type AssessmentHintId = string;
+export type ExperienceToolId = string;
+export type ExperienceToolParameterValue = string | number | boolean;
 
 export interface ExperienceTransition {
   readonly on: ExperienceOutcomeId;
   readonly to: ExperienceStepId | 'complete';
 }
 
+export type ExperienceToolKind = 'world-effect' | 'product-effect';
+export type ExperienceToolParameterType = 'string' | 'number' | 'boolean';
+
+export interface ExperienceToolParameterDeclaration {
+  readonly id: string;
+  readonly type: ExperienceToolParameterType;
+  readonly required: boolean;
+}
+
+export interface ExperienceToolDeclaration {
+  readonly id: ExperienceToolId;
+  readonly kind: ExperienceToolKind;
+  readonly parameters: readonly ExperienceToolParameterDeclaration[];
+}
+
 interface ExperienceStepBase {
   readonly id: ExperienceStepId;
   readonly transitions: readonly ExperienceTransition[];
+  readonly allowedToolIds?: readonly ExperienceToolId[];
 }
 
 export interface InstructionExperienceStep extends ExperienceStepBase {
@@ -53,7 +71,23 @@ export interface ExperienceDefinition {
   readonly id: ExperienceId;
   readonly version: ExperienceVersion;
   readonly initialStepId: ExperienceStepId;
+  readonly tools?: readonly ExperienceToolDeclaration[];
   readonly steps: readonly ExperienceStep[];
+}
+
+export interface ExperienceToolRequest {
+  readonly toolId: ExperienceToolId;
+  readonly stepId: ExperienceStepId;
+  readonly expectedRevision: number;
+  readonly parameters: Readonly<Record<string, ExperienceToolParameterValue>>;
+}
+
+export interface ExperienceToolIntent {
+  readonly toolId: ExperienceToolId;
+  readonly kind: ExperienceToolKind;
+  readonly stepId: ExperienceStepId;
+  readonly parameters: Readonly<Record<string, ExperienceToolParameterValue>>;
+  readonly revision: number;
 }
 
 export type ExperienceCommand =
@@ -125,6 +159,14 @@ export type ExperienceEvent =
       readonly type: 'hint-used';
       readonly stepId: ExperienceStepId;
       readonly hintId: AssessmentHintId;
+      readonly revision: number;
+    }
+  | {
+      readonly type: 'tool-intent-approved';
+      readonly toolId: ExperienceToolId;
+      readonly kind: ExperienceToolKind;
+      readonly stepId: ExperienceStepId;
+      readonly parameters: Readonly<Record<string, ExperienceToolParameterValue>>;
       readonly revision: number;
     }
   | {
