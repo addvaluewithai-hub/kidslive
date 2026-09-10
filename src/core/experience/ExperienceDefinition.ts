@@ -90,19 +90,24 @@ export interface ExperienceToolIntent {
   readonly revision: number;
 }
 
+interface ExperienceCommandAuthority {
+  readonly stepId: ExperienceStepId;
+  readonly expectedRevision: number;
+}
+
 export type ExperienceCommand =
-  | {
+  | (ExperienceCommandAuthority & {
       readonly type: 'submit-outcome';
       readonly outcomeId: ExperienceOutcomeId;
-    }
-  | {
+    })
+  | (ExperienceCommandAuthority & {
       readonly type: 'submit-assessment';
       readonly answer: string;
-    }
-  | {
+    })
+  | (ExperienceCommandAuthority & {
       readonly type: 'use-hint';
       readonly hintId: AssessmentHintId;
-    };
+    });
 
 export type ExperienceStatus = 'running' | 'completed';
 export type AssessmentResult = 'retrying' | 'correct' | 'exhausted';
