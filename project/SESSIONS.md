@@ -144,20 +144,22 @@ Non-blocking A2 follow-ups:
 - Playwright artifacts were directly reviewed: Nova is visible and readable inside English and Music on 1280×720 and 390×844, remains clear of the mobile back control, the forced place-art fallback remains usable with the actor present, and returned hub captures after repeated traversal show no visible duplicate actor regression.
 
 ### A3-D5 — Cohesive actor integration + representative runtime hardening
-**Status: NEXT**
+**Status: DONE**
 
-**Outcome:** all A3 capabilities work together as one companion foundation ready for A4 Experience Engine commands without actor/runtime rewrites.
+**Outcome delivered:** A3's actor capabilities are now exercised together through one deterministic runtime contract and repeated scene ownership flow, with structured lifecycle metrics proving bounded actors/tweens/listeners across resize and Hub → Place → Hub cycles.
 
-**Done when:**
-- one representative scripted flow combines spawn, movement, look, emotion, action, speech presentation, interruption, resize, place transition, return, and cleanup;
-- generic callers depend on `WorldActor`, not `PhaserActor`, character identity, or Phaser scene internals;
-- repeated scripted/navigation cycles reveal no duplicate display objects/listeners/tweens, unresolved operations, or scene-owned asset leaks;
-- touch/mobile composition remains usable at the added actor density;
-- refresh representative Android frame-pacing evidence if final A3 density is materially representative; never fabricate physical-device evidence;
-- lightweight deterministic checks, browser flow, and visual review pass, leaving A3 feature-complete for Q.
+**Evidence / implementation notes:**
+- added a structured dev-only runtime debug snapshot with typed metrics while keeping Phaser a type-only dependency so deterministic unit tests do not boot the renderer;
+- hub/place debug snapshots now expose actor count, tween count, resize-listener count, and actor operation state in addition to human-readable detail;
+- added a representative Playwright flow that exercises focus/scripted movement-look-emotion-action-speech behavior, interruption by resize, responsive reflow, place entry, return, and three repeated ownership cycles;
+- each settled scene asserts exactly one actor and zero active tweens; repeated cycles assert stable hub/place object counts and stable resize-listener counts, with place actor operations returning to `idle/idle/silent`;
+- the browser evidence initially exposed interaction flakiness after resize because tests mixed game-space coordinates with CSS canvas-space coordinates; the final helper explicitly maps through current canvas bounds for both pointer and touch input rather than weakening lifecycle assertions;
+- final CI run `34442537653` on implementation head `aee687f59ab30df61bcc516280cd45e9e1026de9` passed format/lint/tests/build, the complete desktop/mobile Playwright stage gate, and Android debug APK;
+- final Playwright artifacts were directly reviewed: regular 390×844 hub/place/fallback captures remain readable and usable with the actor present, and the resized 960×680 / 430×760 cohesive-flow captures show a single visible companion with no duplicate rendering regression;
+- no physical-device FPS number was fabricated: D-006 still makes real Android hardware authoritative for frame pacing, so representative physical profiling remains a follow-up for a device-equipped run rather than a CI claim.
 
 ### A3-Q — Phase QA / critique
-**Status: PLANNED**
+**Status: NEXT**
 
 Perform the full evidence-based A3 review against `TASKS.md`, `ARCHITECTURE.md`, D-007, `TESTING.md`, and `STAGE_GATES.md`. Review architecture/replaceability, actor lifecycle/interruption resilience, product/visual quality, deterministic CI boundaries, representative performance evidence, and safety/privacy implications. Record blocking and non-blocking findings; do not start A4.
 
