@@ -1,4 +1,5 @@
 import type {
+  AssessmentExperienceStep,
   ExperienceDefinition,
   ExperienceStep,
   ExperienceStepId,
@@ -12,7 +13,12 @@ export type ExperienceValidationIssueCode =
   | 'missing-initial-step'
   | 'duplicate-outcome'
   | 'invalid-transition-target'
-  | 'unreachable-step';
+  | 'unreachable-step'
+  | 'assessment-no-accepted-answers'
+  | 'assessment-invalid-max-attempts'
+  | 'assessment-missing-outcome'
+  | 'duplicate-hint-id'
+  | 'assessment-invalid-hint-policy';
 
 export interface ExperienceValidationIssue {
   readonly code: ExperienceValidationIssueCode;
@@ -34,6 +40,68 @@ export class ExperienceDefinitionValidationError extends Error {
     super(`Experience definition is invalid: ${issues.map((issue) => issue.message).join('; ')}`);
     this.name = 'ExperienceDefinitionValidationError';
     this.issues = issues;
+  }
+}
+
+function inspectAssessment(
+  step: AssessmentExperienceStep,
+  outcomes: ReadonlySet<string>,
+  issues: ExperienceValidationIssue[],
+): void {
+  if (step.assessment.acceptedAnswers.length === 0) {
+    issues.push({
+      code: 'assessment-no-accepted-answers',
+      stepId: step.id,
+      message: `Assessment step "${step.id}" must declare at least one accepted answer.`,
+    });
+  }
+
+  if (!Number.isInteger(step.assessment.maxAttempts) || step.assessment.maxAttempts < 1) {
+    issues.push({
+      code: 'assessment-invalid-max-attempts',
+      stepId: step.id,
+      message: `Assessment step "${step.id}" maxAttempts must be a positive integer.`,
+    });
+  }
+
+  for (const outcomeId of [
+    step.assessment.correctOutcomeId,
+    step.assessment.exhaustedOutcomeId,
+  ]) {
+    if (!outcomes.has(outcomeId)) {
+      issues.push({
+        code: 'assessment-missing-outcome',
+        stepId: step.id,
+        outcomeId,
+        message: `Assessment step "${step.id}" references missing outcome "${outcomeId}".`,
+      });
+    }
+  }
+
+  const hintIds = new Set<string>();
+  for (const hint of step.assessment.hints) {
+    if (hintIds.has(hint.id)) {
+      issues.push({
+        code: 'duplicate-hint-id',
+        stepId: step.id,
+        message: `Assessment step "${step.id}" declares hint "${hint.id}" more than once.`,
+      });
+    }
+    hintIds.add(hint.id);
+
+    if (
+      hint.id.trim().length === 0 ||
+      hint.body.trim().length === 0 ||
+      !Number.isInteger(hint.availableAfterAttempt) ||
+      hint.availableAfterAttempt < 0 ||
+      hint.availableAfterAttempt >= step.assessment.maxAttempts
+    ) {
+      issues.push({
+        code: 'assessment-invalid-hint-policy',
+        stepId: step.id,
+        message: `Assessment step "${step.id}" hint "${hint.id}" has an invalid authored availability policy.`,
+      });
+    }
   }
 }
 
@@ -65,6 +133,8 @@ function inspectTransitions(
       });
     }
   }
+
+  if (step.kind === 'assessment') inspectAssessment(step, outcomes, issues);
 }
 
 function findReachableSteps(

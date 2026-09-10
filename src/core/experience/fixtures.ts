@@ -33,3 +33,48 @@ export const BRANCHING_EXPERIENCE_FIXTURE: ExperienceDefinition = {
     },
   ],
 };
+
+export const ASSESSMENT_EXPERIENCE_FIXTURE: ExperienceDefinition = {
+  id: 'a4-assessment-demo',
+  version: '1',
+  initialStepId: 'prompt',
+  steps: [
+    {
+      id: 'prompt',
+      kind: 'instruction',
+      transitions: [{ on: 'continue', to: 'planet-check' }],
+    },
+    {
+      id: 'planet-check',
+      kind: 'assessment',
+      assessment: {
+        acceptedAnswers: ['Mercury'],
+        normalization: 'trim-casefold',
+        maxAttempts: 3,
+        correctOutcomeId: 'correct',
+        exhaustedOutcomeId: 'exhausted',
+        hints: [
+          {
+            id: 'first-letter',
+            body: 'The answer starts with M.',
+            availableAfterAttempt: 1,
+          },
+        ],
+      },
+      transitions: [
+        { on: 'correct', to: 'success' },
+        { on: 'exhausted', to: 'review' },
+      ],
+    },
+    {
+      id: 'success',
+      kind: 'instruction',
+      transitions: [{ on: 'finish', to: 'complete' }],
+    },
+    {
+      id: 'review',
+      kind: 'instruction',
+      transitions: [{ on: 'finish', to: 'complete' }],
+    },
+  ],
+};
