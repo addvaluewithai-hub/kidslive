@@ -37,6 +37,8 @@ export type TutorAuthorityBridgeResult =
       readonly message: string;
     };
 
+type TutorAuthorityRejection = Extract<TutorAuthorityBridgeResult, { readonly status: 'rejected' }>;
+
 export interface TutorAuthorityAuditRecord {
   readonly sessionId: string;
   readonly turnId: string;
@@ -49,9 +51,9 @@ export interface TutorAuthorityAuditSink {
 }
 
 export class TutorAuthorityBridgeError extends Error {
-  readonly result: Extract<TutorAuthorityBridgeResult, { readonly status: 'rejected' }>;
+  readonly result: TutorAuthorityRejection;
 
-  constructor(result: Extract<TutorAuthorityBridgeResult, { readonly status: 'rejected' }>) {
+  constructor(result: TutorAuthorityRejection) {
     super(result.message);
     this.name = 'TutorAuthorityBridgeError';
     this.result = result;
@@ -96,7 +98,7 @@ function parseParameters(value: unknown): Readonly<Record<string, ExperienceTool
   return Object.freeze(parsed);
 }
 
-function malformed(proposalType: string, message: string): TutorAuthorityBridgeResult {
+function malformed(proposalType: string, message: string): TutorAuthorityRejection {
   return Object.freeze({
     status: 'rejected',
     proposalType,
@@ -105,7 +107,7 @@ function malformed(proposalType: string, message: string): TutorAuthorityBridgeR
   });
 }
 
-function parseProposal(value: unknown): TutorAuthorityProposal | TutorAuthorityBridgeResult {
+function parseProposal(value: unknown): TutorAuthorityProposal | TutorAuthorityRejection {
   if (!isRecord(value)) return malformed('unknown', 'Tutor authority proposal must be a plain object.');
   const proposalType = typeof value.type === 'string' ? value.type : 'unknown';
   if (!validAuthority(value)) {
@@ -180,9 +182,9 @@ function parseProposal(value: unknown): TutorAuthorityProposal | TutorAuthorityB
 }
 
 function isRejected(
-  result: TutorAuthorityProposal | TutorAuthorityBridgeResult,
-): result is Extract<TutorAuthorityBridgeResult, { readonly status: 'rejected' }> {
-  return 'status' in result && result.status === 'rejected';
+  result: TutorAuthorityProposal | TutorAuthorityRejection,
+): result is TutorAuthorityRejection {
+  return 'status' in result;
 }
 
 export class TutorAuthorityBridge {
