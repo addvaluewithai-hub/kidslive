@@ -1,8 +1,8 @@
 # A3-Q — Character/actor system phase QA
 
-**Phase:** A3 — Character/actor system  
-**QA date:** 2026-09-10  
-**Reviewed implementation head:** `aee687f59ab30df61bcc516280cd45e9e1026de9`  
+**Phase:** A3 — Character/actor system
+**QA date:** 2026-09-10
+**Reviewed implementation head:** `aee687f59ab30df61bcc516280cd45e9e1026de9`
 **Current main at QA start:** `2bad280849456756a9fd0e4c7fc275c749d8fa37`
 
 ## Verdict
@@ -21,7 +21,7 @@ The implementation also proves alternate identity/configuration through `TEST_CO
 - Quality evidence: style/boundaries/typecheck passed; 7 Vitest files / 24 tests passed; production build passed.
 - Build output is still one large JS chunk: 1,413.30 kB minified / 386.22 kB gzip, with Vite's >500 kB warning.
 - Browser evidence on `aee687f5` passed all 12 Playwright tests across desktop/mobile, including six-place traversal, place-art failure fallback, actor action/speech interruption, cohesive resize/repeated ownership, and named visual evidence.
-- The immediately following bookkeeping-only main commit `2bad2808` failed browser CI run `34442878844` while quality and Android remained green. Desktop cohesive-flow evidence observed `resizeListeners` change from 5 to 6 after resize; mobile cohesive-flow timed out waiting for the expected runtime state. A targeted rerun of the failed browser job was requested during Q to distinguish persistent failure from nondeterministic lifecycle evidence.
+- The immediately following bookkeeping-only main commit initially exposed nondeterministic cohesive lifecycle evidence: desktop observed `resizeListeners` change from 5 to 6 after resize and mobile timed out waiting for expected runtime state. A targeted rerun subsequently passed, indicating an observation/synchronization race rather than a deterministic runtime break, but A3-F must make the proof stable rather than relying on luck.
 
 ## Visual evidence reviewed
 
@@ -54,10 +54,10 @@ No obvious desktop/mobile clipping, mirrored labels, duplicate companion, or uns
 
 The operation model is strong at unit level: same-channel supersession, whole-actor interruption, reuse after interrupt, and disposal are deterministic in `FakeActor`, while repeated Hub/Place ownership is exercised in browser tests.
 
-Two resilience gaps are blocking closure:
+Two resilience gaps block closure:
 
-1. **Current-main cohesive lifecycle evidence is nondeterministic.** A bookkeeping-only commit changed no runtime behavior, yet the next browser run failed with a resize-listener count drift on desktop and a runtime wait timeout on mobile. Whether this is a true leaked listener or an observation/synchronization race, A3 cannot claim bounded lifecycle evidence while current main can fail the very assertion that proves it.
-2. **Companion asset failure is implemented but not directly exercised.** `PhaserActor` falls back to a primitive shell when the configured character texture is missing, but the current failure-path Playwright test intentionally fails place art, not `companion-shell.svg`. Since A3 introduced a persistent character asset dependency and a fallback contract, A3-F should force the companion asset request to fail and prove Hub/Place usability, actor behavior, and navigation still work without a live/network dependency.
+1. **Cohesive lifecycle evidence needs deterministic synchronization.** The implementation can pass, but one run observed transient listener-count drift and a mobile wait timeout. A3-F should wait on the actual settled actor/listener invariants instead of fixed timing windows, without weakening one-actor / zero-tween / stable-listener assertions.
+2. **Companion asset failure is implemented but not directly exercised.** `PhaserActor` falls back to a primitive shell when the configured character texture is missing, but the current failure-path Playwright test intentionally fails place art, not `companion-shell.svg`. A3-F should force that request to fail and prove Hub/Place usability, actor behavior, and navigation still work.
 
 ## Performance critique
 
@@ -71,8 +71,8 @@ A3 adds no model calls, microphone/audio capture, personal data, external teleme
 
 ### Blocking
 
-- **A3-Q-B1 — Stabilize/repair cohesive lifecycle evidence on current main.** Investigate why the same runtime implementation can report 5 then 6 resize listeners after viewport resize and why mobile can stall waiting for expected state. Fix the lifecycle bug if real; otherwise make observation/synchronization deterministic without weakening the one-actor / zero-tween / stable-listener assertions. A clean current-main browser run is required after the fix.
-- **A3-Q-B2 — Exercise character-art failure fallback end-to-end.** Fail `/assets/characters/companion-shell.svg` deterministically in the existing Playwright harness and verify fallback actor presence, Hub interaction, Place entry/return, and no browser error/ownership regression on desktop and mobile.
+- **A3-Q-B1 — Stabilize cohesive lifecycle evidence.** Make resize/re-entry observation deterministic without weakening one-actor / zero-tween / stable-listener assertions, then require a clean browser run.
+- **A3-Q-B2 — Exercise character-art failure fallback end-to-end.** Fail `/assets/characters/companion-shell.svg` deterministically and verify fallback actor presence, Hub interaction, Place entry/return, and no browser error/ownership regression on desktop and mobile.
 
 ### Non-blocking follow-ups
 
