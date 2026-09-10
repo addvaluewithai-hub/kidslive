@@ -1,11 +1,18 @@
-import type {
-  ActorAction,
-  ActorAnchor,
-  ActorCommand,
-  ActorEmotion,
-  ActorTarget,
-  WorldActor,
+import {
+  ActorOperationCancelledError,
+  type ActorAction,
+  type ActorAnchor,
+  type ActorCommand,
+  type ActorEmotion,
+  type ActorTarget,
+  type WorldActor,
 } from './WorldActor';
+
+type PendingMovement = {
+  target: ActorAnchor;
+  resolve: () => void;
+  reject: (error: Error) => void;
+};
 
 export class FakeActor implements WorldActor {
   readonly commands: ActorCommand[] = [];
@@ -15,11 +22,33 @@ export class FakeActor implements WorldActor {
   lastSpokenText?: string;
   lastAction: ActorAction = 'idle';
   disposed = false;
+  private pendingMovement?: PendingMovement;
 
-  async moveTo(target: ActorAnchor) {
+  constructor(private readonly options: { manualMovement?: boolean } = {}) {}
+
+  moveTo(target: ActorAnchor): Promise<void> {
     this.assertActive();
-    this.currentAnchor = { ...target };
     this.commands.push({ type: 'moveTo', target: { ...target } });
+    this.cancelPendingMovement('Actor movement superseded by a newer moveTo request');
+
+    if (!this.options.manualMovement) {
+      this.currentAnchor = { ...target };
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      this.pendingMovement = { target: { ...target }, resolve, reject };
+    });
+  }
+
+  completeMovement() {
+    this.assertActive();
+    const movement = this.pendingMovement;
+    if (!movement) return false;
+    this.pendingMovement = undefined;
+    this.currentAnchor = { ...movement.target };
+    movement.resolve();
+    return true;
   }
 
   lookAt(target: ActorTarget) {
@@ -48,8 +77,16 @@ export class FakeActor implements WorldActor {
 
   dispose() {
     if (this.disposed) return;
+    this.cancelPendingMovement('Actor disposed during movement');
     this.disposed = true;
     this.commands.push({ type: 'dispose' });
+  }
+
+  private cancelPendingMovement(reason: string) {
+    const movement = this.pendingMovement;
+    if (!movement) return;
+    this.pendingMovement = undefined;
+    movement.reject(new ActorOperationCancelledError(reason));
   }
 
   private assertActive() {
