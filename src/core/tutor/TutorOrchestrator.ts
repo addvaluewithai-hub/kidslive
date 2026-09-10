@@ -170,7 +170,9 @@ export class TutorOrchestrator {
 
   cancelActiveTurn(reason = 'Tutor turn cancelled'): boolean {
     if (this.activeTurn === null) return false;
-    this.activeTurn.token.cancel(reason);
+    const { turnId, token } = this.activeTurn;
+    token.cancel(reason);
+    this.host.interrupt(turnId, reason);
     this.activeTurn = null;
     return true;
   }

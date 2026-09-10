@@ -30,8 +30,13 @@ export class ScriptedTutor implements TutorProvider {
 
 export class RecordingTutorHost implements TutorOutputHost {
   readonly deliveries: TutorTurnDelivery[] = [];
+  readonly interruptions: Array<{ turnId: string; reason: string }> = [];
 
   publish(delivery: TutorTurnDelivery): void {
     this.deliveries.push(delivery);
+  }
+
+  interrupt(turnId: string, reason: string): void {
+    this.interruptions.push({ turnId, reason });
   }
 }

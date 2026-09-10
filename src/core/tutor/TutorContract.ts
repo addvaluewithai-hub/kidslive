@@ -47,7 +47,9 @@ export interface TutorNarrationIntent {
 
 export type TutorActorCue =
   | { readonly type: 'emotion'; readonly emotion: 'neutral' | 'encouraging' | 'celebrating' | 'thinking' }
-  | { readonly type: 'action'; readonly action: 'idle' | 'acknowledge' | 'celebrate' };
+  | { readonly type: 'action'; readonly action: 'idle' | 'acknowledge' | 'celebrate' }
+  | { readonly type: 'move-to'; readonly anchorId: string }
+  | { readonly type: 'look-at'; readonly anchorId: string };
 
 export interface TutorOutput {
   readonly narration: readonly TutorNarrationIntent[];
@@ -67,6 +69,7 @@ export interface TutorTurnDelivery {
 
 export interface TutorOutputHost {
   publish(delivery: TutorTurnDelivery): void | Promise<void>;
+  interrupt(turnId: TutorTurnId, reason: string): void;
 }
 
 export type TutorTurnResult =
