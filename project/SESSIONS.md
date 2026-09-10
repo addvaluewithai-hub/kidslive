@@ -17,7 +17,7 @@ Every roadmap phase is run with a standard **8-session budget**:
 7. **F — Fix / polish**
 8. **P — Plan the next phase**
 
-The first five are the maximum implementation budget for the phase. They must be large, coherent outcomes rather than micro-tasks. If the implementation is genuinely complete before D5, do not invent filler work; move directly to Q. The normal operating model is therefore **up to five delivery sessions + three mandatory transition sessions**.
+The first five are the maximum implementation budget for the phase. They must be large, coherent outcomes rather than micro-tasks. If implementation is genuinely complete before D5, do not invent filler work; move directly to Q. The normal operating model is therefore **up to five delivery sessions + three mandatory transition sessions**.
 
 A phase must not silently consume a sixth ordinary delivery session because the first five were undersized. If the five-session decomposition proves too small, the planning was wrong: re-scope within the phase acceptance criteria, combine work more aggressively, or explicitly record a genuine blocker/exception.
 
@@ -98,97 +98,114 @@ Do not pre-plan distant phases into tiny tasks. Detailed decomposition belongs i
 
 ---
 
-# Current phase plan
+# Completed phase
 
 ## A2 — Planet Hub foundation
 
-A2 is using the new cadence retroactively. Work already completed before this cadence counts toward D1.
-
-### A2-D1 — Spatial hub + selection/navigation foundation
 **Status: DONE**
 
-**Outcome:** the user sees a responsive spatial hub with six authored places and can select/focus a place and return to overview.
+A2 completed D1–D5, dedicated Q, F, and P. The final stage gate is `project/gates/A2.md` with **PASS WITH FOLLOW-UP**. The Planet Hub now provides the stable scene/catalog/navigation/asset lifecycle foundation that A3 may build on rather than replace.
 
-Includes the current spatial composition, place selection, camera focus/navigation, responsive mobile/desktop layout, and overview behavior.
+A2 follow-ups that remain deliberately non-blocking:
+- revisit bundle startup/code-splitting when there is evidence of a real loading problem;
+- refresh physical Android frame pacing once actor/vertical-slice rendering density is representative;
+- replace small transition waits with stronger synchronization only if real CI flakiness appears.
 
-### A2-D2 — Enter/exit a place end-to-end
-**Status: DONE**
+---
 
-**Outcome:** from the Planet Hub, the user can choose a place, enter a real reusable placeholder place scene through an intentional transition, then return to the hub with expected state preserved.
+# Current phase plan
 
-**Done when:**
-- hub selection exposes a clear enter interaction;
-- a reusable place-scene contract exists rather than an English-only hack;
-- at least one authored placeholder place opens as its own Phaser scene/state;
-- transition in/out is coherent on touch and desktop;
-- returning restores or deliberately resets hub selection/camera state according to one documented rule;
-- repeated enter/return cycles do not accumulate duplicate listeners/display objects;
-- relevant tests/build/browser checks pass and the visible flow is reviewed.
+## A3 — Character/actor system
 
-**Delivered:** all authored hub places now share one place catalog and reusable placeholder scene. Enter/return uses Phaser scene transitions, returns with the selected place and focused camera restored, and resize deliberately resets to overview. Browser coverage exercises English enter/return twice on desktop and touch/mobile viewports to catch lifecycle regressions; the fixed HUD remains usable through camera zoom.
+**Phase outcome:** KidsLive has a character-agnostic `WorldActor` system with a real Phaser implementation, deterministic test actor, replaceable character definition/assets, bounded movement/look/emotion/action/speech behavior, and clean integration with the A2 hub/place lifecycle. The first KidsLive companion proves the system without becoming a domain assumption.
 
-### A2-D3 — Asset loading + lifecycle end-to-end
-**Status: DONE**
+**Architecture constraints:**
+- `WorldActor` is renderer-independent; Phaser details stay behind `PhaserActor`.
+- Do not add PixiJS or a second render/game loop. Inspect the historical Pixi/Nova implementation for reusable renderer-independent assets, timing, movement math, state names, and behavior only.
+- Character identity, voice, animation set, emotion vocabulary/presentation, and visual assets must come from replaceable definition/configuration rather than domain constants.
+- A3 must remain deterministic without a live tutor, TTS, or model provider. A5 owns provider orchestration later.
+- Reuse A2 scene lifecycle, asset loading, responsive layout, and runtime visibility rather than creating a parallel character runtime.
 
-**Outcome:** hub/place navigation uses a reusable authored asset-loading path with explicit ownership and lifecycle behavior.
-
-**Done when:**
-- one representative asset manifest/pack is loaded through a reusable path;
-- loading, ready, and error behavior are explicit enough for future authored worlds;
-- repeated scene entry does not blindly reload or leak resources;
-- persistent vs scene-local asset ownership is clear;
-- the flow remains deterministic without live services.
-
-**Delivered:** every authored place now resolves through a typed asset pack. The pack reuses one persistent portal-frame texture across place visits while each place marker is explicitly scene-owned and released on scene shutdown. `PlaceholderPlaceScene` queues only uncached textures, exposes loading progress and a safe authored-asset error state, renders the loaded SVG assets in the real place flow, and remains fully local/deterministic. Existing browser coverage entered and returned from English twice in the same session successfully, exercising cleanup/re-entry; desktop and mobile visual evidence showed the loaded portal/marker without clipping or broken return state.
-
-### A2-D4 — Runtime visibility + mobile/runtime hardening
-**Status: DONE**
-
-**Outcome:** the hub can be debugged and exercised confidently while remaining bounded and usable on representative mobile conditions.
-
-**Done when:**
-- development-only visibility exposes useful scene/camera/selection/asset facts;
-- production presentation remains clean;
-- resize/orientation/re-entry paths avoid duplicate objects/listeners;
-- touch targets and camera behavior are usable on the representative mobile viewport;
-- obvious unbounded update/allocation patterns are removed.
-
-**Delivered:** an opt-in development overlay (`?runtimeDebug=1`) now exposes scene, viewport, camera, mode/selection, object/tween counts, and place asset queue/cache/failure state on a bounded 250 ms cadence; normal development and production presentation stay clean. Hub HUD synchronization now runs only while camera zoom actually changes instead of rebuilding positioning work every frame. Both hub and place scenes explicitly remove resize listeners, stop scene tweens, and destroy debug state on shutdown; the place also releases scene-owned assets. `PlaceholderPlaceScene` now relayouts existing objects on resize/orientation changes instead of recreating them, and compact touch controls have larger hit areas with the place back action moved to a clear bottom-edge position. Visual review caught and fixed a mobile title/control overlap before completion. Final quality, browser/touch enter-return-reentry, build, and Android debug APK paths pass on the completed head.
-
-### A2-D5 — Cohesive hub integration
-**Status: DONE**
-
-**Outcome:** all A2 capabilities work together as one coherent Planet Hub foundation ready for the companion system to be added without rewriting hub fundamentals.
-
-**Done when:**
-- all six authored placeholders remain navigable;
-- selection, focus, enter/return, loading/lifecycle, responsive behavior, and dev visibility coexist cleanly;
-- repeated navigation is stable;
-- any rough integration gaps discovered while combining D1–D4 are resolved;
-- the phase is feature-complete enough to enter dedicated QA rather than adding more hub scope.
-
-**Delivered:** the authored place catalog is now the single source for place identity, responsive desktop/compact spatial positions, and derived asset packs, removing duplicated integration metadata between hub rendering, asset lifecycle, and browser exercise code. The representative browser traversal now selects, enters, returns from, and restores the hub across all six authored places on both desktop and touch/mobile projects. While integrating the six-place flow, the browser check exposed two test-contract defects rather than product regressions: the exhaustive desktop traversal needed an explicit realistic test budget, and mobile touchscreen coordinates needed conversion through the canvas page bounds rather than treating game coordinates as page coordinates. Both were corrected. Final CI on the completed implementation passes format/lint/typecheck/tests/build, the complete desktop/mobile six-place traversal, and Android debug APK packaging.
-
-### A2-Q — Phase QA / critique
-**Status: DONE**
-
-**Outcome:** perform the full evidence-based A2 review and leave a concrete blocking/non-blocking findings list. Do not treat this as another feature session.
-
-**Delivered:** reviewed acceptance, architecture boundaries, latest main CI, all eight current Playwright screenshots, resilience, performance risk, and safety/privacy impact. The review is recorded in `project/qa/A2-Q.md`. Two blocking findings were identified: focused hub composition visibly collides/clips with the fixed heading, especially on the representative mobile viewport, and the authored asset-error fallback has no deterministic failure-path evidence. Non-blocking follow-ups cover the current bundle-size warning, later representative-device performance evidence, and avoiding premature test synchronization machinery.
-
-### A2-F — Fix / polish
-**Status: DONE**
-
-**Outcome:** fix A2-Q findings, rerun focused checks/evidence, and leave A2 genuinely ready to close. If blockers remain, do not advance.
-
-**Required focus:** repair focused hub composition on desktop/mobile and deterministically exercise the authored asset failure/fallback/return path using the existing Playwright stack. Keep the session scoped to QA findings rather than new hub features.
-
-**Delivered:** the fixed Planet Hub HUD now has an explicit high-depth backdrop/safe region, so camera pan/zoom can preserve spatial context without moving world planets and labels visibly through the heading. Refreshed desktop and 390×844 mobile evidence shows the focused return state with a legible title/subtitle and no prior heading collision. The existing Playwright stack now deliberately aborts the authored place-marker SVG, verifies that the request is exercised, captures the safe fallback presentation, and returns to the hub on both desktop and mobile. The first failure-path check exposed an assertion timing issue despite the fallback rendering correctly; the assertion was changed to synchronize on the actual asset request rather than adding new test infrastructure. Final CI run `34416649282` passes formatting, architecture/lint/type checks, unit tests, production build, all eight browser tests across desktop/mobile including the forced asset failure, and Android debug APK packaging. The A2-Q blocking findings are resolved; non-blocking bundle/performance follow-ups remain deferred to representative later phases as documented.
-
-### A2-P — Close A2 + plan A3
+### A3-D1 — WorldActor contract + first production actor end-to-end
 **Status: NEXT**
 
-**Outcome:** record the final A2 gate/status, then decompose **A3 Character/actor system** into at most five substantial delivery sessions plus A3-Q, A3-F, and A3-P using what A2 taught us.
+**Outcome:** a real configured companion is visibly present in the production hub through a renderer-independent actor contract, with a deterministic test actor proving callers do not need Phaser.
+
+**Done when:**
+- inspect the historical Pixi/Nova source referenced by D-007 and explicitly choose only reusable renderer-independent concepts/assets; do not restore PixiJS;
+- define the minimal production `WorldActor` contract and supporting actor target/action/emotion types in a renderer-independent location;
+- implement `FakeActor`/`InstantActor` (or equivalent deterministic test actor) with observable command history/state;
+- implement the initial `PhaserActor` renderer/controller and create it through a character definition/config rather than hard-coded Nova/KidsLive identity inside generic actor logic;
+- wire one configured companion into `PlanetHubScene` using A2 lifecycle/asset seams so it is actually visible and survives normal responsive layout;
+- cleanly destroy/unsubscribe actor-owned Phaser objects on scene shutdown/recreation;
+- add focused deterministic tests for the contract/test actor plus relevant build/browser checks and visual review of desktop/mobile hub presence.
+
+### A3-D2 — Movement, look targets, emotion + responsive spatial behavior
+**Status: PLANNED**
+
+**Outcome:** the companion can inhabit the world rather than act as a static sprite: callers can move it to semantic anchors, direct attention, and change emotion/presentation consistently across desktop/mobile layout.
+
+**Done when:**
+- introduce renderer-independent semantic anchors/targets that do not expose Phaser coordinates to domain/caller code;
+- `moveTo` has deterministic completion/cancellation semantics and the Phaser implementation visibly interpolates/moves without teleport-only behavior;
+- `lookAt`/orientation and `setEmotion` affect actor presentation through replaceable definition data rather than one-character branching;
+- resize/orientation changes preserve a coherent actor position/target instead of duplicating or losing the actor;
+- overlapping movement/state requests have an explicit rule rather than leaking tweens/promises;
+- deterministic actor tests cover state/command semantics; browser visual evidence covers representative movement/emotion states on desktop/mobile.
+
+### A3-D3 — Bounded perform/speak sequencing + interruption semantics
+**Status: PLANNED**
+
+**Outcome:** the actor can execute bounded action and speech presentation commands in deterministic sequences, including interruption/cleanup, without introducing a live AI/TTS dependency or stealing authority from later Experience/Tutor systems.
+
+**Done when:**
+- `perform(action)` maps generic actor actions to configured Phaser presentation/animation behavior with explicit completion semantics;
+- `speak(text)` has a deterministic local/scripted presentation path suitable for A3 (for example bounded speech state/bubble or fake speech adapter) and does not require network audio/TTS;
+- sequential and overlapping move/perform/speak commands have documented ordering/interruption/cancellation behavior;
+- scene shutdown or actor disposal settles/cancels outstanding actor operations without dangling promises/tweens/listeners;
+- `FakeActor` can reproduce command sequences deterministically for A4/A5 tests later;
+- one visible scripted sequence exercises move/look/emotion/perform/speak end-to-end in the current runtime and is visually reviewed where presentation changes.
+
+### A3-D4 — Character definition/assets + hub/place lifecycle integration
+**Status: PLANNED**
+
+**Outcome:** the companion system is demonstrably replaceable and coexists cleanly with A2 navigation: character visuals/config are authored data, and actor ownership across hub/place transitions follows one deliberate lifecycle policy.
+
+**Done when:**
+- character definition contains identity/presentation assets and supported actions/emotions without leaking child-specific terminology into generic actor/runtime contracts;
+- port only justified reusable art/timing/behavior data from the historical prototype through the existing asset lifecycle or another compatible A2 seam;
+- prove replaceability with at least one lightweight alternate/test character definition using the same `PhaserActor` implementation, without building an A17 alternate-product prototype early;
+- define and implement whether the companion persists, is recreated, or is transferred across hub → place → hub transitions, with no duplicate actors/listeners/assets after repeated traversal;
+- runtime debug visibility exposes enough actor state to diagnose lifecycle/command issues without production clutter;
+- relevant desktop/mobile enter/return/re-entry flow succeeds with the actor present.
+
+### A3-D5 — Cohesive actor system integration + representative runtime hardening
+**Status: PLANNED**
+
+**Outcome:** all A3 capabilities work together as one companion foundation ready for A4 Experience Engine commands without needing actor/runtime rewrites.
+
+**Done when:**
+- one representative scripted companion flow combines spawn, movement, look, emotion, action, speech presentation, interruption, resize, place transition, return, and cleanup;
+- generic callers depend on `WorldActor`, not `PhaserActor`, character identity, or Phaser scene internals;
+- repeated scripted/navigation cycles do not reveal duplicate display objects, listeners, tweens, unresolved operations, or scene-owned asset leaks;
+- touch/mobile composition remains usable with the actor added to the hub/place density;
+- refresh representative Android frame-pacing evidence if the final A3 animation/art density is materially representative enough to make the A2 follow-up meaningful; record rather than fabricate evidence if no physical-device path is available;
+- lightweight deterministic checks, browser flow, and relevant visual review pass, leaving A3 feature-complete enough for Q rather than adding more companion scope.
+
+### A3-Q — Phase QA / critique
+**Status: PLANNED**
+
+**Outcome:** perform the full evidence-based A3 review against `TASKS.md`, `ARCHITECTURE.md`, D-007, `TESTING.md`, and `STAGE_GATES.md`. Review architecture/replaceability, actor lifecycle and interruption resilience, product/visual quality, deterministic CI boundaries, representative performance evidence, and any safety/privacy implications. Record blocking and non-blocking findings; do not turn Q into A4 work.
+
+### A3-F — Fix / polish
+**Status: PLANNED**
+
+**Outcome:** aggressively fix A3-Q blockers and high-value polish/regressions, rerun focused deterministic/visual/runtime evidence, and leave the actor system genuinely safe for A4 to consume. Do not add Experience Engine scope.
+
+### A3-P — Close A3 + plan A4
+**Status: PLANNED**
+
+**Outcome:** if A3 has no unresolved blocker, record `project/gates/A3.md`, mark A3 `DONE` and A4 current in `TASKS.md`, then decompose **A4 Experience Engine v1** into at most five substantial D sessions plus A4-Q, A4-F, and A4-P using what the actor integration taught us.
 
 ---
 
