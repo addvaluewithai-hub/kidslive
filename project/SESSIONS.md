@@ -76,135 +76,89 @@ Non-blocking A3 follow-ups:
 - keep A5 voice/tone/persona replaceable outside renderer semantics;
 - keep runtime debug UI development-only.
 
+## A4 — Experience Engine v1
+
+**Status: DONE**
+
+A4 completed D1–D5, Q, F, and P. The final stage gate is `project/gates/A4.md` with **PASS WITH FOLLOW-UP**. The platform now has a pure-TypeScript authored experience engine with deterministic graph transitions, assessment/retry/hint authority, bounded tool intents, checkpoint/restart semantics, semantic resume verification, immutable serializable state/events, authored-policy validation, and guarded step/revision host commands.
+
+A4-Q identified four blocking gaps: public mutation bypasses, structurally valid but semantically forgeable checkpoints, caller-owned mutable authored definitions, and non-finite numeric tool parameters. A4-F closed all four and added adversarial regression evidence. Focused implementation CI `34489766907` passed format, package boundaries/typecheck, unit/integration tests, and production build on implementation head `316497cb5c7a9e2826dd0dde899b340312b59f31`.
+
+A4-P also corrected the documentation-only final-newline failure seen on CI `34490166471`; that run otherwise passed browser stage-gate and Android debug APK.
+
+Non-blocking A4 follow-ups:
+- measure validation/runtime cost with representative authored graph/content density when A6/A15 make that evidence meaningful;
+- A5 must consume A4's guarded command/tool APIs instead of recreating educational truth in tutor/provider orchestration;
+- A11 persistence must keep checkpoint payloads untrusted and preserve semantic validation before restoration.
+
 ---
 
 # Current phase plan
 
-## A4 — Experience Engine v1
+## A5 — Tutor/AI orchestration v1
 
 **Status: IN PROGRESS**
 
-**Phase outcome:** KidsLive has a framework-independent authored experience engine that can validate and run deterministic step graphs, process bounded learner inputs and assessment transitions, apply retries/hints, checkpoint and resume safely, enforce declared tool permissions, and expose typed state/events suitable for later tutor/world hosts without giving AI or rendering code authority over educational truth.
+**Phase outcome:** KidsLive has a provider-independent tutor orchestration layer that can consume authoritative A4 experience state/events, turn bounded tutor decisions into narration/actor behavior/approved engine requests, coordinate speech/text and interruption lifecycles, expose deterministic observability, and degrade safely under slow/failing providers without ever giving a model authority over curriculum truth, assessment, rewards, or arbitrary product state.
 
 **Architecture constraints:**
-- all experience definitions, validation, transition logic, assessment truth, retries, hints, checkpoints, and permissions live in pure TypeScript with no Phaser, React, browser, native, network, persistence-provider, or model imports;
-- experience definitions describe educational intent and bounded product effects, not Nova-specific dialogue, Phaser coordinates, visual skins, or provider prompts;
-- the engine is authoritative for allowed transitions and assessment outcomes; future A5 tutor code may request or narrate actions but cannot bypass engine state/permissions;
-- no live AI/TTS/model provider is required for implementation or CI;
-- persistence in A4 is a serializable checkpoint/resume contract and deterministic test storage only; production backend/sync remains A11;
-- A4 should consume existing typed-event/actor seams only through framework-independent contracts where useful, without moving Phaser lifecycle into domain code.
+- tutor/model providers are adapters behind framework-independent contracts; no domain rule depends on a specific vendor, SDK, prompt format, model name, or network response shape;
+- A4 remains the sole educational authority: tutor orchestration may inspect state/events and submit guarded commands/tool requests, but cannot invent correctness, retries, hints, completion, progression, or permissions;
+- voice, persona, tone, and presentation configuration remain replaceable and separate from actor renderer identity and curriculum definitions;
+- orchestration must not own Phaser objects directly; actor effects go through `WorldActor`, while speech/text/audio use explicit adapter contracts;
+- deterministic `ScriptedTutor`, failure, and slow/cancellable test doubles are required; CI must never call a live AI/TTS provider;
+- A5 may define provider-neutral observability/events but must not build production analytics/backend persistence, which remain later roadmap phases;
+- keep child-safety/tool authority enforceable in code boundaries rather than prompt wording alone.
 
-### A4-D1 — Authored definition contract + deterministic graph runner end-to-end
-**Status: DONE**
-
-**Outcome delivered:** added the foundational pure-TypeScript Experience Engine contract, structural validator, authoritative deterministic graph runner, typed commands/events, immutable serializable state snapshots, and a representative branching authored fixture.
-
-**Implementation/evidence notes:**
-- `ExperienceDefinition` defines stable experience/version/step/outcome ids, instruction/activity steps, explicit authored transitions, typed commands, state, and engine events;
-- preflight validation catches empty identity/version, empty graphs, duplicate step ids/outcomes, missing initial steps, invalid transition targets, and unreachable authored steps with deterministic path/id-oriented diagnostics;
-- `ExperienceEngine.start()` refuses invalid definitions before execution; legal outcomes deterministically transition or complete, while unknown outcomes and terminal commands reject without mutating state/event history;
-- state/event getters return frozen copies so callers can inspect/serialize engine truth without receiving mutable authority;
-- representative fixture proves both direct and practice-loop branches through explicit completion;
-- tests cover valid branching, duplicate ids, bad references, duplicate outcomes, unreachable steps, missing initial state, illegal outcomes, terminal behavior, ordered events, and immutable/JSON-serializable snapshots;
-- focused CI evidence: run `34454645616` quality job passed format, package-boundary/typecheck lint, all unit tests, and production build on implementation head `0d6f278df044529669cade4e438b8ad9e619784d`;
-- no user-visible React/Phaser surface changed, so delivery visual QA was intentionally not added.
-
-### A4-D2 — Assessment transitions, retries, hints + mastery-safe state
-**Status: DONE**
-
-**Outcome delivered:** added engine-owned assessment steps and deterministic learner submission semantics end-to-end: authored normalization/correct-answer policy, bounded attempts, retry-vs-exhaustion behavior, authored hint availability, persistent assessment history, typed events, and success/failure graph branching without exposing educational authority to renderer or tutor code.
-
-**Implementation/evidence notes:**
-- `ExperienceDefinition` now distinguishes assessment steps and declares accepted answers, deterministic normalization, maximum attempts, correct/exhausted outcome ids, and authored hints with availability thresholds;
-- assessment commands are separate from ordinary authored outcomes, so callers cannot submit `correct`/`exhausted` directly to bypass engine evaluation;
-- submissions normalize and evaluate inside `ExperienceEngine`, append immutable attempt history, remain on-step while retries are available, and transition only on authoritative correctness or attempt exhaustion;
-- assessment state persists per step with attempts, used hints, and the current mastery-relevant result (`retrying`, `correct`, or `exhausted`), and nested snapshots/events are frozen and JSON-serializable for A4-D3;
-- hints are engine-authorized: unknown, premature, duplicate, post-resolution, and non-assessment hint requests reject without mutating state or event history; successful hint use is recorded and subsequent attempts capture which hints were used;
-- validation now rejects essential unsafe assessment definitions such as no accepted answers, non-positive attempt limits, missing configured assessment outcomes, duplicate hint ids, and impossible hint availability values; broader graph/policy validation remains in A4-D4;
-- representative fixture/tests cover immediate normalized success, retry-to-success, three-attempt exhaustion, hint-assisted success, direct-outcome bypass attempts, unknown/premature/duplicate hints, empty submissions, nested immutability, and malformed assessment policy;
-- focused CI evidence: run `34460581636` quality job passed style, package-boundary/typecheck lint, all unit tests, and production build on implementation head `a9dcda56e11dbfe1750e8abfaba0ad6ed2a2039e`;
-- no React/Phaser/rendering/navigation surface changed, so delivery visual QA was intentionally not run.
-
-### A4-D3 — Checkpoints, resume, restart + version-safe recovery
-**Status: DONE**
-
-**Outcome delivered:** added a versioned, framework-independent checkpoint contract with deterministic JSON round-tripping, exact state/event-history restoration, restart semantics, completed-run restoration, and fail-closed validation for malformed, mismatched, incompatible, or impossible snapshots.
-
-**Implementation/evidence notes:**
-- `ExperienceCheckpoint` is an explicit format-versioned envelope containing experience identity/version plus immutable authoritative engine state and ordered run events; no backend/provider/storage implementation was introduced;
-- `ExperienceEngine.checkpoint()` emits JSON-safe frozen snapshots, and `ExperienceEngine.resume()` validates the authored definition and the entire checkpoint before constructing restored authority;
-- resume restores current step, revision, assessment attempts/results, consumed hints, completion state, and prior ordered events without replaying or duplicating historical events;
-- checkpoint parsing rejects malformed fields/events, unsupported checkpoint format versions, mismatched experience ids, incompatible authored versions, unknown current steps, duplicate/invalid assessment state, undeclared hints, non-sequential attempts, impossible attempt counts, and inconsistent event revisions/status;
-- `restart()` deliberately resets the same engine to the authored initial step with revision 0, empty assessment/hint state, and one fresh `experience-started` event, discarding the previous run history by contract;
-- integration tests serialize through JSON as deterministic in-memory storage evidence, recreate the engine mid-assessment after an incorrect attempt + hint, continue both resumed and uninterrupted runs, and prove identical final state/events; completed checkpoints and invalid recovery paths are also covered;
-- the first test commit exposed a test-only error-code inference failure; it was corrected without weakening assertions;
-- focused CI evidence: run `34465429623` quality job passed format, package-boundary/typecheck lint, unit tests, and production build on implementation head `0a5ceeebaa62e14e3f00d9aa4f719172d4fc4548`;
-- no React/Phaser/rendering/navigation surface changed, so delivery visual QA was intentionally not run.
-
-### A4-D4 — Tool permissions + authored content validation boundary
-**Status: DONE**
-
-**Outcome delivered:** added a bounded engine-owned tool/effect authority seam for later A5/A6 hosts plus stronger authored-policy validation. Experiences can declare typed world/product effects and parameter contracts; individual steps explicitly allow a subset; runtime requests are checked against active step identity and engine revision before producing immutable approved intents. The engine still executes no renderer, backend, native, or model work.
-
-**Implementation/evidence notes:**
-- `ExperienceDefinition` now supports framework-independent tool declarations with stable ids, `world-effect`/`product-effect` kinds, typed primitive parameter declarations, and per-step `allowedToolIds`;
-- `ExperienceEngine.requestTool()` requires the request's step id and expected revision to match current authority, rejects unknown/unauthorized/stale requests and missing/unknown/wrong-type parameters without state/event mutation, and returns an immutable `ExperienceToolIntent` only after authorization;
-- approved intent issuance advances engine revision as authority bookkeeping and appends a typed `tool-intent-approved` event, while leaving educational step/assessment truth unchanged; the host remains responsible for executing or presenting the approved effect;
-- approved tool events are JSON-safe and checkpoint/resume parsing preserves them, so a future host can reconstruct authoritative intent history without provider-specific state;
-- validation now reports duplicate/invalid tool declarations, duplicate parameters, undeclared/duplicate step permissions, contradictory assessment result outcomes, empty/duplicate normalized accepted answers, and reachable graph regions with no path to completion using step/tool/parameter ids where relevant;
-- focused tests cover allowed typed intents, denied/unknown tools, malformed parameters, stale revision and stale-step requests, checkpoint round-trip, malformed tool declarations, impossible completion cycles, and contradictory assessment policy;
-- focused CI evidence: run `34471085528` quality job passed format, package-boundary/typecheck lint, all unit tests, and production build on implementation head `fbbaeaadc961b2033e520d8c0f7940549d7bf929`;
-- no React/Phaser/rendering/navigation surface changed, so delivery visual QA was intentionally not run.
-
-### A4-D5 — Cohesive representative experience + engine hardening
-**Status: DONE**
-
-**Outcome delivered:** hardened the host-facing command path against delayed/duplicate educational mutations and added one cohesive representative A4 fixture/test flow that exercises graph branching, approved/denied tools, assessment retry, hint use, checkpoint/resume, deterministic continuation, restart, completion, terminal rejection, and immutable inspection as one engine contract.
-
-**Implementation/evidence notes:**
-- every host-facing `ExperienceCommand` now carries active `stepId` plus `expectedRevision`; `dispatch()` verifies both against current authority before any mutation and rejects stale/delayed/replayed commands with `stale-command` without changing state or event history;
-- tool requests retain the equivalent step/revision guard, so duplicate approved effects and delayed tool intents fail closed just like educational commands;
-- `COHESIVE_A4_EXPERIENCE_FIXTURE` combines a real practice/direct branch, a typed world effect, a three-attempt normalized assessment with hint policy, success/review branches, and a success-only product effect without introducing renderer, tutor, provider, or audience-specific details;
-- integration evidence deliberately replays the same assessment command, hint command, and tool request and proves they cannot double-apply; unauthorized tool requests also leave authority unchanged;
-- a JSON checkpoint is taken after incorrect attempt + hint, resumed into a new engine, then completed; final authoritative state and ordered events are exactly equal to an uninterrupted execution of the same accepted command/effect sequence;
-- restart discards prior attempts/hints/tool history/revision and proves a clean alternate direct branch can complete from revision zero; a pre-restart command is stale against the new run;
-- completed experiences reject terminal commands without adding a second completion event, while state/events/tool parameters/checkpoints remain frozen and JSON-safe for future A5/A6 hosts;
-- focused CI evidence: run `34476462578` quality job passed format, package-boundary/typecheck lint, all unit tests, and production build on implementation head `10af0bbb1de036c5fec439d028daf96bfae80dde`;
-- no React/Phaser/rendering/navigation surface changed, so delivery visual QA was intentionally not run.
-
-### A4-Q — Phase QA / critique
-**Status: DONE**
-
-**QA record:** `project/qa/A4-Q.md` on reviewed main `58a79c75c42468d4729fe433e3e17a355e06224b`.
-
-**Evidence/critique outcome:** latest main CI `34476700575` was green across quality, browser stage-gate, and Android debug APK, and A4 introduced no user-visible rendering/audio surface requiring new visual or device-performance evidence. Phase-level adversarial contract review nevertheless found four blockers that must be fixed before A4 can close or A5 can begin:
-- public `submitOutcome` / `submitAssessment` / `useHint` mutators bypass the step/revision guard enforced by `dispatch()`, leaving a weaker external authority path;
-- checkpoint parsing validates structure and monotonic revisions but does not prove restored state/event history is semantically producible by the authored graph, allowing fabricated/skipped educational authority on resume;
-- the engine retains externally mutable authored-definition references after one-time validation, so caller mutation can invalidate transition/assessment/tool authority during a run;
-- numeric tool parameters accept `NaN`/infinite values even though approved intents/events/checkpoints are claimed to be JSON-safe.
-
-Non-blocking follow-ups remain large-content performance measurement when representative authored graphs exist, preserving the final guarded A4 API as A5's only authority path, and treating checkpoints as validated untrusted input when A11 persistence arrives.
-
-### A4-F — Fix / polish
-**Status: DONE**
-
-**Outcome delivered:** resolved all four A4-Q blocking authority/recovery findings without adding A5/A6 scope, and added adversarial evidence around the repaired boundaries.
-
-**Implementation/evidence notes:**
-- `dispatch()` is now the only public educational mutation path; outcome, assessment, and hint application helpers are private, so every host-facing educational mutation must satisfy active `stepId` + `expectedRevision` authority before state/events can change;
-- authored definitions are defensively deep-snapshotted and frozen before validation/start/resume, including transitions, tool declarations/parameters, per-step permissions, assessment accepted answers, policies, and hints; caller mutation after engine construction can no longer alter active educational authority;
-- resume now performs semantic checkpoint verification after structural parsing: event history is reconstructed from the authored initial step with exact revision advancement, required transition pairing, legal graph targets/completion, deterministic assessment correctness/result/hint sequencing, authored tool permission/parameter checks, and exact agreement between reconstructed authority and persisted state;
-- fabricated current steps/revisions/mastery/results/hints, skipped transitions, falsified assessment events, invented completion, extra assessment records, and events after completion fail closed before a resumed engine is constructed;
-- runtime and checkpoint semantic validation reject `NaN` and infinite numeric tool parameters, preserving JSON-safe approved intents/events/checkpoints;
-- engine/checkpoint/tool tests were migrated to the same guarded dispatch API A5 will consume, and dedicated mutation-isolation tests prove later caller changes to answers/transitions/permissions/tool parameter declarations do not affect started or resumed engines;
-- an incidental pre-existing A4-Q markdown trailing-whitespace failure was normalized as part of fix/polish; no product scope changed;
-- focused CI evidence: run `34489766907` quality job passed format, package boundaries/typecheck, all tests, and production build on implementation head `316497cb5c7a9e2826dd0dde899b340312b59f31`;
-- no React/Phaser/rendering/navigation/audio surface changed, so no new visual QA was required for A4-F.
-
-### A4-P — Close A4 + plan A5
+### A5-D1 — Provider-neutral tutor contract + deterministic orchestration kernel end-to-end
 **Status: NEXT**
 
-Only if A4 is genuinely ready: record `project/gates/A4.md`, mark A4 `DONE` and A5 current in `TASKS.md`, then decompose **A5 Tutor/AI orchestration v1** into at most five substantial end-to-end D sessions plus A5-Q/F/P. Preserve the post-development curriculum phases in `TASKS.md` without pulling curriculum production into current development.
+Build the core tutor request/response contract and orchestration state machine around authoritative A4 snapshots/events. Add deterministic scripted/fake tutor adapters, stable turn/request IDs, explicit bounded tutor outputs, cancellation/session lifecycle, and a host seam that can accept narration/actor intentions without executing educational authority itself.
+
+**Done when:** a representative authored experience can drive multiple tutor turns through a provider-neutral orchestrator using only deterministic adapters; outputs are typed/bounded and immutable/serializable where appropriate; stale/cancelled/completed sessions fail closed; no provider SDK, Phaser object, React component, browser API, or live model is required; focused typecheck/tests/build are green.
+
+### A5-D2 — Speech/text delivery + interruption and actor coordination
+**Status: PLANNED**
+
+Add provider-independent speech/text output contracts and coordinate them with `WorldActor` behavior so tutor turns can speak, display text intent, move/look/emote/perform bounded actor actions, and be interrupted/replaced cleanly. Include deterministic instant/slow/failure speech adapters and cancellation semantics that prevent late audio/actor completion from reviving stale turns.
+
+**Done when:** one tutor turn can coordinate text/speech and actor intentions end-to-end; a newer turn or explicit interruption deterministically cancels superseded work; slow/failing speech and actor operations settle into known states without hanging or mutating A4 authority; persona/tone/voice configuration remains replaceable; focused deterministic checks are green, with visual QA only if a user-visible surface is actually changed.
+
+### A5-D3 — Guarded Experience Engine command/tool bridge
+**Status: PLANNED**
+
+Connect bounded tutor decisions to A4 through the final guarded `dispatch()` and `requestTool()` APIs. Define explicit translation/authorization boundaries so tutor outputs may propose allowed learner-facing actions or product/world effects but can never submit correctness directly, bypass step/revision guards, broaden tool permissions, or execute arbitrary backend/native work.
+
+**Done when:** approved tutor proposals can cause legal A4 commands/tool intents through one audited bridge; unauthorized, malformed, stale, duplicate, or out-of-step proposals are rejected without authority mutation; engine rejection is observable to orchestration; tests prove a malicious/incorrect scripted tutor cannot override educational truth or undeclared permissions.
+
+### A5-D4 — Failure/slow-provider resilience + observable turn lifecycle
+**Status: PLANNED**
+
+Harden orchestration for provider timeout/failure/cancellation, malformed outputs, duplicate/late responses, speech failures, actor failures, and recoverable retries. Add provider-neutral structured lifecycle events/diagnostics with data-minimized payloads suitable for later analytics integration, plus deterministic failure/slow tutor fixtures.
+
+**Done when:** every provider/adapter failure path reaches a bounded terminal or recoverable orchestration state with no hung promises or stale side effects; late/duplicate responses cannot mutate current turns; diagnostics identify session/turn/provider-boundary failures without storing unnecessary learner content; deterministic failure/slow tests run without network access.
+
+### A5-D5 — Cohesive tutor session + orchestration hardening
+**Status: PLANNED**
+
+Exercise the whole A5 contract in one representative deterministic tutor session over the cohesive A4 experience: authored state/event observation, scripted narration, actor coordination, speech/text delivery, guarded assessment/hint/tool proposals, interruption, provider failure/recovery, completion, and disposal. Harden ordering, replay resistance, cleanup, and configuration isolation revealed by integration evidence.
+
+**Done when:** one deterministic end-to-end session proves the tutor makes the experience feel alive while A4 remains authoritative; uninterrupted and interrupted/recovered paths converge on valid deterministic authority; stale work after completion/disposal is inert; no live provider is needed; all A5 contracts remain provider/character/audience replaceable; focused typecheck/tests/build pass and any genuinely changed user-visible surface receives representative visual evidence.
+
+### A5-Q — Phase QA / critique
+**Status: PLANNED**
+
+Run the dedicated A5 phase critique from `TESTING.md` and `STAGE_GATES.md`. Review architecture/provider isolation, educational authority, tool safety, interruption and failure resilience, observability/data minimization, persona/voice replaceability, deterministic CI, and any user-visible evidence created during A5. Record concrete blocking and non-blocking findings; do not add features.
+
+### A5-F — Fix / polish
+**Status: PLANNED**
+
+Aggressively fix A5-Q blockers and high-value regressions, rerun focused deterministic/failure/interruption evidence and any relevant visual evidence, and keep A5 open if a real authority/safety/resilience blocker remains.
+
+### A5-P — Close A5 + plan A6
+**Status: PLANNED**
+
+Only if A5 is genuinely ready: record `project/gates/A5.md`, mark A5 `DONE` and A6 current in `TASKS.md`, then decompose **A6 English World vertical slice** into at most five substantial end-to-end delivery sessions plus A6-Q/F/P. A6 remains a platform/product vertical slice, not full English curriculum production; the post-development curriculum phases stay deferred until the development roadmap is complete.
 
 ---
 
