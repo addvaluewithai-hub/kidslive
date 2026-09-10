@@ -21,6 +21,7 @@ type ActiveMovement = {
 
 export class PhaserActor implements WorldActor {
   readonly container: Phaser.GameObjects.Container;
+  private readonly visual: Phaser.GameObjects.Container;
   private readonly face: Phaser.GameObjects.Arc;
   private readonly mouth: Phaser.GameObjects.Ellipse;
   private readonly glow: Phaser.GameObjects.Arc;
@@ -35,6 +36,7 @@ export class PhaserActor implements WorldActor {
     private readonly resolveAnchor: ActorAnchorResolver,
   ) {
     this.container = scene.add.container().setName(`actor:${definition.id}`).setDepth(20);
+    this.visual = scene.add.container();
 
     const shadow = scene.add.ellipse(0, 46, 66, 18, 0x000000, 0.25);
     this.glow = scene.add.circle(0, 0, 43, definition.palette.primary, 0.16);
@@ -57,7 +59,7 @@ export class PhaserActor implements WorldActor {
       })
       .setOrigin(0.5, 0);
 
-    this.container.add([
+    this.visual.add([
       shadow,
       this.glow,
       body,
@@ -68,8 +70,8 @@ export class PhaserActor implements WorldActor {
       antenna,
       antennaTip,
       badge,
-      name,
     ]);
+    this.container.add([this.visual, name]);
     this.container.setScale(definition.scale);
     this.setEmotion('neutral');
   }
@@ -204,7 +206,7 @@ export class PhaserActor implements WorldActor {
     if (!point) return;
     const direction = Math.sign(point.x - this.container.x);
     if (direction === 0) return;
-    this.container.setScale(this.definition.scale * direction, this.definition.scale);
+    this.visual.setScale(direction, 1);
   }
 
   private assertActive() {
