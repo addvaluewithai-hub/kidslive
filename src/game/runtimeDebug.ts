@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 
 export type RuntimeDebugMetric = string | number | boolean;
 
@@ -81,7 +81,7 @@ export class RuntimeDebugOverlay {
         metrics: {
           actors: actorObjects,
           tweens: scene.tweens.getTweens().length,
-          resizeListeners: scene.scale.listenerCount(Phaser.Scale.Events.RESIZE),
+          resizeListeners: scene.scale.listenerCount('resize'),
           ...source.metrics,
         },
       };
