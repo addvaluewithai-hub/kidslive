@@ -1,9 +1,9 @@
 # A5-Q — Tutor/AI orchestration v1 phase QA / critique
 
-**Phase:** A5 — Tutor/AI orchestration v1  
-**QA slot:** Q  
-**Date:** 2026-09-11  
-**Reviewed main:** `7b489431d54921566c2b43b9ca26516c2430e186`  
+**Phase:** A5 — Tutor/AI orchestration v1
+**QA slot:** Q
+**Date:** 2026-09-11
+**Reviewed main:** `7b489431d54921566c2b43b9ca26516c2430e186`
 **Latest reviewed CI:** `34525896943` — quality PASS, Android PASS, browser stage-gate FAILED on first attempt; failed browser job re-run requested during QA and was still in progress when this record was written.
 
 ## QA decision
