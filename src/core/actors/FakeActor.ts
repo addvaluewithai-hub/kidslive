@@ -8,10 +8,16 @@ import {
   type WorldActor,
 } from './WorldActor';
 
-type PendingMovement = {
-  target: ActorAnchor;
+type PendingOperation<T> = {
+  value: T;
   resolve: () => void;
   reject: (error: Error) => void;
+};
+
+type FakeActorOptions = {
+  manualMovement?: boolean;
+  manualActions?: boolean;
+  manualSpeech?: boolean;
 };
 
 export class FakeActor implements WorldActor {
@@ -22,14 +28,16 @@ export class FakeActor implements WorldActor {
   lastSpokenText?: string;
   lastAction: ActorAction = 'idle';
   disposed = false;
-  private pendingMovement?: PendingMovement;
+  private pendingMovement?: PendingOperation<ActorAnchor>;
+  private pendingAction?: PendingOperation<ActorAction>;
+  private pendingSpeech?: PendingOperation<string>;
 
-  constructor(private readonly options: { manualMovement?: boolean } = {}) {}
+  constructor(private readonly options: FakeActorOptions = {}) {}
 
   moveTo(target: ActorAnchor): Promise<void> {
     this.assertActive();
     this.commands.push({ type: 'moveTo', target: { ...target } });
-    this.cancelPendingMovement('Actor movement superseded by a newer moveTo request');
+    this.cancelMovement('Actor movement superseded by a newer moveTo request');
 
     if (!this.options.manualMovement) {
       this.currentAnchor = { ...target };
@@ -37,17 +45,17 @@ export class FakeActor implements WorldActor {
     }
 
     return new Promise<void>((resolve, reject) => {
-      this.pendingMovement = { target: { ...target }, resolve, reject };
+      this.pendingMovement = { value: { ...target }, resolve, reject };
     });
   }
 
   completeMovement() {
     this.assertActive();
-    const movement = this.pendingMovement;
-    if (!movement) return false;
+    const operation = this.pendingMovement;
+    if (!operation) return false;
     this.pendingMovement = undefined;
-    this.currentAnchor = { ...movement.target };
-    movement.resolve();
+    this.currentAnchor = { ...operation.value };
+    operation.resolve();
     return true;
   }
 
@@ -57,16 +65,54 @@ export class FakeActor implements WorldActor {
     this.commands.push({ type: 'lookAt', target: { ...target } });
   }
 
-  async speak(text: string) {
+  speak(text: string): Promise<void> {
     this.assertActive();
-    this.lastSpokenText = text;
     this.commands.push({ type: 'speak', text });
+    this.cancelSpeech('Actor speech superseded by a newer speak request');
+
+    if (!this.options.manualSpeech) {
+      this.lastSpokenText = text;
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      this.pendingSpeech = { value: text, resolve, reject };
+    });
   }
 
-  async perform(action: ActorAction) {
+  completeSpeech() {
     this.assertActive();
-    this.lastAction = action;
+    const operation = this.pendingSpeech;
+    if (!operation) return false;
+    this.pendingSpeech = undefined;
+    this.lastSpokenText = operation.value;
+    operation.resolve();
+    return true;
+  }
+
+  perform(action: ActorAction): Promise<void> {
+    this.assertActive();
     this.commands.push({ type: 'perform', action });
+    this.cancelAction('Actor action superseded by a newer perform request');
+
+    if (!this.options.manualActions) {
+      this.lastAction = action;
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      this.pendingAction = { value: action, resolve, reject };
+    });
+  }
+
+  completeAction() {
+    this.assertActive();
+    const operation = this.pendingAction;
+    if (!operation) return false;
+    this.pendingAction = undefined;
+    this.lastAction = operation.value;
+    operation.resolve();
+    return true;
   }
 
   setEmotion(emotion: ActorEmotion) {
@@ -75,18 +121,44 @@ export class FakeActor implements WorldActor {
     this.commands.push({ type: 'setEmotion', emotion });
   }
 
+  interrupt(reason = 'Actor operations interrupted') {
+    this.assertActive();
+    this.cancelAll(reason);
+    this.commands.push({ type: 'interrupt', reason });
+  }
+
   dispose() {
     if (this.disposed) return;
-    this.cancelPendingMovement('Actor disposed during movement');
+    this.cancelAll('Actor disposed during operation');
     this.disposed = true;
     this.commands.push({ type: 'dispose' });
   }
 
-  private cancelPendingMovement(reason: string) {
-    const movement = this.pendingMovement;
-    if (!movement) return;
+  private cancelAll(reason: string) {
+    this.cancelMovement(reason);
+    this.cancelAction(reason);
+    this.cancelSpeech(reason);
+  }
+
+  private cancelMovement(reason: string) {
+    const operation = this.pendingMovement;
+    if (!operation) return;
     this.pendingMovement = undefined;
-    movement.reject(new ActorOperationCancelledError(reason));
+    operation.reject(new ActorOperationCancelledError(reason));
+  }
+
+  private cancelAction(reason: string) {
+    const operation = this.pendingAction;
+    if (!operation) return;
+    this.pendingAction = undefined;
+    operation.reject(new ActorOperationCancelledError(reason));
+  }
+
+  private cancelSpeech(reason: string) {
+    const operation = this.pendingSpeech;
+    if (!operation) return;
+    this.pendingSpeech = undefined;
+    operation.reject(new ActorOperationCancelledError(reason));
   }
 
   private assertActive() {
