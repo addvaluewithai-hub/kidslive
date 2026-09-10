@@ -7,17 +7,24 @@ import {
 import { ExperienceCommandError, ExperienceEngine } from './ExperienceEngine';
 import { ASSESSMENT_EXPERIENCE_FIXTURE } from './fixtures';
 
+type CommandPayload = ExperienceCommand extends infer Command
+  ? Command extends ExperienceCommand
+    ? Omit<Command, 'stepId' | 'expectedRevision'>
+    : never
+  : never;
+
 function serialize(value: unknown): unknown {
   return JSON.parse(JSON.stringify(value)) as unknown;
 }
 
-function dispatchCurrent(
-  engine: ExperienceEngine,
-  command: Omit<ExperienceCommand, 'stepId' | 'expectedRevision'>,
-): void {
+function dispatchCurrent(engine: ExperienceEngine, command: CommandPayload): void {
   const state = engine.state;
   if (state.currentStepId === null) throw new Error('Expected running experience.');
-  engine.dispatch({ ...command, stepId: state.currentStepId, expectedRevision: state.revision } as ExperienceCommand);
+  engine.dispatch({
+    ...command,
+    stepId: state.currentStepId,
+    expectedRevision: state.revision,
+  } as ExperienceCommand);
 }
 
 function checkpointAfterHint(): ReturnType<ExperienceEngine['checkpoint']> {
