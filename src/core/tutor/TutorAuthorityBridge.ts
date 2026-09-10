@@ -244,14 +244,18 @@ export class GuardedTutorOutputHost implements TutorOutputHost {
     const proposal = delivery.output.authorityProposal;
     if (proposal !== undefined) {
       const result = this.bridge.apply(proposal);
-      this.audit?.record(
-        Object.freeze({
-          sessionId: delivery.sessionId,
-          turnId: delivery.turnId,
-          requestId: delivery.requestId,
-          result,
-        }),
-      );
+      try {
+        this.audit?.record(
+          Object.freeze({
+            sessionId: delivery.sessionId,
+            turnId: delivery.turnId,
+            requestId: delivery.requestId,
+            result,
+          }),
+        );
+      } catch {
+        // Authority audit is best-effort observability and must never alter product semantics.
+      }
       if (result.status === 'rejected') throw new TutorAuthorityBridgeError(result);
     }
     await this.downstream.publish(delivery);
