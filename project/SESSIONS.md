@@ -159,14 +159,26 @@ Non-blocking A2 follow-ups:
 - no physical-device FPS number was fabricated: D-006 still makes real Android hardware authoritative for frame pacing, so representative physical profiling remains a follow-up for a device-equipped run rather than a CI claim.
 
 ### A3-Q — Phase QA / critique
-**Status: NEXT**
+**Status: DONE**
 
-Perform the full evidence-based A3 review against `TASKS.md`, `ARCHITECTURE.md`, D-007, `TESTING.md`, and `STAGE_GATES.md`. Review architecture/replaceability, actor lifecycle/interruption resilience, product/visual quality, deterministic CI boundaries, representative performance evidence, and safety/privacy implications. Record blocking and non-blocking findings; do not start A4.
+**QA record:** `project/qa/A3-Q.md`
+
+**Outcome:** A3 architecture/product evidence is broadly sound, but closure is blocked until A3-F resolves two concrete resilience/evidence findings.
+
+**Blocking findings:**
+- current-main cohesive lifecycle evidence is not deterministic: CI run `34442878844` failed after the green implementation run, with desktop resize-listener count drifting from 5 to 6 and mobile timing out waiting for the expected runtime state;
+- the implemented primitive fallback for failed companion art is not directly exercised: existing failure-path coverage fails place art, not `/assets/characters/companion-shell.svg`.
+
+**Non-blocking findings:**
+- the production bundle remains ~1.41 MB minified / ~386 kB gzip with Vite's >500 kB chunk warning; keep it visible but do not code-split without loading evidence;
+- physical Android frame pacing remains a device-equipped follow-up at representative vertical-slice density under D-006;
+- A5 must keep voice/tone/persona configuration replaceable rather than coupling it to Nova or renderer semantics;
+- the dev-only runtime overlay may overlap product copy in compact/resized debug captures and should remain opt-in rather than becoming production polish scope.
 
 ### A3-F — Fix / polish
-**Status: PLANNED**
+**Status: NEXT**
 
-Fix A3-Q blockers and high-value regressions/polish, rerun focused deterministic/visual/runtime evidence, and leave the actor system safe for A4 to consume. Do not add Experience Engine scope.
+Fix A3-Q blockers and high-value directly related polish only. Stabilize/repair the resize/re-entry lifecycle evidence without weakening one-actor / zero-tween / stable-listener assertions, and add deterministic desktop/mobile companion-art failure coverage proving the primitive fallback remains usable across Hub → Place → Hub. Rerun focused unit/build/browser evidence and inspect representative visuals. Do not add Experience Engine scope.
 
 ### A3-P — Close A3 + plan A4
 **Status: PLANNED**
