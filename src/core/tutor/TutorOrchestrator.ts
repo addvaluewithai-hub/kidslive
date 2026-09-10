@@ -9,13 +9,18 @@ import type {
   TutorActorCue,
   TutorAuthorityProposal,
   TutorCancellationToken,
+  TutorDiagnosticsSink,
   TutorExperienceObservation,
+  TutorFailureCode,
+  TutorFailurePhase,
+  TutorLifecycleEvent,
   TutorNarrationIntent,
   TutorOutput,
   TutorOutputHost,
   TutorPersonaConfig,
   TutorProvider,
   TutorRequest,
+  TutorTimeoutScheduler,
   TutorTurnDelivery,
   TutorTurnResult,
 } from './TutorContract';
@@ -58,6 +63,11 @@ export interface TutorOrchestratorOptions {
   readonly persona: TutorPersonaConfig;
   readonly provider: TutorProvider;
   readonly host: TutorOutputHost;
+  readonly diagnostics?: TutorDiagnosticsSink;
+  readonly providerTimeout?: {
+    readonly delayMs: number;
+    readonly scheduler: TutorTimeoutScheduler;
+  };
 }
 
 function freezeAttempt(attempt: AssessmentAttemptRecord): AssessmentAttemptRecord {
@@ -135,6 +145,59 @@ function snapshotAuthorityProposal(proposal: TutorAuthorityProposal): TutorAutho
   return Object.freeze({ ...proposal });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isFinitePrimitive(value: unknown): value is ExperienceToolParameterValue {
+  return (
+    typeof value === 'string' ||
+    typeof value === 'boolean' ||
+    (typeof value === 'number' && Number.isFinite(value))
+  );
+}
+
+function isValidNarration(value: unknown): value is TutorNarrationIntent {
+  return (
+    isRecord(value) &&
+    typeof value.text === 'string' &&
+    (value.mode === 'speak-and-display' || value.mode === 'display-only')
+  );
+}
+
+function isValidActorCue(value: unknown): value is TutorActorCue {
+  if (!isRecord(value) || typeof value.type !== 'string') return false;
+  if (value.type === 'emotion') {
+    return ['neutral', 'encouraging', 'celebrating', 'thinking'].includes(String(value.emotion));
+  }
+  if (value.type === 'action') {
+    return ['idle', 'acknowledge', 'celebrate'].includes(String(value.action));
+  }
+  if (value.type === 'move-to' || value.type === 'look-at') {
+    return typeof value.anchorId === 'string';
+  }
+  return false;
+}
+
+function hasAuthorityBase(value: Record<string, unknown>): boolean {
+  return typeof value.stepId === 'string' && Number.isInteger(value.expectedRevision) && Number(value.expectedRevision) >= 0;
+}
+
+function isValidAuthorityProposal(value: unknown): value is TutorAuthorityProposal {
+  if (!isRecord(value) || !hasAuthorityBase(value) || typeof value.type !== 'string') return false;
+  if (value.type === 'submit-outcome') return typeof value.outcomeId === 'string';
+  if (value.type === 'submit-assessment') return typeof value.answer === 'string';
+  if (value.type === 'use-hint') return typeof value.hintId === 'string';
+  if (value.type !== 'request-tool' || typeof value.toolId !== 'string' || !isRecord(value.parameters)) return false;
+  return Object.values(value.parameters).every(isFinitePrimitive);
+}
+
+function isValidOutput(value: unknown): value is TutorOutput {
+  if (!isRecord(value) || !Array.isArray(value.narration) || !Array.isArray(value.actorCues)) return false;
+  if (!value.narration.every(isValidNarration) || !value.actorCues.every(isValidActorCue)) return false;
+  return value.authorityProposal === undefined || isValidAuthorityProposal(value.authorityProposal);
+}
+
 function snapshotOutput(output: TutorOutput): TutorOutput {
   const authorityProposal = output.authorityProposal;
   return Object.freeze({
@@ -163,9 +226,11 @@ export class TutorOrchestrator {
   private readonly persona: TutorPersonaConfig;
   private readonly provider: TutorProvider;
   private readonly host: TutorOutputHost;
+  private readonly diagnostics: TutorDiagnosticsSink | undefined;
+  private readonly providerTimeout: TutorOrchestratorOptions['providerTimeout'];
   private status: 'active' | 'completed' | 'disposed' = 'active';
   private turnCounter = 0;
-  private activeTurn: { readonly turnId: string; readonly token: MutableCancellationToken } | null = null;
+  private activeTurn: { readonly turnId: string; readonly requestId: string; readonly token: MutableCancellationToken } | null = null;
   private experienceIdentity: { readonly id: string; readonly version: string } | null = null;
   private lastObservationRevision = -1;
 
@@ -174,6 +239,11 @@ export class TutorOrchestrator {
     this.persona = snapshotPersona(options.persona);
     this.provider = options.provider;
     this.host = options.host;
+    this.diagnostics = options.diagnostics;
+    this.providerTimeout = options.providerTimeout;
+    if (this.providerTimeout !== undefined && (!Number.isFinite(this.providerTimeout.delayMs) || this.providerTimeout.delayMs <= 0)) {
+      throw new Error('Tutor provider timeout must be a positive finite number.');
+    }
   }
 
   get sessionStatus(): 'active' | 'completed' | 'disposed' {
@@ -182,10 +252,11 @@ export class TutorOrchestrator {
 
   cancelActiveTurn(reason = 'Tutor turn cancelled'): boolean {
     if (this.activeTurn === null) return false;
-    const { turnId, token } = this.activeTurn;
+    const { turnId, requestId, token } = this.activeTurn;
     token.cancel(reason);
     this.host.interrupt(turnId, reason);
     this.activeTurn = null;
+    this.record({ type: 'turn-cancelled', sessionId: this.sessionId, turnId, requestId });
     return true;
   }
 
@@ -214,7 +285,7 @@ export class TutorOrchestrator {
     const turnId = `${this.sessionId}:turn:${turnNumber}`;
     const requestId = `${turnId}:request:1`;
     const token = new MutableCancellationToken();
-    this.activeTurn = { turnId, token };
+    this.activeTurn = { turnId, requestId, token };
 
     const request = freezeRequest({
       sessionId: this.sessionId,
@@ -223,29 +294,70 @@ export class TutorOrchestrator {
       persona: this.persona,
       observation,
     });
+    this.record({ type: 'turn-started', sessionId: this.sessionId, turnId, requestId });
+
+    const providerResult = await this.generateProviderOutput(request, token);
+    if (providerResult.kind === 'cancelled') return this.cancelledResult(turnId, token);
+    if (providerResult.kind === 'failed') {
+      return this.failedResult(turnId, requestId, 'provider', providerResult.code);
+    }
+    if (!this.isCurrentTurn(turnId, token)) return this.cancelledResult(turnId, token);
+    this.record({ type: 'provider-completed', sessionId: this.sessionId, turnId, requestId });
+
+    if (!isValidOutput(providerResult.output)) {
+      return this.failedResult(turnId, requestId, 'provider-output', 'malformed-output');
+    }
+
+    const delivery = freezeDelivery({
+      sessionId: this.sessionId,
+      turnId,
+      requestId,
+      output: providerResult.output,
+    });
 
     try {
-      const providerOutput = await this.provider.generate(request, token);
-      if (!this.isCurrentTurn(turnId, token)) return this.cancelledResult(turnId, token);
-
-      const delivery = freezeDelivery({
-        sessionId: this.sessionId,
-        turnId,
-        requestId,
-        output: providerOutput,
-      });
       await this.host.publish(delivery);
-
-      if (!this.isCurrentTurn(turnId, token)) return this.cancelledResult(turnId, token);
-      this.activeTurn = null;
-      return Object.freeze({ status: 'delivered', delivery });
-    } catch (error) {
+    } catch {
       if (token.cancelled || !this.isCurrentTurn(turnId, token)) {
         return this.cancelledResult(turnId, token);
       }
-      this.activeTurn = null;
-      throw error;
+      return this.failedResult(turnId, requestId, 'delivery', 'delivery-failed');
     }
+
+    if (!this.isCurrentTurn(turnId, token)) return this.cancelledResult(turnId, token);
+    this.activeTurn = null;
+    this.record({ type: 'turn-delivered', sessionId: this.sessionId, turnId, requestId });
+    return Object.freeze({ status: 'delivered', delivery });
+  }
+
+  private async generateProviderOutput(
+    request: TutorRequest,
+    token: MutableCancellationToken,
+  ): Promise<
+    | { readonly kind: 'output'; readonly output: TutorOutput }
+    | { readonly kind: 'failed'; readonly code: 'provider-failed' | 'provider-timeout' }
+    | { readonly kind: 'cancelled' }
+  > {
+    let timeoutHandle: { cancel(): void } | null = null;
+    const providerPromise = Promise.resolve()
+      .then(() => this.provider.generate(request, token))
+      .then(
+        (output) => ({ kind: 'output' as const, output }),
+        () => ({ kind: token.cancelled ? 'cancelled' as const : 'failed' as const, code: 'provider-failed' as const }),
+      );
+
+    if (this.providerTimeout === undefined) return providerPromise;
+
+    const timeoutPromise = new Promise<{ readonly kind: 'failed'; readonly code: 'provider-timeout' }>((resolve) => {
+      timeoutHandle = this.providerTimeout?.scheduler.schedule(this.providerTimeout.delayMs, () => {
+        token.cancel('Tutor provider timed out');
+        resolve({ kind: 'failed', code: 'provider-timeout' });
+      }) ?? null;
+    });
+
+    const result = await Promise.race([providerPromise, timeoutPromise]);
+    timeoutHandle?.cancel();
+    return result;
   }
 
   private assertActive(): void {
@@ -294,10 +406,30 @@ export class TutorOrchestrator {
   }
 
   private cancelledResult(turnId: string, token: MutableCancellationToken): TutorTurnResult {
+    if (this.activeTurn?.turnId === turnId) this.activeTurn = null;
     return Object.freeze({
       status: 'cancelled',
       turnId,
       reason: token.reason ?? 'Tutor turn became stale',
     });
+  }
+
+  private failedResult(
+    turnId: string,
+    requestId: string,
+    phase: TutorFailurePhase,
+    code: TutorFailureCode,
+  ): TutorTurnResult {
+    if (this.activeTurn?.turnId === turnId) this.activeTurn = null;
+    this.record({ type: 'turn-failed', sessionId: this.sessionId, turnId, requestId, phase, code });
+    return Object.freeze({ status: 'failed', turnId, requestId, phase, code, recoverable: true });
+  }
+
+  private record(event: TutorLifecycleEvent): void {
+    try {
+      this.diagnostics?.record(Object.freeze({ ...event }));
+    } catch {
+      // Diagnostics are intentionally best-effort and can never break tutor delivery.
+    }
   }
 }
