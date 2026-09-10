@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 
+export type RuntimeDebugMetric = string | number | boolean;
+
 export type RuntimeDebugSnapshot = {
   scene: string;
   viewport: string;
@@ -7,7 +9,14 @@ export type RuntimeDebugSnapshot = {
   mode: string;
   objects: number;
   detail?: string;
+  metrics?: Record<string, RuntimeDebugMetric>;
 };
+
+declare global {
+  interface Window {
+    __KIDSLIVE_RUNTIME_DEBUG__?: RuntimeDebugSnapshot;
+  }
+}
 
 export function formatRuntimeDebugSnapshot(snapshot: RuntimeDebugSnapshot): string {
   const lines = [
@@ -19,6 +28,13 @@ export function formatRuntimeDebugSnapshot(snapshot: RuntimeDebugSnapshot): stri
   ];
 
   if (snapshot.detail) lines.push(snapshot.detail);
+  if (snapshot.metrics) {
+    lines.push(
+      Object.entries(snapshot.metrics)
+        .map(([key, value]) => `${key}=${String(value)}`)
+        .join(' '),
+    );
+  }
   return lines.join('\n');
 }
 
@@ -30,13 +46,16 @@ function isRuntimeDebugEnabled(): boolean {
 export class RuntimeDebugOverlay {
   private readonly label?: Phaser.GameObjects.Text;
   private readonly refreshTimer?: Phaser.Time.TimerEvent;
+  private readonly enabled: boolean;
   private lastText = '';
+  private lastScene?: string;
 
   constructor(
     scene: Phaser.Scene,
     readSnapshot: () => RuntimeDebugSnapshot,
   ) {
-    if (!isRuntimeDebugEnabled()) return;
+    this.enabled = isRuntimeDebugEnabled();
+    if (!this.enabled) return;
 
     this.label = scene.add
       .text(scene.scale.width - 12, 12, '', {
@@ -53,7 +72,10 @@ export class RuntimeDebugOverlay {
 
     const refresh = () => {
       this.label?.setX(scene.scale.width - 12);
-      const text = formatRuntimeDebugSnapshot(readSnapshot());
+      const snapshot = readSnapshot();
+      this.lastScene = snapshot.scene;
+      window.__KIDSLIVE_RUNTIME_DEBUG__ = snapshot;
+      const text = formatRuntimeDebugSnapshot(snapshot);
       if (text === this.lastText) return;
       this.lastText = text;
       this.label?.setText(text);
@@ -70,5 +92,12 @@ export class RuntimeDebugOverlay {
   destroy(): void {
     this.refreshTimer?.remove(false);
     this.label?.destroy();
+    if (
+      this.enabled &&
+      typeof window !== 'undefined' &&
+      window.__KIDSLIVE_RUNTIME_DEBUG__?.scene === this.lastScene
+    ) {
+      delete window.__KIDSLIVE_RUNTIME_DEBUG__;
+    }
   }
 }
