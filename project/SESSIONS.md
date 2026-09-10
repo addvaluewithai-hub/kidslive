@@ -111,14 +111,16 @@ Non-blocking A4 follow-ups:
 - keep child-safety/tool authority enforceable in code boundaries rather than prompt wording alone.
 
 ### A5-D1 — Provider-neutral tutor contract + deterministic orchestration kernel end-to-end
-**Status: NEXT**
+**Status: DONE**
 
 Build the core tutor request/response contract and orchestration state machine around authoritative A4 snapshots/events. Add deterministic scripted/fake tutor adapters, stable turn/request IDs, explicit bounded tutor outputs, cancellation/session lifecycle, and a host seam that can accept narration/actor intentions without executing educational authority itself.
 
 **Done when:** a representative authored experience can drive multiple tutor turns through a provider-neutral orchestrator using only deterministic adapters; outputs are typed/bounded and immutable/serializable where appropriate; stale/cancelled/completed sessions fail closed; no provider SDK, Phaser object, React component, browser API, or live model is required; focused typecheck/tests/build are green.
 
+**Evidence:** provider-neutral contracts, deterministic `TutorOrchestrator`, `ScriptedTutor`, and `RecordingTutorHost` landed across commits `25db7147`, `fa2bdf56`, `b3838c98`, and `93f789d5`; strict test-fixture typing was corrected in `81ea96dd`. CI `34501896332` passed format, package boundaries/typecheck, unit/integration tests, and production build on the implementation head. No user-visible surface changed, so delivery visual QA was not required.
+
 ### A5-D2 — Speech/text delivery + interruption and actor coordination
-**Status: PLANNED**
+**Status: NEXT**
 
 Add provider-independent speech/text output contracts and coordinate them with `WorldActor` behavior so tutor turns can speak, display text intent, move/look/emote/perform bounded actor actions, and be interrupted/replaced cleanly. Include deterministic instant/slow/failure speech adapters and cancellation semantics that prevent late audio/actor completion from reviving stale turns.
 
