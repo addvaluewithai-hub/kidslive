@@ -104,7 +104,9 @@ describe('FakeActor', () => {
     await expect(speech).rejects.toBeInstanceOf(ActorOperationCancelledError);
     expect(actor.commands.at(-1)).toEqual({ type: 'interrupt', reason: 'Scene intent changed' });
 
-    await actor.perform('greet');
+    const resumedAction = actor.perform('greet');
+    expect(actor.completeAction()).toBe(true);
+    await resumedAction;
     expect(actor.lastAction).toBe('greet');
   });
 
