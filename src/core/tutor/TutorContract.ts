@@ -98,6 +98,49 @@ export interface TutorOutputHost {
   interrupt(turnId: TutorTurnId, reason: string): void;
 }
 
+export type TutorFailurePhase = 'provider' | 'provider-output' | 'delivery';
+export type TutorFailureCode =
+  | 'provider-failed'
+  | 'provider-timeout'
+  | 'malformed-output'
+  | 'delivery-failed';
+
 export type TutorTurnResult =
   | { readonly status: 'delivered'; readonly delivery: TutorTurnDelivery }
-  | { readonly status: 'cancelled'; readonly turnId: TutorTurnId; readonly reason: string };
+  | { readonly status: 'cancelled'; readonly turnId: TutorTurnId; readonly reason: string }
+  | {
+      readonly status: 'failed';
+      readonly turnId: TutorTurnId;
+      readonly requestId: TutorRequestId;
+      readonly phase: TutorFailurePhase;
+      readonly code: TutorFailureCode;
+      readonly recoverable: true;
+    };
+
+export type TutorLifecycleEventType =
+  | 'turn-started'
+  | 'provider-completed'
+  | 'turn-delivered'
+  | 'turn-cancelled'
+  | 'turn-failed';
+
+export interface TutorLifecycleEvent {
+  readonly type: TutorLifecycleEventType;
+  readonly sessionId: TutorSessionId;
+  readonly turnId: TutorTurnId;
+  readonly requestId: TutorRequestId;
+  readonly phase?: TutorFailurePhase;
+  readonly code?: TutorFailureCode;
+}
+
+export interface TutorDiagnosticsSink {
+  record(event: TutorLifecycleEvent): void;
+}
+
+export interface TutorTimeoutHandle {
+  cancel(): void;
+}
+
+export interface TutorTimeoutScheduler {
+  schedule(delayMs: number, onTimeout: () => void): TutorTimeoutHandle;
+}
