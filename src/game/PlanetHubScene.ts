@@ -249,10 +249,13 @@ export class PlanetHubScene extends Phaser.Scene {
     this.overviewButton?.setAlpha(1);
     this.enterButton?.setText(`Enter ${place.label} →`).setAlpha(1);
 
-    this.actor?.setEmotion('curious');
-    this.actor?.lookAt(placeLookTarget(place.id));
-    if (animate) this.moveActorTo(placeActorAnchor(place.id));
-    else this.actor?.snapTo(placeActorAnchor(place.id));
+    if (animate) {
+      this.runActorPlaceSequence(place);
+    } else {
+      this.actor?.setEmotion('curious');
+      this.actor?.lookAt(placeLookTarget(place.id));
+      this.actor?.snapTo(placeActorAnchor(place.id));
+    }
 
     this.placeLayer.each((child: Phaser.GameObjects.Container) => {
       const selected = child === selectedCard;
@@ -286,6 +289,7 @@ export class PlanetHubScene extends Phaser.Scene {
     if (!place) return;
 
     this.transitioning = true;
+    this.actor?.interrupt('Leaving the hub');
     this.enterButton?.disableInteractive().setText(`Entering ${place.label}…`);
     this.overviewButton?.disableInteractive();
 
@@ -302,6 +306,7 @@ export class PlanetHubScene extends Phaser.Scene {
     this.subtitle?.setText('Choose a place to explore');
     this.overviewButton?.setAlpha(0);
     this.enterButton?.setAlpha(0);
+    this.actor?.interrupt('Hub overview requested');
     this.actor?.setEmotion('warm');
     this.actor?.lookAt(HUB_ACTOR_CENTER);
     this.moveActorTo(HUB_ACTOR_HOME);
@@ -328,6 +333,7 @@ export class PlanetHubScene extends Phaser.Scene {
     this.overviewButton?.setAlpha(0);
     this.enterButton?.setAlpha(0);
     this.subtitle?.setText('Choose a place to explore');
+    this.actor?.interrupt('Hub resized');
     this.layout(gameSize.width, gameSize.height);
     this.actor?.setEmotion('warm');
     this.actor?.snapTo(HUB_ACTOR_HOME);
@@ -341,6 +347,27 @@ export class PlanetHubScene extends Phaser.Scene {
     this.tweens.killAll();
     this.debugOverlay?.destroy();
     this.debugOverlay = undefined;
+  }
+
+  private runActorPlaceSequence(place: HubPlace) {
+    const actor = this.actor;
+    if (!actor) return;
+
+    actor.interrupt('Hub selection changed');
+    actor.setEmotion('curious');
+    actor.lookAt(placeLookTarget(place.id));
+
+    void (async () => {
+      try {
+        await actor.moveTo(placeActorAnchor(place.id));
+        await actor.perform('think');
+        actor.setEmotion('excited');
+        await actor.speak(`Let's explore ${place.label}!`);
+        actor.setEmotion('curious');
+      } catch (error: unknown) {
+        if (!isActorOperationCancelled(error)) console.error(error);
+      }
+    })();
   }
 
   private moveActorTo(anchor: ActorAnchor) {
