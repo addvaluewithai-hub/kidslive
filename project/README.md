@@ -9,7 +9,7 @@ The current product is child-first, but the core platform must remain replaceabl
 
 ## Current state
 
-**A0 architecture selection is DONE. A1 repository/development foundation is DONE. A2 Planet Hub foundation is DONE. A3 Character/actor system is DONE. A4 Experience Engine v1 is DONE. A5 Tutor/AI orchestration v1 is IN PROGRESS.**
+**A0 architecture selection is DONE. A1 repository/development foundation is DONE. A2 Planet Hub foundation is DONE. A3 Character/actor system is DONE. A4 Experience Engine v1 is DONE. A5 Tutor/AI orchestration v1 is DONE. A6 English World vertical slice is IN PROGRESS.**
 
 Locked runtime:
 - Phaser 3 + TypeScript for the living world.
@@ -24,6 +24,8 @@ A2 established the production Planet Hub foundation: six authored places, respon
 A3 established the character-agnostic actor foundation: renderer-independent `WorldActor`, deterministic `FakeActor`, configurable character definitions/assets, production `PhaserActor`, bounded movement/look/emotion/action/speech behavior, interruption semantics, and stable Hub/Place ownership/fallback behavior. The stage-gate record is `gates/A3.md`.
 
 A4 established the framework-independent Experience Engine v1: authored deterministic step graphs, assessment/retry/hint authority, semantic checkpoint/resume validation, guarded host commands, bounded approved tool intents, content validation, and immutable/serializable state/events. The stage-gate record is `gates/A4.md`.
+
+A5 established provider-neutral tutor orchestration: bounded tutor contracts, deterministic scripted/failure/slow providers, speech/text and `WorldActor` coordination, guarded A4 command/tool bridging, cancellation/timeout/failure containment, data-minimized lifecycle diagnostics, and a cohesive `TutorSession` composition root. A4 remains the only educational authority and CI requires no live model/TTS provider. The stage-gate record is `gates/A5.md`.
 
 The working tree was deliberately cleaned after A0. Godot, React Native Skia, synthetic stress scenes, and shootout-specific build code are not production dependencies.
 
