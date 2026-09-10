@@ -8,6 +8,12 @@ import { ExperienceEngine } from './ExperienceEngine';
 import { ASSESSMENT_EXPERIENCE_FIXTURE } from './fixtures';
 import { validateExperience } from './validateExperience';
 
+type CommandPayload = ExperienceCommand extends infer Command
+  ? Command extends ExperienceCommand
+    ? Omit<Command, 'stepId' | 'expectedRevision'>
+    : never
+  : never;
+
 const TOOL_EXPERIENCE_FIXTURE: ExperienceDefinition = {
   id: 'a4-tool-demo',
   version: '1',
@@ -44,13 +50,14 @@ const TOOL_EXPERIENCE_FIXTURE: ExperienceDefinition = {
   ],
 };
 
-function dispatchCurrent(
-  engine: ExperienceEngine,
-  command: Omit<ExperienceCommand, 'stepId' | 'expectedRevision'>,
-): void {
+function dispatchCurrent(engine: ExperienceEngine, command: CommandPayload): void {
   const state = engine.state;
   if (state.currentStepId === null) throw new Error('Expected running experience.');
-  engine.dispatch({ ...command, stepId: state.currentStepId, expectedRevision: state.revision } as ExperienceCommand);
+  engine.dispatch({
+    ...command,
+    stepId: state.currentStepId,
+    expectedRevision: state.revision,
+  } as ExperienceCommand);
 }
 
 function expectDenied(engine: ExperienceEngine, request: ExperienceToolRequest, code: string): void {
