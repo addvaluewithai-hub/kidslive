@@ -83,31 +83,46 @@ test('failed authored place art falls back and still returns safely', async ({ p
     await route.abort('failed');
   });
 
-  await page.goto('/');
+  await page.goto('/?runtimeDebug=1');
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
-  await page.waitForTimeout(800);
 
   const viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected a configured browser viewport');
 
   const compact = isCompactHubViewport(viewport.width);
   const pressCanvas = async (position: { x: number; y: number }) => {
-    if (compact) {
-      const bounds = await canvas.boundingBox();
-      if (!bounds) throw new Error('Expected visible game canvas bounds');
-      await page.touchscreen.tap(bounds.x + position.x, bounds.y + position.y);
-    } else {
-      await canvas.click({ position });
-    }
+    const bounds = await canvas.boundingBox();
+    if (!bounds) throw new Error('Expected visible game canvas bounds');
+    const x = bounds.x + (position.x / viewport.width) * bounds.width;
+    const y = bounds.y + (position.y / viewport.height) * bounds.height;
+    if (compact) await page.touchscreen.tap(x, y);
+    else await page.mouse.click(x, y);
+  };
+  const waitForRuntime = async (scene: string, mode?: string) => {
+    await page.waitForFunction(
+      ({ expectedScene, expectedMode }) => {
+        const snapshot = (
+          window as Window & {
+            __KIDSLIVE_RUNTIME_DEBUG__?: { scene: string; mode: string };
+          }
+        ).__KIDSLIVE_RUNTIME_DEBUG__;
+        return (
+          snapshot?.scene === expectedScene &&
+          (expectedMode === undefined || snapshot.mode === expectedMode)
+        );
+      },
+      { expectedScene: scene, expectedMode: mode },
+    );
   };
 
+  await waitForRuntime('planet-hub', 'overview');
   const english = HUB_PLACES[0];
   const overview = await page.screenshot({ animations: 'disabled' });
   await pressCanvas(resolveHubPlacePosition(english, viewport.width, viewport.height));
-  await page.waitForTimeout(320);
+  await waitForRuntime('planet-hub', english.id);
   await pressCanvas({ x: 92, y: viewport.height - 36 });
-  await page.waitForTimeout(700);
+  await waitForRuntime('placeholder-place');
 
   expect(failedMarkerRequest).toBe(true);
   const failureState = await page.screenshot({ animations: 'disabled' });
@@ -119,7 +134,7 @@ test('failed authored place art falls back and still returns safely', async ({ p
 
   const placeBack = compact ? { x: 92, y: viewport.height - 40 } : { x: 92, y: 76 };
   await pressCanvas(placeBack);
-  await page.waitForTimeout(700);
+  await waitForRuntime('planet-hub', english.id);
   await expect(canvas).toBeVisible();
 
   const returnedHub = await page.screenshot({ animations: 'disabled' });
@@ -180,7 +195,7 @@ test('actor runs scripted action and speech and survives interruption', async ({
 test('cohesive actor flow stays bounded through resize and repeated scene ownership', async ({
   page,
 }, testInfo) => {
-  test.setTimeout(60_000);
+  test.setTimeout(75_000);
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
@@ -201,15 +216,20 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
         (window as Window & { __KIDSLIVE_RUNTIME_DEBUG__?: DebugSnapshot })
           .__KIDSLIVE_RUNTIME_DEBUG__,
     );
-  const waitForScene = async (scene: string) => {
+  const waitForRuntime = async (scene: string, mode?: string) => {
     await page.waitForFunction(
-      (expectedScene) =>
-        (
+      ({ expectedScene, expectedMode }) => {
+        const snapshot = (
           window as Window & {
-            __KIDSLIVE_RUNTIME_DEBUG__?: { scene: string };
+            __KIDSLIVE_RUNTIME_DEBUG__?: { scene: string; mode: string };
           }
-        ).__KIDSLIVE_RUNTIME_DEBUG__?.scene === expectedScene,
-      scene,
+        ).__KIDSLIVE_RUNTIME_DEBUG__;
+        return (
+          snapshot?.scene === expectedScene &&
+          (expectedMode === undefined || snapshot.mode === expectedMode)
+        );
+      },
+      { expectedScene: scene, expectedMode: mode },
     );
     await page.waitForTimeout(300);
     const snapshot = await readSnapshot();
@@ -223,16 +243,15 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
   const pressCanvas = async (position: { x: number; y: number }) => {
     const viewport = page.viewportSize();
     if (!viewport) throw new Error('Expected a configured browser viewport');
-    if (isCompactHubViewport(viewport.width)) {
-      const bounds = await canvas.boundingBox();
-      if (!bounds) throw new Error('Expected visible game canvas bounds');
-      await page.touchscreen.tap(bounds.x + position.x, bounds.y + position.y);
-    } else {
-      await canvas.click({ position });
-    }
+    const bounds = await canvas.boundingBox();
+    if (!bounds) throw new Error('Expected visible game canvas bounds');
+    const x = bounds.x + (position.x / viewport.width) * bounds.width;
+    const y = bounds.y + (position.y / viewport.height) * bounds.height;
+    if (isCompactHubViewport(viewport.width)) await page.touchscreen.tap(x, y);
+    else await page.mouse.click(x, y);
   };
 
-  const initialHub = await waitForScene('planet-hub');
+  const initialHub = await waitForRuntime('planet-hub', 'overview');
   expectSettledActorRuntime(initialHub);
   const initialResizeListeners = initialHub.metrics?.resizeListeners;
   expect(typeof initialResizeListeners).toBe('number');
@@ -240,20 +259,21 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
   let viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected a configured browser viewport');
   await pressCanvas(resolveHubPlacePosition(HUB_PLACES[0], viewport.width, viewport.height));
+  await waitForRuntime('planet-hub', HUB_PLACES[0].id);
   await page.waitForTimeout(100);
 
   const compact = isCompactHubViewport(viewport.width);
   await page.setViewportSize(
     compact ? { width: 430, height: 760 } : { width: 960, height: 680 },
   );
-  const resizedHub = await waitForScene('planet-hub');
-  expect(resizedHub.mode).toBe('overview');
+  const resizedHub = await waitForRuntime('planet-hub', 'overview');
   expectSettledActorRuntime(resizedHub);
   expect(resizedHub.metrics?.resizeListeners).toBe(initialResizeListeners);
 
   viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected resized browser viewport');
   await pressCanvas(resolveHubPlacePosition(HUB_PLACES[0], viewport.width, viewport.height));
+  await waitForRuntime('planet-hub', HUB_PLACES[0].id);
   await page.waitForTimeout(1_050);
 
   const activeSequence = await readSnapshot();
@@ -271,7 +291,7 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
 
   for (let cycle = 0; cycle < 3; cycle += 1) {
     await pressCanvas(enterButton);
-    const placeSnapshot = await waitForScene('placeholder-place');
+    const placeSnapshot = await waitForRuntime('placeholder-place');
     expectSettledActorRuntime(placeSnapshot);
     expect(placeSnapshot.detail).toContain('actors=1');
     expect(placeSnapshot.detail).toContain('ops=idle/idle/silent');
@@ -279,9 +299,8 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
     resizeListenerCounts.push(Number(placeSnapshot.metrics?.resizeListeners));
 
     await pressCanvas(placeBack);
-    const hubSnapshot = await waitForScene('planet-hub');
+    const hubSnapshot = await waitForRuntime('planet-hub', HUB_PLACES[0].id);
     expectSettledActorRuntime(hubSnapshot);
-    expect(hubSnapshot.mode).toBe('english');
     expect(hubSnapshot.detail).toContain('actor=nova');
     hubObjectCounts.push(hubSnapshot.objects);
     resizeListenerCounts.push(Number(hubSnapshot.metrics?.resizeListeners));
