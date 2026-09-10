@@ -9,7 +9,21 @@ export type ActorEmotion = 'neutral' | 'warm' | 'curious' | 'excited';
 
 export type ActorAction = 'idle' | 'greet' | 'explain' | 'celebrate' | 'think';
 
+export class ActorOperationCancelledError extends Error {
+  constructor(message = 'Actor operation was cancelled') {
+    super(message);
+    this.name = 'ActorOperationCancelledError';
+  }
+}
+
+export const isActorOperationCancelled = (error: unknown): error is ActorOperationCancelledError =>
+  error instanceof ActorOperationCancelledError;
+
 export interface WorldActor {
+  /**
+   * Move to a semantic world anchor. Starting a newer movement cancels and rejects
+   * the previous unfinished movement with ActorOperationCancelledError.
+   */
   moveTo(target: ActorAnchor): Promise<void>;
   lookAt(target: ActorTarget): void;
   speak(text: string): Promise<void>;
