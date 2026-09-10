@@ -176,12 +176,23 @@ Non-blocking A2 follow-ups:
 - the dev-only runtime overlay may overlap product copy in compact/resized debug captures and should remain opt-in rather than becoming production polish scope.
 
 ### A3-F — Fix / polish
-**Status: NEXT**
+**Status: DONE**
 
-Fix A3-Q blockers and high-value directly related polish only. Stabilize/repair the resize/re-entry lifecycle evidence without weakening one-actor / zero-tween / stable-listener assertions, and add deterministic desktop/mobile companion-art failure coverage proving the primitive fallback remains usable across Hub → Place → Hub. Rerun focused unit/build/browser evidence and inspect representative visuals. Do not add Experience Engine scope.
+**Outcome delivered:** both A3-Q blockers are resolved with deterministic browser evidence, and a directly observed traversal synchronization regression was polished without adding A4 scope.
+
+**Evidence / implementation notes:**
+- added focused Playwright coverage that aborts `/assets/characters/companion-shell.svg` and proves the primitive companion fallback remains usable through Hub → English Place → Hub on desktop and mobile with one actor, zero settled tweens, idle place operations, and no page errors;
+- downloaded and directly reviewed the successful Playwright evidence from CI run `34449755726`; representative desktop/mobile Hub and Place fallback captures remain readable and navigable with a single visible companion fallback;
+- traced the reported resize-listener 5→6 drift to the debug overlay publishing its first lifecycle snapshot synchronously before the scene registered its own resize listener, not to a leaked scene listener;
+- `RuntimeDebugOverlay` now publishes its first snapshot on the existing 250 ms timer after synchronous scene `create()` wiring completes, so the baseline includes the scene listener and stable-listener assertions measure a settled lifecycle state;
+- focused lifecycle coverage now waits for one actor, zero tweens, and the exact baseline resize-listener count after resize and through three repeated Hub → Place → Hub ownership cycles on both browser projects;
+- CI run `34449755726` passed quality, Android debug APK, and all 16 Playwright tests after the lifecycle instrumentation fix; a deliberate browser rerun then confirmed both new A3-F tests plus the original cohesive actor test passed, while exposing an unrelated existing six-place screenshot timing race;
+- fixed that directly observed smoke regression by synchronizing six-place selection/entry/return/overview on the runtime scene/mode state instead of fixed sleeps and byte-equality timing luck;
+- final CI run `34450624817` on implementation head `5971e2253f829ace99d273e1163700ac4e0405d5` passed format/lint/tests/build, the complete desktop/mobile Playwright stage gate, and Android debug APK;
+- no A4 Experience Engine behavior, provider integration, or unrelated feature scope was added.
 
 ### A3-P — Close A3 + plan A4
-**Status: PLANNED**
+**Status: NEXT**
 
 If A3 has no unresolved blocker, record `project/gates/A3.md`, mark A3 `DONE` and A4 current in `TASKS.md`, then decompose **A4 Experience Engine v1** into at most five substantial D sessions plus A4-Q/F/P using what actor integration taught us.
 
