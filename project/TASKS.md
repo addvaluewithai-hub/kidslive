@@ -26,11 +26,15 @@ Foundation boundaries must avoid hard-coding the current child audience, compani
 **Done when:** a clean checkout reaches running web + installable Android build + complete CI through documented commands, with no benchmark-only code or hidden local setup, and the core package boundaries can support alternate character/theme/audience implementations without framework rewrites.
 
 ## A2 — Planet hub foundation
-**Status: IN PROGRESS**
+**Status: DONE**
+
 Build the production planet hub: camera/touch behavior, responsive composition, six authored place placeholders, transitions, asset loading/lifecycle, debug overlay, and bounded memory/performance. Treat the hub as the user's persistent world entry point rather than a disposable level-select screen.
 
+**Gate:** `project/gates/A2.md` — PASS WITH FOLLOW-UP on 2026-09-10. Non-blocking follow-ups are deferred bundle/startup profiling, representative Android frame-pacing at actor/vertical-slice density, and stronger transition synchronization only if real CI flakiness appears.
+
 ## A3 — Character/actor system
-**Status: PLANNED**
+**Status: IN PROGRESS**
+
 Build a character-agnostic companion system in Phaser TypeScript behind `WorldActor`; port reusable renderer-independent behavior/assets from the Pixi prototype and add deterministic test actors. The first KidsLive companion is an implementation/configuration of the actor system, not an identity baked into domain logic. Character, voice, animation set, tone, and presentation must remain replaceable for future audiences and themes.
 
 ## A4 — Experience Engine v1
