@@ -5,6 +5,7 @@ import type {
   ExperienceEvent,
   ExperienceState,
   ExperienceStepId,
+  ExperienceToolParameterValue,
 } from './ExperienceDefinition';
 
 export const EXPERIENCE_CHECKPOINT_FORMAT_VERSION = 1 as const;
@@ -50,6 +51,23 @@ function requireString(value: unknown, path: string): string {
     );
   }
   return value;
+}
+
+function parseToolParameters(
+  value: unknown,
+  path: string,
+): Readonly<Record<string, ExperienceToolParameterValue>> {
+  if (!isRecord(value)) {
+    throw new ExperienceCheckpointError('malformed-checkpoint', `Checkpoint field "${path}" must be an object.`);
+  }
+  const parsed: Record<string, ExperienceToolParameterValue> = {};
+  for (const [key, parameter] of Object.entries(value)) {
+    if (typeof parameter !== 'string' && typeof parameter !== 'number' && typeof parameter !== 'boolean') {
+      throw new ExperienceCheckpointError('malformed-checkpoint', `Checkpoint field "${path}.${key}" has an unsupported value.`);
+    }
+    parsed[key] = parameter;
+  }
+  return parsed;
 }
 
 function parseAttempt(value: unknown, path: string): AssessmentAttemptRecord {
@@ -146,6 +164,20 @@ function parseEvent(value: unknown, index: number): ExperienceEvent {
     }
     case 'hint-used':
       return { type: value.type, stepId: requireString(value.stepId, `events[${index}].stepId`), hintId: requireString(value.hintId, `events[${index}].hintId`), revision: value.revision };
+    case 'tool-intent-approved': {
+      const kind = value.kind;
+      if (kind !== 'world-effect' && kind !== 'product-effect') {
+        throw new ExperienceCheckpointError('malformed-checkpoint', `Checkpoint tool event ${index} has invalid kind.`);
+      }
+      return {
+        type: value.type,
+        toolId: requireString(value.toolId, `events[${index}].toolId`),
+        kind,
+        stepId: requireString(value.stepId, `events[${index}].stepId`),
+        parameters: parseToolParameters(value.parameters, `events[${index}].parameters`),
+        revision: value.revision,
+      };
+    }
     case 'step-transitioned':
       return { type: value.type, fromStepId: requireString(value.fromStepId, `events[${index}].fromStepId`), toStepId: requireString(value.toStepId, `events[${index}].toStepId`), outcomeId: requireString(value.outcomeId, `events[${index}].outcomeId`), revision: value.revision };
     case 'experience-completed':
