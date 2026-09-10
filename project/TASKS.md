@@ -40,11 +40,13 @@ Build a character-agnostic companion system in Phaser TypeScript behind `WorldAc
 **Gate:** `project/gates/A3.md` — PASS WITH FOLLOW-UP on 2026-09-10. Non-blocking follow-ups are measured bundle/startup profiling only if user-impact evidence appears, representative physical Android frame pacing at A6 density, and preserving replaceable voice/tone/persona seams in A5.
 
 ## A4 — Experience Engine v1
-**Status: IN PROGRESS**
-Authored step graph, events, assessment transitions, retries, hints, checkpoints/resume, tool permissions, and content validation in pure TypeScript. Experience definitions must describe educational intent independently from a specific character or visual skin.
+**Status: DONE**
+Authored step graph, events, assessment transitions, retries, hints, checkpoints/resume, tool permissions, and content validation in pure TypeScript. Experience definitions describe educational intent independently from a specific character or visual skin.
+
+**Gate:** `project/gates/A4.md` — PASS WITH FOLLOW-UP on 2026-09-10. Non-blocking follow-ups are representative large-content performance measurement in A6/A15, preserving the guarded A4 authority API as A5's only educational mutation boundary, and treating checkpoints as untrusted input when A11 persistence arrives.
 
 ## A5 — Tutor/AI orchestration v1
-**Status: PLANNED**
+**Status: IN PROGRESS**
 Provider-independent tutor contracts, scripted/failure/slow test tutors, speech/text adapter, tool permissions, interruption handling, and event observability. Tutor persona/tone should be configurable separately from curriculum truth and actor rendering.
 
 ## A6 — English World vertical slice
