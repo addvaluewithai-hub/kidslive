@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { ActorAnchor } from '../core/actors/WorldActor';
 import {
   getPlaceAssetPack,
   isAssetPackReady,
@@ -7,6 +8,8 @@ import {
   type AuthoredAssetPack,
   type QueuedAssetPack,
 } from './assetPacks';
+import { KIDSLIVE_COMPANION } from './characterDefinitions';
+import { PhaserActor } from './PhaserActor';
 import { getHubPlace, type HubPlace } from './places';
 import { RuntimeDebugOverlay } from './runtimeDebug';
 
@@ -15,6 +18,9 @@ type PlaceholderPlaceSceneData = {
 };
 
 type AssetLoadState = 'idle' | 'loading' | 'ready' | 'error';
+
+const PLACE_ACTOR_HOME: ActorAnchor = { kind: 'anchor', id: 'place-companion-home' };
+const PLACE_ACTOR_FOCUS: ActorAnchor = { kind: 'anchor', id: 'place-focus' };
 
 export class PlaceholderPlaceScene extends Phaser.Scene {
   private place?: HubPlace;
@@ -30,6 +36,7 @@ export class PlaceholderPlaceScene extends Phaser.Scene {
   private subtitle?: Phaser.GameObjects.Text;
   private statusLabel?: Phaser.GameObjects.Text;
   private backButton?: Phaser.GameObjects.Text;
+  private actor?: PhaserActor;
   private debugOverlay?: RuntimeDebugOverlay;
   private returning = false;
 
@@ -51,6 +58,7 @@ export class PlaceholderPlaceScene extends Phaser.Scene {
     this.subtitle = undefined;
     this.statusLabel = undefined;
     this.backButton = undefined;
+    this.actor = undefined;
     this.debugOverlay = undefined;
     this.returning = false;
   }
@@ -71,7 +79,9 @@ export class PlaceholderPlaceScene extends Phaser.Scene {
     this.queuedAssets = queueAssetPack(this, this.assetPack);
 
     const updateProgress = (progress: number) => {
-      this.loadingLabel?.setText(`Loading ${this.place?.label ?? 'place'}… ${Math.round(progress * 100)}%`);
+      this.loadingLabel?.setText(
+        `Loading ${this.place?.label ?? 'place'}… ${Math.round(progress * 100)}%`,
+      );
     };
     const recordFailure = (file: { key: string }) => {
       this.failedAssetKeys.add(file.key);
@@ -153,16 +163,30 @@ export class PlaceholderPlaceScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     this.backButton.on('pointerdown', () => this.returnToHub());
 
+    this.actor = new PhaserActor(this, KIDSLIVE_COMPANION, (anchor) =>
+      this.resolveActorAnchor(anchor),
+    );
+    this.actor.setEmotion('warm');
+    this.actor.snapTo(PLACE_ACTOR_HOME);
+    this.actor.lookAt(PLACE_ACTOR_FOCUS);
+
     this.layout(this.scale.width, this.scale.height);
 
-    this.debugOverlay = new RuntimeDebugOverlay(this, () => ({
-      scene: this.scene.key,
-      viewport: `${this.scale.width}x${this.scale.height}`,
-      camera: `z=${this.cameras.main.zoom.toFixed(2)} x=${Math.round(this.cameras.main.scrollX)} y=${Math.round(this.cameras.main.scrollY)}`,
-      mode: this.returning ? 'returning' : place.id,
-      objects: this.children.length,
-      detail: `assets=${this.assetLoadState} queued=${this.queuedAssets?.queuedKeys.length ?? 0} cached=${this.queuedAssets?.cachedKeys.length ?? 0} failed=${this.failedAssetKeys.size}`,
-    }));
+    this.debugOverlay = new RuntimeDebugOverlay(this, () => {
+      const actorState = this.actor?.getDebugState();
+      const actorObjects = this.children
+        .getChildren()
+        .filter((child) => child.name.startsWith('actor:')).length;
+
+      return {
+        scene: this.scene.key,
+        viewport: `${this.scale.width}x${this.scale.height}`,
+        camera: `z=${this.cameras.main.zoom.toFixed(2)} x=${Math.round(this.cameras.main.scrollX)} y=${Math.round(this.cameras.main.scrollY)}`,
+        mode: this.returning ? 'returning' : place.id,
+        objects: this.children.length,
+        detail: `assets=${this.assetLoadState} cached=${this.queuedAssets?.cachedKeys.length ?? 0} failed=${this.failedAssetKeys.size} actors=${actorObjects} actor=${actorState?.id ?? 'none'} anchor=${actorState?.anchor ?? 'none'} ops=${actorState?.movement ?? 'none'}/${actorState?.action ?? 'none'}/${actorState?.speech ? 'speech' : 'silent'}`,
+      };
+    });
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
@@ -170,10 +194,13 @@ export class PlaceholderPlaceScene extends Phaser.Scene {
 
   private handleResize(gameSize: Phaser.Structs.Size) {
     this.layout(gameSize.width, gameSize.height);
+    this.actor?.reflow();
   }
 
   private handleShutdown() {
     this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+    this.actor?.dispose();
+    this.actor = undefined;
     this.tweens.killAll();
     this.debugOverlay?.destroy();
     this.debugOverlay = undefined;
@@ -212,9 +239,29 @@ export class PlaceholderPlaceScene extends Phaser.Scene {
     }
   }
 
+  private resolveActorAnchor(anchor: ActorAnchor) {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const compact = width < 700;
+
+    if (anchor.id === PLACE_ACTOR_HOME.id) {
+      return {
+        x: compact ? width - 58 : width - 100,
+        y: compact ? height - 150 : height - 104,
+      };
+    }
+
+    if (anchor.id === PLACE_ACTOR_FOCUS.id) {
+      return { x: width / 2, y: height / 2 - 24 };
+    }
+
+    return undefined;
+  }
+
   private returnToHub() {
     if (this.returning || !this.place) return;
     this.returning = true;
+    this.actor?.interrupt('Leaving the place');
     this.backButton?.disableInteractive().setText('Returning…');
 
     this.cameras.main.fadeOut(180, 7, 20, 38);
