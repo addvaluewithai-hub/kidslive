@@ -10,13 +10,20 @@ import {
   validateExperience,
 } from './validateExperience';
 
-function dispatchCurrent(
-  engine: ExperienceEngine,
-  command: Omit<ExperienceCommand, 'stepId' | 'expectedRevision'>,
-): void {
+type CommandPayload = ExperienceCommand extends infer Command
+  ? Command extends ExperienceCommand
+    ? Omit<Command, 'stepId' | 'expectedRevision'>
+    : never
+  : never;
+
+function dispatchCurrent(engine: ExperienceEngine, command: CommandPayload): void {
   const state = engine.state;
   if (state.currentStepId === null) throw new Error('Expected a running experience.');
-  engine.dispatch({ ...command, stepId: state.currentStepId, expectedRevision: state.revision } as ExperienceCommand);
+  engine.dispatch({
+    ...command,
+    stepId: state.currentStepId,
+    expectedRevision: state.revision,
+  } as ExperienceCommand);
 }
 
 function atAssessment(): ExperienceEngine {
@@ -138,7 +145,7 @@ describe('ExperienceEngine assessment authority', () => {
       { type: 'submit-outcome', outcomeId: 'correct' },
       { type: 'use-hint', hintId: 'first-letter' },
       { type: 'submit-assessment', answer: '   ' },
-    ] as const) {
+    ] as const satisfies readonly CommandPayload[]) {
       const state = engine.state;
       const events = engine.events;
       expect(() => dispatchCurrent(engine, command)).toThrow(ExperienceCommandError);
