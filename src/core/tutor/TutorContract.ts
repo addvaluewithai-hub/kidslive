@@ -2,6 +2,7 @@ import type {
   ExperienceEvent,
   ExperienceState,
   ExperienceStep,
+  ExperienceToolParameterValue,
 } from '../experience/ExperienceDefinition';
 
 export type TutorSessionId = string;
@@ -51,9 +52,34 @@ export type TutorActorCue =
   | { readonly type: 'move-to'; readonly anchorId: string }
   | { readonly type: 'look-at'; readonly anchorId: string };
 
+interface TutorAuthorityProposalBase {
+  readonly stepId: string;
+  readonly expectedRevision: number;
+}
+
+export type TutorAuthorityProposal =
+  | (TutorAuthorityProposalBase & {
+      readonly type: 'submit-outcome';
+      readonly outcomeId: string;
+    })
+  | (TutorAuthorityProposalBase & {
+      readonly type: 'submit-assessment';
+      readonly answer: string;
+    })
+  | (TutorAuthorityProposalBase & {
+      readonly type: 'use-hint';
+      readonly hintId: string;
+    })
+  | (TutorAuthorityProposalBase & {
+      readonly type: 'request-tool';
+      readonly toolId: string;
+      readonly parameters: Readonly<Record<string, ExperienceToolParameterValue>>;
+    });
+
 export interface TutorOutput {
   readonly narration: readonly TutorNarrationIntent[];
   readonly actorCues: readonly TutorActorCue[];
+  readonly authorityProposal?: TutorAuthorityProposal;
 }
 
 export interface TutorProvider {

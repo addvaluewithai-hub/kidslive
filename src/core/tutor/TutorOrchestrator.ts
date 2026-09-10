@@ -7,6 +7,7 @@ import type {
 } from '../experience/ExperienceDefinition';
 import type {
   TutorActorCue,
+  TutorAuthorityProposal,
   TutorCancellationToken,
   TutorExperienceObservation,
   TutorNarrationIntent,
@@ -127,10 +128,21 @@ function snapshotActorCue(cue: TutorActorCue): TutorActorCue {
   return Object.freeze({ ...cue }) as TutorActorCue;
 }
 
+function snapshotAuthorityProposal(proposal: TutorAuthorityProposal): TutorAuthorityProposal {
+  if (proposal.type === 'request-tool') {
+    return Object.freeze({ ...proposal, parameters: freezeParameters(proposal.parameters) });
+  }
+  return Object.freeze({ ...proposal });
+}
+
 function snapshotOutput(output: TutorOutput): TutorOutput {
+  const authorityProposal = output.authorityProposal;
   return Object.freeze({
     narration: Object.freeze(output.narration.map(snapshotNarration)),
     actorCues: Object.freeze(output.actorCues.map(snapshotActorCue)),
+    ...(authorityProposal === undefined
+      ? {}
+      : { authorityProposal: snapshotAuthorityProposal(authorityProposal) }),
   });
 }
 
