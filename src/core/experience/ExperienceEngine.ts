@@ -11,6 +11,11 @@ import type {
   ExperienceStep,
   ExperienceStepId,
 } from './ExperienceDefinition';
+import {
+  EXPERIENCE_CHECKPOINT_FORMAT_VERSION,
+  parseExperienceCheckpoint,
+  type ExperienceCheckpoint,
+} from './ExperienceCheckpoint';
 import { assertValidExperience } from './validateExperience';
 
 export type ExperienceCommandErrorCode =
@@ -34,10 +39,7 @@ export class ExperienceCommandError extends Error {
 }
 
 function freezeAttempt(attempt: AssessmentAttemptRecord): AssessmentAttemptRecord {
-  return Object.freeze({
-    ...attempt,
-    usedHintIds: Object.freeze([...attempt.usedHintIds]),
-  });
+  return Object.freeze({ ...attempt, usedHintIds: Object.freeze([...attempt.usedHintIds]) });
 }
 
 function freezeAssessment(record: AssessmentStepRecord): AssessmentStepRecord {
@@ -57,10 +59,7 @@ function freezeState(state: ExperienceState): ExperienceState {
 
 function freezeEvent(event: ExperienceEvent): ExperienceEvent {
   if (event.type === 'assessment-submitted') {
-    return Object.freeze({
-      ...event,
-      usedHintIds: Object.freeze([...event.usedHintIds]),
-    });
+    return Object.freeze({ ...event, usedHintIds: Object.freeze([...event.usedHintIds]) });
   }
   return Object.freeze({ ...event }) as ExperienceEvent;
 }
@@ -74,10 +73,7 @@ function normalizeAnswer(answer: string, step: AssessmentExperienceStep): string
   }
 }
 
-function getAssessmentRecord(
-  state: ExperienceState,
-  stepId: ExperienceStepId,
-): AssessmentStepRecord {
+function getAssessmentRecord(state: ExperienceState, stepId: ExperienceStepId): AssessmentStepRecord {
   return (
     state.assessments.find((record) => record.stepId === stepId) ?? {
       stepId,
@@ -96,37 +92,55 @@ function replaceAssessmentRecord(
   return [...withoutStep, nextRecord];
 }
 
+function initialState(definition: ExperienceDefinition): ExperienceState {
+  return freezeState({
+    experienceId: definition.id,
+    experienceVersion: definition.version,
+    status: 'running',
+    currentStepId: definition.initialStepId,
+    assessments: [],
+    revision: 0,
+  });
+}
+
+function initialEvent(definition: ExperienceDefinition): ExperienceEvent {
+  return freezeEvent({
+    type: 'experience-started',
+    experienceId: definition.id,
+    experienceVersion: definition.version,
+    stepId: definition.initialStepId,
+    revision: 0,
+  });
+}
+
 export class ExperienceEngine {
   private readonly definition: ExperienceDefinition;
   private readonly stepById: ReadonlyMap<ExperienceStepId, ExperienceStep>;
   private currentState: ExperienceState;
   private readonly eventLog: ExperienceEvent[];
 
-  private constructor(definition: ExperienceDefinition) {
+  private constructor(
+    definition: ExperienceDefinition,
+    restoredState?: ExperienceState,
+    restoredEvents?: readonly ExperienceEvent[],
+  ) {
     this.definition = definition;
     this.stepById = new Map(definition.steps.map((step) => [step.id, step]));
-    this.currentState = freezeState({
-      experienceId: definition.id,
-      experienceVersion: definition.version,
-      status: 'running',
-      currentStepId: definition.initialStepId,
-      assessments: [],
-      revision: 0,
-    });
-    this.eventLog = [
-      freezeEvent({
-        type: 'experience-started',
-        experienceId: definition.id,
-        experienceVersion: definition.version,
-        stepId: definition.initialStepId,
-        revision: 0,
-      }),
-    ];
+    this.currentState = restoredState === undefined ? initialState(definition) : freezeState(restoredState);
+    this.eventLog = restoredEvents === undefined
+      ? [initialEvent(definition)]
+      : restoredEvents.map(freezeEvent);
   }
 
   static start(definition: ExperienceDefinition): ExperienceEngine {
     assertValidExperience(definition);
     return new ExperienceEngine(definition);
+  }
+
+  static resume(definition: ExperienceDefinition, checkpointValue: unknown): ExperienceEngine {
+    assertValidExperience(definition);
+    const checkpoint = parseExperienceCheckpoint(definition, checkpointValue);
+    return new ExperienceEngine(definition, checkpoint.state, checkpoint.events);
   }
 
   get state(): ExperienceState {
@@ -141,6 +155,22 @@ export class ExperienceEngine {
     const stepId = this.currentState.currentStepId;
     if (stepId === null) return null;
     return this.stepById.get(stepId) ?? null;
+  }
+
+  checkpoint(): ExperienceCheckpoint {
+    return Object.freeze({
+      formatVersion: EXPERIENCE_CHECKPOINT_FORMAT_VERSION,
+      experienceId: this.definition.id,
+      experienceVersion: this.definition.version,
+      state: this.state,
+      events: this.events,
+    });
+  }
+
+  restart(): ExperienceState {
+    this.currentState = initialState(this.definition);
+    this.eventLog.splice(0, this.eventLog.length, initialEvent(this.definition));
+    return this.state;
   }
 
   dispatch(command: ExperienceCommand): ExperienceState {
@@ -172,14 +202,7 @@ export class ExperienceEngine {
     }
 
     const revision = this.currentState.revision + 1;
-    this.eventLog.push(
-      freezeEvent({
-        type: 'outcome-submitted',
-        stepId: step.id,
-        outcomeId,
-        revision,
-      }),
-    );
+    this.eventLog.push(freezeEvent({ type: 'outcome-submitted', stepId: step.id, outcomeId, revision }));
     return this.applyTransition(step.id, outcomeId, revision);
   }
 
@@ -241,9 +264,7 @@ export class ExperienceEngine {
     );
 
     if (result === 'retrying') return this.state;
-    const outcomeId = correct
-      ? step.assessment.correctOutcomeId
-      : step.assessment.exhaustedOutcomeId;
+    const outcomeId = correct ? step.assessment.correctOutcomeId : step.assessment.exhaustedOutcomeId;
     return this.applyTransition(step.id, outcomeId, revision);
   }
 
@@ -251,70 +272,44 @@ export class ExperienceEngine {
     const step = this.requireAssessmentStep();
     const record = getAssessmentRecord(this.currentState, step.id);
     if (record.result === 'correct' || record.result === 'exhausted') {
-      throw new ExperienceCommandError(
-        'hint-not-available',
-        `Assessment step "${step.id}" is already resolved.`,
-      );
+      throw new ExperienceCommandError('hint-not-available', `Assessment step "${step.id}" is already resolved.`);
     }
 
     const hint = step.assessment.hints.find((candidate) => candidate.id === hintId);
     if (hint === undefined) {
-      throw new ExperienceCommandError(
-        'unknown-hint',
-        `Assessment step "${step.id}" does not declare hint "${hintId}".`,
-      );
+      throw new ExperienceCommandError('unknown-hint', `Assessment step "${step.id}" does not declare hint "${hintId}".`);
     }
     if (record.usedHintIds.includes(hintId)) {
-      throw new ExperienceCommandError(
-        'hint-already-used',
-        `Hint "${hintId}" has already been used on assessment step "${step.id}".`,
-      );
+      throw new ExperienceCommandError('hint-already-used', `Hint "${hintId}" has already been used on assessment step "${step.id}".`);
     }
     if (record.attempts.length < hint.availableAfterAttempt) {
-      throw new ExperienceCommandError(
-        'hint-not-available',
-        `Hint "${hintId}" requires ${hint.availableAfterAttempt} completed attempt(s).`,
-      );
+      throw new ExperienceCommandError('hint-not-available', `Hint "${hintId}" requires ${hint.availableAfterAttempt} completed attempt(s).`);
     }
 
     const revision = this.currentState.revision + 1;
-    const nextRecord: AssessmentStepRecord = {
-      ...record,
-      usedHintIds: [...record.usedHintIds, hintId],
-    };
+    const nextRecord: AssessmentStepRecord = { ...record, usedHintIds: [...record.usedHintIds, hintId] };
     this.currentState = freezeState({
       ...this.currentState,
       assessments: replaceAssessmentRecord(this.currentState, nextRecord),
       revision,
     });
-    this.eventLog.push(
-      freezeEvent({ type: 'hint-used', stepId: step.id, hintId, revision }),
-    );
+    this.eventLog.push(freezeEvent({ type: 'hint-used', stepId: step.id, hintId, revision }));
     return this.state;
   }
 
   private requireCurrentStep(): ExperienceStep {
     if (this.currentState.status === 'completed') {
-      throw new ExperienceCommandError(
-        'experience-completed',
-        `Experience "${this.definition.id}" is already complete.`,
-      );
+      throw new ExperienceCommandError('experience-completed', `Experience "${this.definition.id}" is already complete.`);
     }
 
     const stepId = this.currentState.currentStepId;
     if (stepId === null) {
-      throw new ExperienceCommandError(
-        'missing-current-step',
-        'Running experience has no current step.',
-      );
+      throw new ExperienceCommandError('missing-current-step', 'Running experience has no current step.');
     }
 
     const step = this.stepById.get(stepId);
     if (step === undefined) {
-      throw new ExperienceCommandError(
-        'missing-current-step',
-        `Current step "${stepId}" does not exist in the validated definition.`,
-      );
+      throw new ExperienceCommandError('missing-current-step', `Current step "${stepId}" does not exist in the validated definition.`);
     }
     return step;
   }
@@ -322,10 +317,7 @@ export class ExperienceEngine {
   private requireAssessmentStep(): AssessmentExperienceStep {
     const step = this.requireCurrentStep();
     if (step.kind !== 'assessment') {
-      throw new ExperienceCommandError(
-        'invalid-command-for-step',
-        `Step "${step.id}" is not an assessment step.`,
-      );
+      throw new ExperienceCommandError('invalid-command-for-step', `Step "${step.id}" is not an assessment step.`);
     }
     return step;
   }
@@ -338,43 +330,18 @@ export class ExperienceEngine {
     const step = this.stepById.get(fromStepId);
     const transition = step?.transitions.find((candidate) => candidate.on === outcomeId);
     if (transition === undefined) {
-      throw new ExperienceCommandError(
-        'unknown-outcome',
-        `Step "${fromStepId}" does not allow outcome "${outcomeId}".`,
-      );
+      throw new ExperienceCommandError('unknown-outcome', `Step "${fromStepId}" does not allow outcome "${outcomeId}".`);
     }
 
     if (transition.to === 'complete') {
-      this.currentState = freezeState({
-        ...this.currentState,
-        status: 'completed',
-        currentStepId: null,
-        revision,
-      });
-      this.eventLog.push(
-        freezeEvent({
-          type: 'experience-completed',
-          fromStepId,
-          outcomeId,
-          revision,
-        }),
-      );
+      this.currentState = freezeState({ ...this.currentState, status: 'completed', currentStepId: null, revision });
+      this.eventLog.push(freezeEvent({ type: 'experience-completed', fromStepId, outcomeId, revision }));
       return this.state;
     }
 
-    this.currentState = freezeState({
-      ...this.currentState,
-      currentStepId: transition.to,
-      revision,
-    });
+    this.currentState = freezeState({ ...this.currentState, currentStepId: transition.to, revision });
     this.eventLog.push(
-      freezeEvent({
-        type: 'step-transitioned',
-        fromStepId,
-        toStepId: transition.to,
-        outcomeId,
-        revision,
-      }),
+      freezeEvent({ type: 'step-transitioned', fromStepId, toStepId: transition.to, outcomeId, revision }),
     );
     return this.state;
   }
