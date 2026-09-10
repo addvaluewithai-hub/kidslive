@@ -93,7 +93,8 @@ export class RuntimeDebugOverlay {
       this.label?.setText(text);
     };
 
-    refresh();
+    // Publish only after the scene has finished synchronous create() wiring so lifecycle
+    // metrics include listeners registered immediately after the overlay is constructed.
     this.refreshTimer = scene.time.addEvent({
       delay: 250,
       loop: true,
