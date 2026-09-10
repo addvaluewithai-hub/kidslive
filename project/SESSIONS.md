@@ -94,20 +94,24 @@ Non-blocking A2 follow-ups:
 - Playwright visual artifacts were directly reviewed: Nova is visible in the hub on both 1280×720 desktop and 390×844 mobile without breaking the existing place navigation flow.
 
 ### A3-D2 — Movement, look targets, emotion + responsive spatial behavior
-**Status: NEXT**
+**Status: DONE**
 
-**Outcome:** the companion inhabits the world rather than remaining a static configured renderer: callers can move it to semantic anchors, direct attention, and change emotion/presentation consistently across desktop/mobile layout.
+**Outcome delivered:** the companion now inhabits the hub through semantic movement/look targets, configurable emotion presentation, deterministic overlap cancellation, and responsive reflow rather than teleport-only/static behavior.
 
-**Done when:**
-- introduce renderer-independent semantic anchors/targets that do not expose Phaser coordinates to generic callers;
-- `moveTo` has explicit deterministic completion/cancellation semantics and Phaser visibly interpolates rather than teleporting only;
-- `lookAt`/orientation and `setEmotion` visibly affect presentation through replaceable definition data, not one-character branching;
-- resize/orientation preserves coherent actor position/target without duplicate/lost actors;
-- overlapping movement/state requests have an explicit rule instead of leaking tweens/promises;
-- deterministic tests cover actor state/command semantics and browser visual evidence covers representative movement/emotion states desktop/mobile.
+**Evidence / implementation notes:**
+- `WorldActor` now defines an explicit `ActorOperationCancelledError`; a newer unfinished `moveTo` deterministically rejects the previous movement instead of leaking promises/tweens;
+- `FakeActor` supports manual deterministic movement completion/cancellation so future engine/tutor tests can exercise overlap semantics without Phaser;
+- `PhaserActor.moveTo` visibly interpolates with configured timing, tracks the current semantic anchor/look target, and exposes Phaser-only `snapTo`/`reflow` lifecycle helpers without leaking coordinates into generic callers;
+- hub semantic targets cover home, center, and per-place companion/focus anchors resolved from the responsive A2 place layout;
+- selecting a place moves Nova beside it, points attention toward it, and applies the configured `curious` presentation; Overview returns Nova home/warm and points attention center;
+- emotion face tint/mouth/glow and movement timing live in `CharacterDefinition`, not Nova-specific branches inside the generic renderer;
+- resize/layout re-resolves current or active semantic movement targets and preserves one actor instance; scene shutdown still cancels/disposes outstanding movement cleanly;
+- visual QA exposed and fixed a real facing regression where negative container scale mirrored the `Nova` label; only the actor visual body now flips, keeping labels readable;
+- CI run `34429648866` passed formatting/boundaries/typecheck, 20 unit tests, production build, all 10 Playwright tests across desktop/mobile, and Android debug APK;
+- successful Playwright evidence was directly reviewed on 1280×720 and 390×844: focused Nova visibly sits beside English and faces it with a curious expression, Overview restores a readable warm home state, labels remain unmirrored, and mobile composition remains usable.
 
 ### A3-D3 — Bounded perform/speak sequencing + interruption semantics
-**Status: PLANNED**
+**Status: NEXT**
 
 **Outcome:** the actor executes bounded action and speech-presentation commands in deterministic sequences, including interruption/cleanup, without a live AI/TTS dependency or authority leakage.
 
