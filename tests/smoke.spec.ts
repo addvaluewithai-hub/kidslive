@@ -92,12 +92,15 @@ test('failed authored place art falls back and still returns safely', async ({ p
 
   const compact = isCompactHubViewport(viewport.width);
   const pressCanvas = async (position: { x: number; y: number }) => {
+    if (!compact) {
+      await canvas.click({ position });
+      return;
+    }
     const bounds = await canvas.boundingBox();
     if (!bounds) throw new Error('Expected visible game canvas bounds');
     const x = bounds.x + (position.x / viewport.width) * bounds.width;
     const y = bounds.y + (position.y / viewport.height) * bounds.height;
-    if (compact) await page.touchscreen.tap(x, y);
-    else await page.mouse.click(x, y);
+    await page.touchscreen.tap(x, y);
   };
   const waitForRuntime = async (scene: string, mode?: string) => {
     await page.waitForFunction(
@@ -243,12 +246,15 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
   const pressCanvas = async (position: { x: number; y: number }) => {
     const viewport = page.viewportSize();
     if (!viewport) throw new Error('Expected a configured browser viewport');
+    if (!isCompactHubViewport(viewport.width)) {
+      await canvas.click({ position });
+      return;
+    }
     const bounds = await canvas.boundingBox();
     if (!bounds) throw new Error('Expected visible game canvas bounds');
     const x = bounds.x + (position.x / viewport.width) * bounds.width;
     const y = bounds.y + (position.y / viewport.height) * bounds.height;
-    if (isCompactHubViewport(viewport.width)) await page.touchscreen.tap(x, y);
-    else await page.mouse.click(x, y);
+    await page.touchscreen.tap(x, y);
   };
 
   const initialHub = await waitForRuntime('planet-hub', 'overview');
