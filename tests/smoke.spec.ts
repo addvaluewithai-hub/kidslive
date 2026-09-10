@@ -18,10 +18,27 @@ test('boots the KidsLive shell without viewport overflow', async ({ page }) => {
 test('all authored places enter and return without breaking the hub', async ({ page }, testInfo) => {
   test.setTimeout(100_000);
 
-  await page.goto('/');
+  await page.goto('/?runtimeDebug=1');
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
-  await page.waitForTimeout(800);
+
+  const waitForRuntime = async (scene: string, mode?: string) => {
+    await page.waitForFunction(
+      ({ expectedScene, expectedMode }) => {
+        const snapshot = (
+          window as Window & {
+            __KIDSLIVE_RUNTIME_DEBUG__?: { scene: string; mode: string };
+          }
+        ).__KIDSLIVE_RUNTIME_DEBUG__;
+        return (
+          snapshot?.scene === expectedScene &&
+          (expectedMode === undefined || snapshot.mode === expectedMode)
+        );
+      },
+      { expectedScene: scene, expectedMode: mode },
+    );
+  };
+  await waitForRuntime('planet-hub', 'overview');
 
   const viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected a configured browser viewport');
@@ -45,9 +62,9 @@ test('all authored places enter and return without breaking the hub', async ({ p
   for (const [index, place] of HUB_PLACES.entries()) {
     const position = resolveHubPlacePosition(place, viewport.width, viewport.height);
     await pressCanvas(position);
-    await page.waitForTimeout(320);
+    await waitForRuntime('planet-hub', place.id);
     await pressCanvas(enterButton);
-    await page.waitForTimeout(700);
+    await waitForRuntime('placeholder-place');
 
     if (index === 0 || index === HUB_PLACES.length - 1) {
       const placeScreenshot = await page.screenshot({ animations: 'disabled' });
@@ -59,12 +76,12 @@ test('all authored places enter and return without breaking the hub', async ({ p
     }
 
     await pressCanvas(placeBack);
-    await page.waitForTimeout(700);
+    await waitForRuntime('planet-hub', place.id);
     await expect(canvas).toBeVisible();
 
     if (index < HUB_PLACES.length - 1) {
       await pressCanvas(overviewButton);
-      await page.waitForTimeout(320);
+      await waitForRuntime('planet-hub', 'overview');
     }
   }
 
