@@ -7,6 +7,12 @@ export type CharacterEmotionPresentation = {
   glowAlpha: number;
 };
 
+export type CharacterActionPresentation = {
+  durationMs: number;
+  lift: number;
+  scale: number;
+};
+
 export type CharacterDefinition = {
   id: string;
   displayName: string;
@@ -21,6 +27,13 @@ export type CharacterDefinition = {
   supportedActions: readonly ActorAction[];
   supportedEmotions: readonly ActorEmotion[];
   emotionPresentation: Record<ActorEmotion, CharacterEmotionPresentation>;
+  actionPresentation: Record<ActorAction, CharacterActionPresentation>;
+  speechPresentation: {
+    minDurationMs: number;
+    maxDurationMs: number;
+    msPerCharacter: number;
+    maxWidth: number;
+  };
 };
 
 export const KIDSLIVE_COMPANION: CharacterDefinition = {
@@ -41,5 +54,18 @@ export const KIDSLIVE_COMPANION: CharacterDefinition = {
     warm: { faceTint: 0x7c8cff, mouthWidth: 18, mouthHeight: 7, glowAlpha: 0.2 },
     curious: { faceTint: 0x7c8cff, mouthWidth: 9, mouthHeight: 9, glowAlpha: 0.24 },
     excited: { faceTint: 0xffd166, mouthWidth: 18, mouthHeight: 12, glowAlpha: 0.32 },
+  },
+  actionPresentation: {
+    idle: { durationMs: 180, lift: 0, scale: 1 },
+    greet: { durationMs: 420, lift: 8, scale: 1.08 },
+    explain: { durationMs: 520, lift: 5, scale: 1.04 },
+    celebrate: { durationMs: 620, lift: 14, scale: 1.16 },
+    think: { durationMs: 520, lift: 4, scale: 0.96 },
+  },
+  speechPresentation: {
+    minDurationMs: 900,
+    maxDurationMs: 2_400,
+    msPerCharacter: 42,
+    maxWidth: 190,
   },
 };
