@@ -163,12 +163,14 @@ Run the dedicated A5 phase critique from `TESTING.md` and `STAGE_GATES.md`. Revi
 **Evidence:** `project/qa/A5-Q.md` records the phase critique against `TESTING.md` and `STAGE_GATES.md`. Q found three blockers: explicit cancellation does not settle a never-cooperating provider promise; a throwing authority-audit sink can disrupt downstream behavior after A4 authority has already mutated; and current `main` browser evidence is red on a repeated desktop actor lifecycle timeout that must be diagnosed or stabilized before phase closure. Current CI `34525896943` has quality and Android green; its failed browser job was re-run during Q to gather additional evidence. No A5-specific visual surface changed and no live provider is used.
 
 ### A5-F — Fix / polish
-**Status: NEXT**
+**Status: DONE**
 
 Aggressively fix A5-Q blockers and high-value regressions, rerun focused deterministic/failure/interruption evidence and any relevant visual evidence, and keep A5 open if a real authority/safety/resilience blocker remains.
 
+**Evidence:** A5-F closed all three A5-Q blockers. Commit `b409abef` makes authority audit best-effort so a throwing sink cannot change approved/rejected authority semantics or suppress downstream delivery. Commit `95faae19` races explicit cancellation against provider work, cancels timeout handles promptly, and snapshots standalone timeout configuration. Commit `aca0b2f0` adds deterministic regressions for explicit cancellation, supersede, dispose, timeout cleanup, and throwing-audit behavior with data-minimized diagnostics. Commit `37a2ca31` removes the Q-document trailing whitespace that was the sole quality failure on the prior bookkeeping baseline. CI `34536910453` passed format, package boundaries/typecheck/lint, unit/integration tests, production build, browser stage-gate, and Android debug APK. The previously red desktop actor lifecycle evidence is green again without product/runtime changes, so the Q failure did not reproduce as an A5 rendering regression. No A5 user-visible surface changed, so no additional visual baseline was required.
+
 ### A5-P — Close A5 + plan A6
-**Status: PLANNED**
+**Status: NEXT**
 
 Only if A5 is genuinely ready: record `project/gates/A5.md`, mark A5 `DONE` and A6 current in `TASKS.md`, then decompose **A6 English World vertical slice** into at most five substantial end-to-end delivery sessions plus A6-Q/F/P. A6 remains a platform/product vertical slice, not full English curriculum production; the post-development curriculum phases stay deferred until the development roadmap is complete.
 
