@@ -129,14 +129,16 @@ Add provider-independent speech/text output contracts and coordinate them with `
 **Evidence:** commit `4fa207a9` added bounded move/look actor cues, `TutorDeliveryCoordinator`, replaceable voice/speech/text contracts, deterministic instant/manual/failure speech adapters, orchestration-to-host interruption propagation, and integration evidence for actor/text/speech coordination, superseded slow speech, explicit actor interruption, display-only fallback, deterministic speech failure, voice-config isolation, and unchanged A4 authority. CI `34507905386` passed the focused quality job including format, package boundaries/typecheck/lint, unit/integration tests, and production build. No React/Phaser rendering/layout/navigation surface changed, so delivery visual QA was not required.
 
 ### A5-D3 — Guarded Experience Engine command/tool bridge
-**Status: NEXT**
+**Status: DONE**
 
 Connect bounded tutor decisions to A4 through the final guarded `dispatch()` and `requestTool()` APIs. Define explicit translation/authorization boundaries so tutor outputs may propose allowed learner-facing actions or product/world effects but can never submit correctness directly, bypass step/revision guards, broaden tool permissions, or execute arbitrary backend/native work.
 
 **Done when:** approved tutor proposals can cause legal A4 commands/tool intents through one audited bridge; unauthorized, malformed, stale, duplicate, or out-of-step proposals are rejected without authority mutation; engine rejection is observable to orchestration; tests prove a malicious/incorrect scripted tutor cannot override educational truth or undeclared permissions.
 
+**Evidence:** commits `72753832`, `e32ed83d`, and `c44bea50` added a typed single-proposal tutor authority contract, immutable proposal snapshotting, `TutorAuthorityBridge`, `GuardedTutorOutputHost`, structured audit records, runtime malformed-input rejection, and deterministic integration/adversarial coverage. Legal outcome/assessment/hint proposals reach only A4 `dispatch()`, legal tools reach only A4 `requestTool()`, approved tool intents are not executed by the bridge, and stale/duplicate/out-of-step/undeclared/malformed proposals fail closed without authority mutation or downstream delivery. CI `34514401082` passed format, package boundaries/typecheck, unit/integration tests, and production build in the focused quality job on implementation head `c44bea50`. No React/Phaser rendering/layout/navigation surface changed, so delivery visual QA was not required. The immediately preceding D2 bookkeeping CI failure remained an unrelated pre-existing desktop actor smoke timeout; its quality and Android jobs were green.
+
 ### A5-D4 — Failure/slow-provider resilience + observable turn lifecycle
-**Status: PLANNED**
+**Status: NEXT**
 
 Harden orchestration for provider timeout/failure/cancellation, malformed outputs, duplicate/late responses, speech failures, actor failures, and recoverable retries. Add provider-neutral structured lifecycle events/diagnostics with data-minimized payloads suitable for later analytics integration, plus deterministic failure/slow tutor fixtures.
 
