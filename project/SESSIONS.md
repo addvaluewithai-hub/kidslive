@@ -120,14 +120,16 @@ Build the core tutor request/response contract and orchestration state machine a
 **Evidence:** provider-neutral contracts, deterministic `TutorOrchestrator`, `ScriptedTutor`, and `RecordingTutorHost` landed across commits `25db7147`, `fa2bdf56`, `b3838c98`, and `93f789d5`; strict test-fixture typing was corrected in `81ea96dd`. CI `34501896332` passed format, package boundaries/typecheck, unit/integration tests, and production build on the implementation head. No user-visible surface changed, so delivery visual QA was not required.
 
 ### A5-D2 — Speech/text delivery + interruption and actor coordination
-**Status: NEXT**
+**Status: DONE**
 
 Add provider-independent speech/text output contracts and coordinate them with `WorldActor` behavior so tutor turns can speak, display text intent, move/look/emote/perform bounded actor actions, and be interrupted/replaced cleanly. Include deterministic instant/slow/failure speech adapters and cancellation semantics that prevent late audio/actor completion from reviving stale turns.
 
 **Done when:** one tutor turn can coordinate text/speech and actor intentions end-to-end; a newer turn or explicit interruption deterministically cancels superseded work; slow/failing speech and actor operations settle into known states without hanging or mutating A4 authority; persona/tone/voice configuration remains replaceable; focused deterministic checks are green, with visual QA only if a user-visible surface is actually changed.
 
+**Evidence:** commit `4fa207a9` added bounded move/look actor cues, `TutorDeliveryCoordinator`, replaceable voice/speech/text contracts, deterministic instant/manual/failure speech adapters, orchestration-to-host interruption propagation, and integration evidence for actor/text/speech coordination, superseded slow speech, explicit actor interruption, display-only fallback, deterministic speech failure, voice-config isolation, and unchanged A4 authority. CI `34507905386` passed the focused quality job including format, package boundaries/typecheck/lint, unit/integration tests, and production build. No React/Phaser rendering/layout/navigation surface changed, so delivery visual QA was not required.
+
 ### A5-D3 — Guarded Experience Engine command/tool bridge
-**Status: PLANNED**
+**Status: NEXT**
 
 Connect bounded tutor decisions to A4 through the final guarded `dispatch()` and `requestTool()` APIs. Define explicit translation/authorization boundaries so tutor outputs may propose allowed learner-facing actions or product/world effects but can never submit correctness directly, bypass step/revision guards, broaden tool permissions, or execute arbitrary backend/native work.
 
