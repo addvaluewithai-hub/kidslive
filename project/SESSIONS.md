@@ -49,7 +49,7 @@ Only after the current phase is genuinely ready to close: record the gate, updat
 
 ---
 
-# Completed phase
+# Completed phases
 
 ## A2 — Planet Hub foundation
 
@@ -62,139 +62,128 @@ Non-blocking A2 follow-ups:
 - refresh physical Android frame pacing once actor/vertical-slice rendering density is representative;
 - strengthen transition synchronization only if real CI flakiness appears.
 
+## A3 — Character/actor system
+
+**Status: DONE**
+
+A3 completed D1–D5, Q, F, and P. The final stage gate is `project/gates/A3.md` with **PASS WITH FOLLOW-UP**. The production runtime now has a renderer-independent `WorldActor`, deterministic `FakeActor`, configurable character identity/assets, production `PhaserActor`, bounded movement/look/emotion/action/speech behavior, explicit interruption/disposal semantics, and stable active-scene ownership across Hub → Place → Hub.
+
+A3-Q found two blocking evidence gaps: nondeterministic lifecycle observation around resize/re-entry and missing direct coverage for failed companion art. A3-F resolved both without weakening lifecycle assertions or adding A4 scope, and also synchronized the existing six-place traversal on actual scene state after a deliberate rerun exposed a screenshot timing race.
+
+Final A3 evidence:
+- implementation CI `34450624817` on `5971e2253f829ace99d273e1163700ac4e0405d5` passed format/lint/tests/build, the complete desktop/mobile Playwright gate, and Android debug APK;
+- closure-baseline CI `34451067873` on `b453504e8139901395411b60fbdc673cc29d6905` also passed;
+- forced `/assets/characters/companion-shell.svg` failure is exercised on desktop/mobile through Hub → Place → Hub with one actor, zero settled tweens, idle place operations, and no page errors;
+- settled lifecycle evidence asserts one actor, zero tweens, and stable resize-listener counts through resize and three repeated ownership cycles;
+- representative desktop/mobile visual artifacts were reviewed for regular, focused/speech, resized, Place, return, and character-fallback states.
+
+Non-blocking A3 follow-ups:
+- keep the bundle/startup warning visible and profile/code-split only when measured loading evidence shows a real problem;
+- refresh physical Android frame pacing when A6 provides representative production-density world/actor content under D-006;
+- A5 must keep voice/tone/persona replaceable outside renderer semantics rather than hard-coding Nova/KidsLive identity;
+- keep the runtime debug overlay development-only.
+
+### A3-P — Close A3 + plan A4
+**Status: DONE**
+
+**Outcome delivered:** A3 passed its stage gate, roadmap/project handoff now marks A3 complete and A4 current, and A4 Experience Engine v1 is decomposed below into five substantial pure-TypeScript delivery outcomes followed by Q/F/P.
+
+**Planning notes:**
+- recorded `project/gates/A3.md` as **PASS WITH FOLLOW-UP** after verifying both A3-Q blockers were resolved and current-main CI was green;
+- marked A3 `DONE` and A4 `IN PROGRESS` in `TASKS.md`, and updated the project resume handoff in `README.md`;
+- A4 planning preserves D-003/D-004: authored educational truth and transitions remain deterministic pure TypeScript, while renderer/tutor/provider concerns stay outside the engine;
+- A4 does not build the A5 live/scripted tutor orchestration or the A6 English World vertical slice; it establishes the authored engine contracts those phases can consume.
+
 ---
 
 # Current phase plan
 
-## A3 — Character/actor system
+## A4 — Experience Engine v1
 
-**Phase outcome:** KidsLive has a character-agnostic `WorldActor` system with a real Phaser implementation, deterministic test actor, replaceable character definition/assets, bounded movement/look/emotion/action/speech behavior, and clean integration with the A2 hub/place lifecycle. The first KidsLive companion proves the system without becoming a domain assumption.
+**Phase outcome:** KidsLive has a framework-independent authored experience engine that can validate and run deterministic step graphs, process bounded learner inputs and assessment transitions, apply retries/hints, checkpoint and resume safely, enforce declared tool permissions, and expose typed state/events suitable for later tutor/world hosts without giving AI or rendering code authority over educational truth.
 
 **Architecture constraints:**
-- `WorldActor` is renderer-independent; Phaser details stay behind `PhaserActor`.
-- Do not add PixiJS or a second render/game loop. Historical Pixi/Nova is reference evidence only.
-- Character identity, voice, animation set, emotion presentation, and visuals come from replaceable definition/configuration rather than generic-domain constants.
-- A3 remains deterministic without live tutor, TTS, or model providers.
-- Reuse A2 scene lifecycle, responsive layout, asset/runtime seams rather than creating a parallel runtime.
+- all experience definitions, validation, transition logic, assessment truth, retries, hints, checkpoints, and permissions live in pure TypeScript with no Phaser, React, browser, native, network, persistence-provider, or model imports;
+- experience definitions describe educational intent and bounded product effects, not Nova-specific dialogue, Phaser coordinates, visual skins, or provider prompts;
+- the engine is authoritative for allowed transitions and assessment outcomes; future A5 tutor code may request or narrate actions but cannot bypass engine state/permissions;
+- no live AI/TTS/model provider is required for implementation or CI;
+- persistence in A4 is a serializable checkpoint/resume contract and deterministic test storage only; production backend/sync remains A11;
+- A4 should consume existing typed-event/actor seams only through framework-independent contracts where useful, without moving Phaser lifecycle into domain code.
 
-### A3-D1 — WorldActor contract + first production actor end-to-end
-**Status: DONE**
-
-**Outcome delivered:** a configured Nova companion is visibly present in the production Planet Hub through a renderer-independent actor contract, and callers can use a deterministic fake without Phaser.
-
-**Evidence / implementation notes:**
-- inspected KidsLive PR #1 and PixiLive PR #9 under D-007;
-- reused only renderer-independent concepts: semantic destination ownership, action/emotion vocabulary, and explicit actor lifecycle intent;
-- explicitly did **not** port Pixi display objects, Pixi renderer lifecycle, SDK embedding, Gemini/TTS, or the Pixi flight implementation;
-- added `src/core/actors/WorldActor.ts` and deterministic `FakeActor` command history/state coverage;
-- added configurable `CharacterDefinition` and initial `KIDSLIVE_COMPANION` definition so Nova identity/palette/capabilities are data, not generic actor branching;
-- added initial `PhaserActor` renderer/controller and wired it into `PlanetHubScene` with explicit shutdown disposal and responsive home placement;
-- runtime debug detail now reports the active actor id;
-- CI run `34425187811` passed quality (boundaries/typecheck/tests/build), Playwright desktop/mobile flows, and Android debug APK;
-- Playwright visual artifacts were directly reviewed: Nova is visible in the hub on both 1280×720 desktop and 390×844 mobile without breaking the existing place navigation flow.
-
-### A3-D2 — Movement, look targets, emotion + responsive spatial behavior
-**Status: DONE**
-
-**Outcome delivered:** the companion now inhabits the hub through semantic movement/look targets, configurable emotion presentation, deterministic overlap cancellation, and responsive reflow rather than teleport-only/static behavior.
-
-**Evidence / implementation notes:**
-- `WorldActor` now defines an explicit `ActorOperationCancelledError`; a newer unfinished `moveTo` deterministically rejects the previous movement instead of leaking promises/tweens;
-- `FakeActor` supports manual deterministic movement completion/cancellation so future engine/tutor tests can exercise overlap semantics without Phaser;
-- `PhaserActor.moveTo` visibly interpolates with configured timing, tracks the current semantic anchor/look target, and exposes Phaser-only `snapTo`/`reflow` lifecycle helpers without leaking coordinates into generic callers;
-- hub semantic targets cover home, center, and per-place companion/focus anchors resolved from the responsive A2 place layout;
-- selecting a place moves Nova beside it, points attention toward it, and applies the configured `curious` presentation; Overview returns Nova home/warm and points attention center;
-- emotion face tint/mouth/glow and movement timing live in `CharacterDefinition`, not Nova-specific branches inside the generic renderer;
-- resize/layout re-resolves current or active semantic movement targets and preserves one actor instance; scene shutdown still cancels/disposes outstanding movement cleanly;
-- visual QA exposed and fixed a real facing regression where negative container scale mirrored the `Nova` label; only the actor visual body now flips, keeping labels readable;
-- CI run `34429648866` passed formatting/boundaries/typecheck, 20 unit tests, production build, all 10 Playwright tests across desktop/mobile, and Android debug APK;
-- successful Playwright evidence was directly reviewed on 1280×720 and 390×844: focused Nova visibly sits beside English and faces it with a curious expression, Overview restores a readable warm home state, labels remain unmirrored, and mobile composition remains usable.
-
-### A3-D3 — Bounded perform/speak sequencing + interruption semantics
-**Status: DONE**
-
-**Outcome delivered:** the actor can now execute bounded movement, configured actions, and local speech presentation as deterministic awaited sequences, with explicit same-channel supersession and whole-actor interruption/cleanup semantics and no live AI/TTS dependency.
-
-**Evidence / implementation notes:**
-- `WorldActor` documents independent long-running movement/action/speech channels: a newer command cancels the previous unfinished command on the same channel with `ActorOperationCancelledError`, independent channels may overlap deliberately, and callers use `await` when strict sequence ordering is required;
-- added `interrupt(reason?)` to cancel all unfinished actor operations without disposing the actor, while `dispose()` permanently cancels operations and releases resources;
-- `FakeActor` now supports manual deterministic completion of movement, action, and speech, same-channel cancellation, whole-actor interruption, post-interrupt reuse, and disposal coverage for future A4/A5 tests;
-- `CharacterDefinition` now owns per-action duration/lift/scale presentation and bounded local speech timing/width configuration instead of hard-coding Nova-specific timing inside generic actor behavior;
-- `PhaserActor.perform()` uses configured completion-aware visual tweens; `speak()` shows a deterministic local speech bubble for a bounded configured duration with no network, TTS, or model provider;
-- action presentation is isolated from the outer movement container and facing visual, so move/action/look behavior can coexist without corrupting semantic position or readable labels;
-- hub selection now demonstrates a real awaited sequence: interrupt stale intent → move to the selected place → perform `think` → switch emotion → speak `Let's explore <place>!`; selecting another intent, Overview, resize, place entry, or scene shutdown cancels outstanding work cleanly;
-- CI run `34432950071` on implementation head `c30f81efc55a45cd6962762c78994319a888caaf` passed formatting/boundaries/typecheck, 23 unit tests, production build, Playwright desktop/mobile flows, and Android debug APK;
-- Playwright evidence was directly reviewed on 1280×720 and 390×844: the `Let's explore English!` speech bubble is readable above Nova while she sits beside English, labels remain readable, the compact mobile composition remains usable, and Overview removes the active speech presentation without browser errors.
-
-### A3-D4 — Character definition/assets + hub/place lifecycle integration
-**Status: DONE**
-
-**Outcome delivered:** character identity now includes authored visual assets behind replaceable definitions, and one deliberate active-scene ownership policy carries the companion cleanly through Hub → Place → Hub without sharing Phaser instances across scene boundaries.
-
-**Evidence / implementation notes:**
-- `CharacterDefinition` now owns a persistent authored asset pack and visual texture key in addition to palette, actions, emotions, movement, action, and speech presentation data;
-- added a newly authored generic `companion-shell.svg` through the existing A2 `queueAssetPack` lifecycle seam; historical Pixi/Nova review again justified reusing behavior vocabulary/timing concepts only, not Pixi display code or renderer assets that would couple the new runtime;
-- startup now uses `BootScene` to preload the active companion's persistent assets once before entering the hub; `PhaserActor` consumes the loaded shell when present and retains a primitive fallback if character art fails;
-- added `TEST_COMPANION` (`Ember`) with a distinct identity/palette/asset key but the same `CharacterDefinition`/`PhaserActor` contract, plus deterministic coverage proving the renderer-facing definition is not Nova-specific;
-- actor ownership is explicitly **active-scene scoped**: the Hub owns one actor while active, the Place owns one actor while active, every shutdown disposes its actor and cancels operations, and the character texture cache remains persistent across transitions;
-- `PlaceholderPlaceScene` now renders the companion, keeps it responsive through semantic place anchors/reflow, interrupts it before leaving, and disposes it before releasing scene-owned place art;
-- `PhaserActor.getDebugState()` exposes renderer-local id/anchor/look/active operation state; Place runtime debug also reports actor object count and asset/cache/failure state without production UI clutter;
-- existing six-place Playwright traversal now exercises actor create/dispose/recreate across every enter/return cycle on desktop and mobile, including the authored-place failure fallback path;
-- CI run `34436700371` on implementation head `a2cc6ffd5a00b59b8b05809058d27368fa22b952` passed format/lint/tests/build, browser desktop/mobile flows, and Android debug APK;
-- Playwright artifacts were directly reviewed: Nova is visible and readable inside English and Music on 1280×720 and 390×844, remains clear of the mobile back control, the forced place-art fallback remains usable with the actor present, and returned hub captures after repeated traversal show no visible duplicate actor regression.
-
-### A3-D5 — Cohesive actor integration + representative runtime hardening
-**Status: DONE**
-
-**Outcome delivered:** A3's actor capabilities are now exercised together through one deterministic runtime contract and repeated scene ownership flow, with structured lifecycle metrics proving bounded actors/tweens/listeners across resize and Hub → Place → Hub cycles.
-
-**Evidence / implementation notes:**
-- added a structured dev-only runtime debug snapshot with typed metrics while keeping Phaser a type-only dependency so deterministic unit tests do not boot the renderer;
-- hub/place debug snapshots now expose actor count, tween count, resize-listener count, and actor operation state in addition to human-readable detail;
-- added a representative Playwright flow that exercises focus/scripted movement-look-emotion-action-speech behavior, interruption by resize, responsive reflow, place entry, return, and three repeated ownership cycles;
-- each settled scene asserts exactly one actor and zero active tweens; repeated cycles assert stable hub/place object counts and stable resize-listener counts, with place actor operations returning to `idle/idle/silent`;
-- the browser evidence initially exposed interaction flakiness after resize because tests mixed game-space coordinates with CSS canvas-space coordinates; the final helper explicitly maps through current canvas bounds for both pointer and touch input rather than weakening lifecycle assertions;
-- final CI run `34442537653` on implementation head `aee687f59ab30df61bcc516280cd45e9e1026de9` passed format/lint/tests/build, the complete desktop/mobile Playwright stage gate, and Android debug APK;
-- final Playwright artifacts were directly reviewed: regular 390×844 hub/place/fallback captures remain readable and usable with the actor present, and the resized 960×680 / 430×760 cohesive-flow captures show a single visible companion with no duplicate rendering regression;
-- no physical-device FPS number was fabricated: D-006 still makes real Android hardware authoritative for frame pacing, so representative physical profiling remains a follow-up for a device-equipped run rather than a CI claim.
-
-### A3-Q — Phase QA / critique
-**Status: DONE**
-
-**QA record:** `project/qa/A3-Q.md`
-
-**Outcome:** A3 architecture/product evidence is broadly sound, but closure is blocked until A3-F resolves two concrete resilience/evidence findings.
-
-**Blocking findings:**
-- current-main cohesive lifecycle evidence is not deterministic: CI run `34442878844` failed after the green implementation run, with desktop resize-listener count drifting from 5 to 6 and mobile timing out waiting for the expected runtime state;
-- the implemented primitive fallback for failed companion art is not directly exercised: existing failure-path coverage fails place art, not `/assets/characters/companion-shell.svg`.
-
-**Non-blocking findings:**
-- the production bundle remains ~1.41 MB minified / ~386 kB gzip with Vite's >500 kB chunk warning; keep it visible but do not code-split without loading evidence;
-- physical Android frame pacing remains a device-equipped follow-up at representative vertical-slice density under D-006;
-- A5 must keep voice/tone/persona configuration replaceable rather than coupling it to Nova or renderer semantics;
-- the dev-only runtime overlay may overlap product copy in compact/resized debug captures and should remain opt-in rather than becoming production polish scope.
-
-### A3-F — Fix / polish
-**Status: DONE**
-
-**Outcome delivered:** both A3-Q blockers are resolved with deterministic browser evidence, and a directly observed traversal synchronization regression was polished without adding A4 scope.
-
-**Evidence / implementation notes:**
-- added focused Playwright coverage that aborts `/assets/characters/companion-shell.svg` and proves the primitive companion fallback remains usable through Hub → English Place → Hub on desktop and mobile with one actor, zero settled tweens, idle place operations, and no page errors;
-- downloaded and directly reviewed the successful Playwright evidence from CI run `34449755726`; representative desktop/mobile Hub and Place fallback captures remain readable and navigable with a single visible companion fallback;
-- traced the reported resize-listener 5→6 drift to the debug overlay publishing its first lifecycle snapshot synchronously before the scene registered its own resize listener, not to a leaked scene listener;
-- `RuntimeDebugOverlay` now publishes its first snapshot on the existing 250 ms timer after synchronous scene `create()` wiring completes, so the baseline includes the scene listener and stable-listener assertions measure a settled lifecycle state;
-- focused lifecycle coverage now waits for one actor, zero tweens, and the exact baseline resize-listener count after resize and through three repeated Hub → Place → Hub ownership cycles on both browser projects;
-- CI run `34449755726` passed quality, Android debug APK, and all 16 Playwright tests after the lifecycle instrumentation fix; a deliberate browser rerun then confirmed both new A3-F tests plus the original cohesive actor test passed, while exposing an unrelated existing six-place screenshot timing race;
-- fixed that directly observed smoke regression by synchronizing six-place selection/entry/return/overview on the runtime scene/mode state instead of fixed sleeps and byte-equality timing luck;
-- final CI run `34450624817` on implementation head `5971e2253f829ace99d273e1163700ac4e0405d5` passed format/lint/tests/build, the complete desktop/mobile Playwright stage gate, and Android debug APK;
-- no A4 Experience Engine behavior, provider integration, or unrelated feature scope was added.
-
-### A3-P — Close A3 + plan A4
+### A4-D1 — Authored definition contract + deterministic graph runner end-to-end
 **Status: NEXT**
 
-If A3 has no unresolved blocker, record `project/gates/A3.md`, mark A3 `DONE` and A4 current in `TASKS.md`, then decompose **A4 Experience Engine v1** into at most five substantial D sessions plus A4-Q/F/P using what actor integration taught us.
+Build the foundational Experience Engine as one coherent capability: typed authored experience/step/transition definitions, stable ids/version metadata, deterministic initial state, graph traversal, explicit completion state, typed engine commands/events, and structural validation for missing/duplicate/unreachable/invalid transition references. Include a representative authored fixture that runs through a non-trivial branch entirely in pure TypeScript.
+
+**Done when:**
+- callers can validate an authored experience, start it, submit a bounded non-assessment step outcome, follow deterministic transitions, and reach completion without renderer/provider dependencies;
+- invalid graphs fail with actionable deterministic validation errors before execution;
+- engine state is inspectable/serializable enough for later sessions without exposing mutable internal authority;
+- unit/integration tests cover valid branching, invalid references, duplicate ids, unreachable steps, illegal commands/transitions, and completion behavior;
+- typecheck, affected tests, and production build pass; no visual QA is required unless this session unexpectedly changes a user-visible surface.
+
+### A4-D2 — Assessment transitions, retries, hints + mastery-safe state
+**Status: PLANNED**
+
+Extend the runner so authored assessment steps own deterministic answer/evaluation rules, retry limits/policies, hint availability/consumption, attempt history, and success/failure branching while keeping presentation independent. Build the full flow rather than one assessment type: submission → normalized evaluation → attempt record → retry/hint policy → transition/completion, with deterministic fixtures for correct, incorrect, retry, exhausted, and hint paths.
+
+**Done when:**
+- assessment correctness and retry/hint transitions are engine-owned and cannot be changed by actor/tutor/rendering code;
+- attempt history and current mastery-relevant result are deterministic and serializable;
+- hints are authored/policy-bounded, cannot be consumed illegally, and do not silently mutate assessment truth;
+- representative fixtures cover immediate success, retry-to-success, exhausted attempts, hint-assisted progression, and invalid submissions;
+- focused tests/typecheck/build pass with no live provider dependency.
+
+### A4-D3 — Checkpoints, resume, restart + version-safe recovery
+**Status: PLANNED**
+
+Deliver resumability end-to-end: define checkpoint snapshots containing only authoritative engine state, deterministic serialization/restoration, restart semantics, safe handling of completed experiences, and explicit rejection/recovery behavior for malformed, mismatched-experience, or incompatible-version snapshots. Use deterministic in-memory test storage only; do not implement A11 backend sync.
+
+**Done when:**
+- a representative multi-step/assessment experience can checkpoint mid-flow, recreate the engine, resume at the exact authoritative state, and continue to the same deterministic result as uninterrupted execution;
+- attempts, hints, current step, completion state, and relevant event/order semantics survive resume without duplication;
+- restart intentionally clears run state according to a documented contract;
+- corrupt/mismatched/incompatible checkpoints fail safely with typed errors or explicit recovery results rather than partially applying state;
+- focused tests/typecheck/build pass.
+
+### A4-D4 — Tool permissions + authored content validation boundary
+**Status: PLANNED**
+
+Add bounded tool/effect declarations and permission enforcement as an engine-level authority seam for later A5/A6 hosts. Definitions declare which educational/product effects a step may request; runtime requests are validated against the active step/state and emitted as typed approved intents rather than executing renderer/backend/model work directly. Expand content validation to catch contradictory policies, invalid assessment/hint/retry configuration, impossible completion paths, and undeclared tool references.
+
+**Done when:**
+- unauthorized or out-of-state tool/effect requests are deterministically rejected and cannot mutate engine truth;
+- approved requests produce typed intents/events suitable for a future host adapter without importing Phaser/model/backend code;
+- validation reports actionable path/id-specific diagnostics for malformed policy, assessment, transition, and tool declarations;
+- tests include allowed/denied tool requests, stale-step requests, malformed declarations, and graph/policy combinations that cannot complete safely;
+- focused tests/typecheck/build pass and CI remains provider-free.
+
+### A4-D5 — Cohesive representative experience + engine hardening
+**Status: PLANNED**
+
+Exercise the full A4 engine coherently with one representative authored experience fixture that combines branching, deterministic assessment, retry, hint use, approved/denied tool intents, checkpoint/resume, restart, completion, and event/state inspection. Harden command ordering, stale/duplicate submissions, terminal-state behavior, immutability boundaries, and deterministic replay-equivalence where applicable. Keep this as engine integration evidence, not an A6 visual lesson.
+
+**Done when:**
+- one end-to-end fixture proves the complete A4 contract from validation/start through assessment/retry/hint/tool intent/checkpoint/resume to deterministic completion;
+- duplicate/stale/terminal commands cannot double-apply attempts, hints, transitions, or completion;
+- resumed execution is equivalent to uninterrupted execution for authoritative state/outcome under the documented contract;
+- public engine APIs remain framework/provider/audience/character agnostic and are ready for A5 tutor orchestration and A6 world hosting;
+- focused unit/integration/typecheck/build evidence is green; add browser/visual evidence only if A4 integration intentionally changes an existing user-visible surface.
+
+### A4-Q — Phase QA / critique
+**Status: PLANNED**
+
+Perform the dedicated A4 phase-level critique from `TESTING.md` and `STAGE_GATES.md`. Review deterministic correctness, graph/content validation, assessment authority, retry/hint semantics, checkpoint/resume resilience, tool-permission enforcement, API immutability, architecture boundaries, safety implications, and readiness for A5. Record concrete blocking and non-blocking findings; do not add A5 tutor features.
+
+### A4-F — Fix / polish
+**Status: PLANNED**
+
+Aggressively fix A4-Q blockers and directly related regressions/polish, then rerun focused deterministic evidence. Do not add unrelated A5/A6 scope. If an engine-authority, validation, resume, or permission blocker remains, record the exception and keep A4 open.
+
+### A4-P — Close A4 + plan A5
+**Status: PLANNED**
+
+Only if A4 is genuinely ready: record `project/gates/A4.md`, mark A4 `DONE` and A5 current in `TASKS.md`, then decompose **A5 Tutor/AI orchestration v1** into at most five substantial end-to-end D sessions plus A5-Q/F/P. Preserve the post-development curriculum phases in `TASKS.md` without pulling curriculum production into current development.
 
 ---
 
