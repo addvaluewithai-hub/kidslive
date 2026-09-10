@@ -130,7 +130,8 @@ export function validateExperience(definition: ExperienceDefinition): Experience
     });
   }
 
-  for (const step of definition.steps) inspectTransitions(step, stepById.keys().toArray(), issues);
+  const stepIds = new Set(stepById.keys());
+  for (const step of definition.steps) inspectTransitions(step, stepIds, issues);
 
   const reachable = findReachableSteps(definition, stepById);
   for (const step of definition.steps) {
