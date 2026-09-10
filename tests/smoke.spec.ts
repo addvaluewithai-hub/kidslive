@@ -128,7 +128,7 @@ test('failed authored place art falls back and still returns safely', async ({ p
   expect(returnedHub.equals(failureState)).toBe(false);
 });
 
-test('actor moves toward semantic places and survives interrupted movement', async ({ page }, testInfo) => {
+test('actor runs scripted action and speech and survives interruption', async ({ page }, testInfo) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
@@ -153,19 +153,19 @@ test('actor moves toward semantic places and survives interrupted movement', asy
   const overview = await page.screenshot({ animations: 'disabled' });
 
   await pressCanvas(resolveHubPlacePosition(HUB_PLACES[0], viewport.width, viewport.height));
-  await page.waitForTimeout(560);
-  const focused = await page.screenshot({ animations: 'disabled' });
-  expect(focused.equals(overview)).toBe(false);
-  await testInfo.attach(`actor-focused-curious-${testInfo.project.name}`, {
-    body: focused,
+  await page.waitForTimeout(1_150);
+  const scriptedSpeech = await page.screenshot({ animations: 'disabled' });
+  expect(scriptedSpeech.equals(overview)).toBe(false);
+  await testInfo.attach(`actor-scripted-speech-${testInfo.project.name}`, {
+    body: scriptedSpeech,
     contentType: 'image/png',
   });
 
   await pressCanvas(overviewButton);
   await page.waitForTimeout(560);
   const home = await page.screenshot({ animations: 'disabled' });
-  expect(home.equals(focused)).toBe(false);
-  await testInfo.attach(`actor-home-warm-${testInfo.project.name}`, {
+  expect(home.equals(scriptedSpeech)).toBe(false);
+  await testInfo.attach(`actor-home-after-interrupt-${testInfo.project.name}`, {
     body: home,
     contentType: 'image/png',
   });
