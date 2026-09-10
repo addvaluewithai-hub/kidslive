@@ -139,10 +139,23 @@ export class TutorDeliveryCoordinator implements TutorOutputHost {
     const active = this.active;
     if (active === null || active.turnId !== turnId) return;
     active.token.cancel(reason);
-    this.speech.interrupt(reason);
-    this.actor.interrupt(reason);
-    this.text.clear(turnId);
     this.active = null;
+
+    try {
+      this.speech.interrupt(reason);
+    } catch {
+      // Interruption is best-effort; one adapter cannot prevent remaining cleanup.
+    }
+    try {
+      this.actor.interrupt(reason);
+    } catch {
+      // Continue cleanup even if a renderer adapter misbehaves.
+    }
+    try {
+      this.text.clear(turnId);
+    } catch {
+      // Presentation cleanup failure must not revive or retain the cancelled turn.
+    }
   }
 
   private isCurrent(turnId: string, token: DeliveryCancellationToken): boolean {
