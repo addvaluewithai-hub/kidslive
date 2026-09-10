@@ -15,6 +15,12 @@ import { TutorOrchestrator } from './TutorOrchestrator';
 
 const VOICE = { voiceId: 'voice-warm-1', locale: 'en-US' } as const;
 
+async function flushTutorPipeline(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 function createRuntime(output: TutorOutput, speech = new InstantSpeechAdapter(), actor = new FakeActor()) {
   const text = new RecordingTextPresenter();
   const host = new TutorDeliveryCoordinator({ actor, speech, text, voice: VOICE });
@@ -97,11 +103,11 @@ describe('TutorDeliveryCoordinator', () => {
     const engine = ExperienceEngine.start(COHESIVE_A4_EXPERIENCE_FIXTURE);
 
     const firstTurn = orchestrator.runTurn(engine);
-    await Promise.resolve();
+    await flushTutorPipeline();
     expect(speech.requests[0]?.text).toBe('First turn speaking slowly.');
 
     const secondTurn = orchestrator.runTurn(engine);
-    await Promise.resolve();
+    await flushTutorPipeline();
 
     await expect(firstTurn).resolves.toEqual({
       status: 'cancelled',
@@ -127,7 +133,7 @@ describe('TutorDeliveryCoordinator', () => {
     const runtime = createRuntime(output, new InstantSpeechAdapter(), actor);
 
     const turn = runtime.orchestrator.runTurn(runtime.engine);
-    await Promise.resolve();
+    await flushTutorPipeline();
     expect(actor.commands[0]).toEqual({ type: 'perform', action: 'celebrate' });
     expect(runtime.orchestrator.cancelActiveTurn('learner spoke')).toBe(true);
 
