@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import type { ActorAnchor } from '../core/actors/WorldActor';
+import { KIDSLIVE_COMPANION } from './characterDefinitions';
+import { PhaserActor } from './PhaserActor';
 import {
   HUB_PLACES,
   getHubPlace,
@@ -12,10 +15,13 @@ type PlanetHubSceneData = {
   selectedPlaceId?: string;
 };
 
+const HUB_ACTOR_HOME: ActorAnchor = { kind: 'anchor', id: 'hub-home' };
+
 export class PlanetHubScene extends Phaser.Scene {
   private backdrop?: Phaser.GameObjects.Container;
   private path?: Phaser.GameObjects.Graphics;
   private placeLayer?: Phaser.GameObjects.Container;
+  private actor?: PhaserActor;
   private hudBackdrop?: Phaser.GameObjects.Rectangle;
   private title?: Phaser.GameObjects.Text;
   private subtitle?: Phaser.GameObjects.Text;
@@ -106,6 +112,12 @@ export class PlanetHubScene extends Phaser.Scene {
 
     this.placeLayer = this.add.container();
     this.buildPlaces();
+
+    this.actor = new PhaserActor(this, KIDSLIVE_COMPANION, (anchor) =>
+      this.resolveActorAnchor(anchor),
+    );
+    this.actor.setEmotion('warm');
+
     this.layout(this.scale.width, this.scale.height);
     this.restoreInitialSelection();
 
@@ -115,7 +127,7 @@ export class PlanetHubScene extends Phaser.Scene {
       camera: `z=${this.cameras.main.zoom.toFixed(2)} x=${Math.round(this.cameras.main.scrollX)} y=${Math.round(this.cameras.main.scrollY)}`,
       mode: this.transitioning ? 'transitioning' : (this.selectedPlaceId ?? 'overview'),
       objects: this.children.length,
-      detail: `places=${this.placeLayer?.length ?? 0} tweens=${this.tweens.getTweens().length}`,
+      detail: `places=${this.placeLayer?.length ?? 0} actor=${this.actor?.definition.id ?? 'none'} tweens=${this.tweens.getTweens().length}`,
     }));
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
@@ -299,9 +311,20 @@ export class PlanetHubScene extends Phaser.Scene {
 
   private handleShutdown() {
     this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
+    this.actor?.dispose();
+    this.actor = undefined;
     this.tweens.killAll();
     this.debugOverlay?.destroy();
     this.debugOverlay = undefined;
+  }
+
+  private resolveActorAnchor(anchor: ActorAnchor) {
+    if (anchor.id !== HUB_ACTOR_HOME.id) return undefined;
+    const compact = isCompactHubViewport(this.scale.width);
+    return {
+      x: compact ? this.scale.width - 58 : this.scale.width - 84,
+      y: compact ? 184 : 194,
+    };
   }
 
   private syncHudToCamera() {
@@ -372,6 +395,8 @@ export class PlanetHubScene extends Phaser.Scene {
       child.setPosition(position.x, position.y).setScale(1).setAlpha(1);
       resolvedPositions.push(new Phaser.Math.Vector2(position.x, position.y));
     });
+
+    void this.actor?.moveTo(HUB_ACTOR_HOME);
 
     this.path.clear();
     this.path.lineStyle(compact ? 2 : 3, 0x6d8fbe, 0.18);
