@@ -50,6 +50,10 @@ function output(
   };
 }
 
+async function flushAsyncDelivery(): Promise<void> {
+  for (let index = 0; index < 6; index += 1) await Promise.resolve();
+}
+
 describe('TutorSession cohesive A5 integration', () => {
   it('coordinates narration, actor work, guarded authority, interruption, failure recovery, completion, and disposal', async () => {
     const engine = ExperienceEngine.start(COHESIVE_A4_EXPERIENCE_FIXTURE);
@@ -146,7 +150,7 @@ describe('TutorSession cohesive A5 integration', () => {
     expect(actor.currentAnchor).toEqual({ kind: 'anchor', id: 'mercury' });
 
     const interrupted = session.runTurn();
-    await Promise.resolve();
+    await flushAsyncDelivery();
     expect(speech.requests.at(-1)?.text).toBe('I can explain that again.');
     expect(session.cancelActiveTurn('learner started answering')).toBe(true);
     await expect(interrupted).resolves.toMatchObject({
@@ -183,7 +187,7 @@ describe('TutorSession cohesive A5 integration', () => {
     expect(actor.lastAction).toBe('celebrate');
 
     const finishing = session.runTurn();
-    await Promise.resolve();
+    await flushAsyncDelivery();
     expect(engine.state).toMatchObject({ status: 'completed', currentStepId: null, revision: 8 });
     expect(speech.requests.at(-1)).toMatchObject({
       text: 'Mission complete.',
