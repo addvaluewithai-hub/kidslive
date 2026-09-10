@@ -186,12 +186,23 @@ Non-blocking A3 follow-ups:
 Non-blocking follow-ups remain large-content performance measurement when representative authored graphs exist, preserving the final guarded A4 API as A5's only authority path, and treating checkpoints as validated untrusted input when A11 persistence arrives.
 
 ### A4-F — Fix / polish
-**Status: NEXT**
+**Status: DONE**
 
-Fix the four A4-Q authority/resilience blockers and directly related regressions only: collapse educational mutation onto one guarded step/revision API; make resume semantically verify that checkpoint state/events represent legal authored execution; defensively snapshot/freeze authored definitions so caller mutation cannot change active authority; reject non-finite numeric tool parameters. Add adversarial regression evidence for stale/replayed direct mutations, fabricated/skipped checkpoint mastery/paths/revisions/hints/tools/completion, caller-definition mutation, and JSON round-tripping, then rerun focused package-boundary/typecheck/lint, experience tests, and production build. Do not add A5/A6 features. If any authority or checkpoint semantic blocker remains, keep A4 open as an explicit exception.
+**Outcome delivered:** resolved all four A4-Q blocking authority/recovery findings without adding A5/A6 scope, and added adversarial evidence around the repaired boundaries.
+
+**Implementation/evidence notes:**
+- `dispatch()` is now the only public educational mutation path; outcome, assessment, and hint application helpers are private, so every host-facing educational mutation must satisfy active `stepId` + `expectedRevision` authority before state/events can change;
+- authored definitions are defensively deep-snapshotted and frozen before validation/start/resume, including transitions, tool declarations/parameters, per-step permissions, assessment accepted answers, policies, and hints; caller mutation after engine construction can no longer alter active educational authority;
+- resume now performs semantic checkpoint verification after structural parsing: event history is reconstructed from the authored initial step with exact revision advancement, required transition pairing, legal graph targets/completion, deterministic assessment correctness/result/hint sequencing, authored tool permission/parameter checks, and exact agreement between reconstructed authority and persisted state;
+- fabricated current steps/revisions/mastery/results/hints, skipped transitions, falsified assessment events, invented completion, extra assessment records, and events after completion fail closed before a resumed engine is constructed;
+- runtime and checkpoint semantic validation reject `NaN` and infinite numeric tool parameters, preserving JSON-safe approved intents/events/checkpoints;
+- engine/checkpoint/tool tests were migrated to the same guarded dispatch API A5 will consume, and dedicated mutation-isolation tests prove later caller changes to answers/transitions/permissions/tool parameter declarations do not affect started or resumed engines;
+- an incidental pre-existing A4-Q markdown trailing-whitespace failure was normalized as part of fix/polish; no product scope changed;
+- focused CI evidence: run `34489766907` quality job passed format, package boundaries/typecheck, all tests, and production build on implementation head `316497cb5c7a9e2826dd0dde899b340312b59f31`;
+- no React/Phaser/rendering/navigation/audio surface changed, so no new visual QA was required for A4-F.
 
 ### A4-P — Close A4 + plan A5
-**Status: PLANNED**
+**Status: NEXT**
 
 Only if A4 is genuinely ready: record `project/gates/A4.md`, mark A4 `DONE` and A5 current in `TASKS.md`, then decompose **A5 Tutor/AI orchestration v1** into at most five substantial end-to-end D sessions plus A5-Q/F/P. Preserve the post-development curriculum phases in `TASKS.md` without pulling curriculum production into current development.
 
