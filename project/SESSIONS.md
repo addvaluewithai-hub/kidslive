@@ -167,12 +167,14 @@ Exercise and harden the whole A6 product loop as one coherent slice, close integ
 **Evidence:** `EnglishSliceJourney.test.ts` proves the full A4-controlled lesson chain deterministically from welcome through practice, wrong answer, authored hint, normalized correct answer, authoritative completion, frozen idempotent completion receipt, and completed re-entry. `tests/a6-d5.spec.ts` proves the same cohesive product journey through the production Hub/English scene path on both configured desktop and mobile browser projects and captures named retry/hint, completion, changed-Hub, and safe-re-entry screenshots. The browser evidence checks the exact bounded receipt IDs `a6:english-first-word-complete` and `english:first-word-star`, verifies the Hub derives `First word learned ✓` from that deterministic state, and verifies re-entry preserves the same receipt without double-granting. CI `34561770182` passed quality (format/lint, all unit/integration tests including the cohesive journey, and production build), the full browser stage-gate with the new desktop/mobile visual evidence, and Android debug APK on implementation head `782097cd`. `project/evidence/A6-D5.md` records that no physical Android device was available in this execution environment; per D-006 that A6-density frame-pacing evidence is carried honestly into A6-Q rather than replaced with hosted-CI FPS.
 
 ### A6-Q — Phase QA / critique
-**Status: NEXT**
+**Status: DONE**
 
 Run the dedicated A6 critique from `TESTING.md` and `STAGE_GATES.md`. Evaluate the complete learning loop, educational authority, tutor embodiment, interaction clarity, before/after world change, lifecycle/resilience, responsive visuals, touch ergonomics, accessibility risk, asset/failure states, regression risk, and representative Android performance evidence. Record concrete blocking and non-blocking findings; do not add features.
 
+**Evidence:** `project/qa/A6-Q.md` records the phase critique against current-main CI `34562400409` and its Playwright QA artifact. The authored A4/A5 authority boundaries, idempotent slice completion, learner interaction, failure containment, lifecycle cleanup, and current desktop/mobile browser regression baseline are sound. Q found two blockers for F: representative physical Android frame-pacing at A6 density is still missing despite being explicitly deferred into this production-density slice, and the product-facing visual evidence is captured with the DEV `RuntimeDebugOverlay` visibly obscuring/clipping the changed surface, so clean production-representative screenshots must be recaptured before the phase visual gate can pass. Q also records session-lifetime completion persistence, canvas accessibility semantics, and the previously observed one-off desktop actor smoke timeout as non-blocking follow-ups/risk.
+
 ### A6-F — Fix / polish
-**Status: PLANNED**
+**Status: NEXT**
 
 Aggressively fix A6-Q blockers and high-value product/visual/lifecycle regressions, rerun focused deterministic and visual evidence, and keep A6 open if the vertical slice is not genuinely trustworthy or required performance evidence remains blocking.
 
