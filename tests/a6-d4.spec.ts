@@ -46,12 +46,18 @@ async function tapCanvasPoint(
 }
 
 async function enterEnglish(page: import('@playwright/test').Page) {
-  await waitForRuntime(page, (snapshot) => snapshot.scene === 'planet-hub' && snapshot.mode === 'overview');
+  await waitForRuntime(page, (snapshot) => snapshot.scene === 'planet-hub');
   const viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected configured viewport');
   const english = HUB_PLACES.find((place) => place.id === 'english');
   if (!english) throw new Error('Expected authored English place');
-  await tapCanvasPoint(page, resolveHubPlacePosition(english, viewport.width, viewport.height));
+
+  const hub = await runtimeSnapshot(page);
+  if (hub?.mode !== 'english') {
+    await tapCanvasPoint(page, resolveHubPlacePosition(english, viewport.width, viewport.height));
+    await waitForRuntime(page, (snapshot) => snapshot.scene === 'planet-hub' && snapshot.mode === 'english');
+  }
+
   await tapCanvasPoint(page, { x: 92, y: viewport.height - 36 });
   await waitForRuntime(page, (snapshot) => snapshot.scene === 'english-world');
 }
@@ -65,7 +71,7 @@ async function returnToHub(page: import('@playwright/test').Page) {
       ? { x: 76, y: viewport.height - 38 }
       : { x: 82, y: 80 },
   );
-  await waitForRuntime(page, (snapshot) => snapshot.scene === 'planet-hub');
+  await waitForRuntime(page, (snapshot) => snapshot.scene === 'planet-hub' && snapshot.mode === 'english');
 }
 
 test('English tutor failure is recoverable and the next authored step still runs', async ({ page }, testInfo) => {
@@ -111,7 +117,8 @@ test('rapid exit during a slow tutor turn leaves the Hub stable with no stale sc
   await page.waitForTimeout(2_400);
   const snapshot = await runtimeSnapshot(page);
   expect(snapshot?.scene).toBe('planet-hub');
-  expect(snapshot?.mode).toBe('overview');
+  expect(snapshot?.mode).toBe('english');
+  expect(snapshot?.detail).not.toContain('fixture=slow-once');
 });
 
 test('repeated Hub-English cycles and short-landscape resize keep the lesson usable', async ({ page }, testInfo) => {
