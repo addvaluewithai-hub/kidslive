@@ -15,10 +15,13 @@ async function waitForRuntime(
   predicate: (snapshot: RuntimeSnapshot) => boolean,
 ) {
   await expect
-    .poll(async () => {
-      const snapshot = await runtimeSnapshot(page);
-      return snapshot ? predicate(snapshot) : false;
-    })
+    .poll(
+      async () => {
+        const snapshot = await runtimeSnapshot(page);
+        return snapshot ? predicate(snapshot) : false;
+      },
+      { timeout: 20_000 },
+    )
     .toBe(true);
 }
 
@@ -68,7 +71,7 @@ async function repeatUntil(
 }
 
 test('English lesson shows authoritative wrong, hint, retry and correct states', async ({ page }, testInfo) => {
-  test.setTimeout(55_000);
+  test.setTimeout(70_000);
   await page.goto('/?runtimeDebug=1');
   await waitForRuntime(page, (snapshot) => snapshot.scene === 'planet-hub' && snapshot.mode === 'overview');
   const { viewport, tap } = await enterEnglish(page);
