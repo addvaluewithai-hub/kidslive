@@ -70,6 +70,7 @@ function output(
     ]),
     actorCues: Object.freeze([
       Object.freeze({ type: 'emotion' as const, emotion: options.emotion ?? ('encouraging' as const) }),
+      Object.freeze({ type: 'move-to' as const, anchorId: 'english-companion-home' }),
       Object.freeze({ type: 'look-at' as const, anchorId: 'english-lesson-focus' }),
       Object.freeze({ type: 'action' as const, action: options.action ?? ('acknowledge' as const) }),
     ]),
