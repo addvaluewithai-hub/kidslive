@@ -181,7 +181,8 @@ export class PlanetHubScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
   }
 
-  update() {
+  update(time: number) {
+    this.animateAmbientPlaces(time);
     const zoom = this.cameras.main.zoom;
     if (Math.abs(zoom - this.lastHudZoom) < 0.0005) return;
     this.syncHudToCamera();
@@ -295,25 +296,22 @@ export class PlanetHubScene extends Phaser.Scene {
 
       card.add([visual, labelPanel, label, subtitle, touchTarget]);
       card.setData('visual', visual);
+      card.setData('glow', glow);
+      card.setData('ambientPhase', index * 0.82);
       this.placeLayer?.add(card);
+    });
+  }
 
-      this.tweens.add({
-        targets: visual,
-        y: -4,
-        duration: 2100 + index * 170,
-        ease: 'Sine.InOut',
-        yoyo: true,
-        repeat: -1,
-      });
-      this.tweens.add({
-        targets: glow,
-        alpha: 0.22,
-        scale: 1.08,
-        duration: 1700 + index * 120,
-        ease: 'Sine.InOut',
-        yoyo: true,
-        repeat: -1,
-      });
+  private animateAmbientPlaces(time: number) {
+    if (!this.placeLayer) return;
+    this.placeLayer.each((child: Phaser.GameObjects.Container) => {
+      const visual = child.getData('visual') as Phaser.GameObjects.Container | undefined;
+      const glow = child.getData('glow') as Phaser.GameObjects.Arc | undefined;
+      const phase = (child.getData('ambientPhase') as number | undefined) ?? 0;
+      if (!visual || !glow) return;
+      const wave = Math.sin(time / 900 + phase);
+      visual.y = wave * 2.6;
+      glow.setAlpha(0.15 + (wave + 1) * 0.035).setScale(1 + (wave + 1) * 0.018);
     });
   }
 
