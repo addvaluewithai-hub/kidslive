@@ -110,6 +110,11 @@ export class PlaceholderPlaceScene extends Phaser.Scene {
       return;
     }
 
+    if (place.id === 'english') {
+      this.scene.start('english-world');
+      return;
+    }
+
     this.cameras.main.setBackgroundColor('#071426');
 
     if (this.assetLoadState === 'ready') {
