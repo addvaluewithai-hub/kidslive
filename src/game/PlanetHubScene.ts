@@ -18,6 +18,27 @@ type PlanetHubSceneData = {
   selectedPlaceId?: string;
 };
 
+type PlaceVisualTheme = {
+  ring: number;
+  shadow: number;
+  glyph: number;
+};
+
+const PLACE_VISUALS: Record<string, PlaceVisualTheme> = {
+  english: { ring: 0x89cfff, shadow: 0x123c73, glyph: 0xffd166 },
+  science: { ring: 0x8ff0c1, shadow: 0x174c43, glyph: 0xf5fff9 },
+  math: { ring: 0xffdc85, shadow: 0x6c4317, glyph: 0x263a72 },
+  chess: { ring: 0xd0c0ff, shadow: 0x3c2d69, glyph: 0xf7f1ff },
+  art: { ring: 0xffb3cf, shadow: 0x6f3150, glyph: 0xfff1f7 },
+  music: { ring: 0x98f7ef, shadow: 0x1c5a62, glyph: 0xf7ffff },
+};
+
+const DEFAULT_PLACE_VISUAL: PlaceVisualTheme = {
+  ring: 0xb9d2ff,
+  shadow: 0x20335c,
+  glyph: 0xffffff,
+};
+
 const HUB_ACTOR_HOME: ActorAnchor = { kind: 'anchor', id: 'hub-home' };
 const HUB_ACTOR_CENTER: ActorAnchor = { kind: 'anchor', id: 'hub-center' };
 const placeActorAnchor = (placeId: string): ActorAnchor => ({
@@ -31,10 +52,12 @@ const placeLookTarget = (placeId: string): ActorAnchor => ({
 
 export class PlanetHubScene extends Phaser.Scene {
   private backdrop?: Phaser.GameObjects.Container;
+  private backdropPaint?: Phaser.GameObjects.Graphics;
   private path?: Phaser.GameObjects.Graphics;
   private placeLayer?: Phaser.GameObjects.Container;
   private actor?: PhaserActor;
   private hudBackdrop?: Phaser.GameObjects.Rectangle;
+  private hudAccent?: Phaser.GameObjects.Rectangle;
   private title?: Phaser.GameObjects.Text;
   private subtitle?: Phaser.GameObjects.Text;
   private overviewButton?: Phaser.GameObjects.Text;
@@ -57,67 +80,77 @@ export class PlanetHubScene extends Phaser.Scene {
   }
 
   create() {
-    this.cameras.main.setBackgroundColor('#071426');
+    this.cameras.main.setBackgroundColor('#061224');
 
-    this.backdrop = this.add.container().setDepth(-2);
+    this.backdrop = this.add.container().setDepth(-3);
     this.buildBackdrop();
     this.path = this.add.graphics().setDepth(-1);
 
     this.hudBackdrop = this.add
-      .rectangle(0, 0, 1, 1, 0x071426, 0.94)
+      .rectangle(0, 0, 1, 1, 0x061224, 0.78)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(100);
+    this.hudAccent = this.add
+      .rectangle(0, 0, 1, 2, 0x72b7ff, 0.38)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(101);
 
     this.title = this.add
       .text(0, 0, 'Your Learning Planet', {
         fontFamily: 'system-ui, sans-serif',
         fontSize: '34px',
         fontStyle: 'bold',
-        color: '#f5f8ff',
+        color: '#f8fbff',
+        stroke: '#12213d',
+        strokeThickness: 2,
       })
+      .setShadow(0, 4, '#000000', 9, true, true)
       .setOrigin(0.5, 0)
       .setScrollFactor(0)
-      .setDepth(101);
+      .setDepth(102);
 
     this.subtitle = this.add
       .text(0, 0, 'Choose a place to explore', {
         fontFamily: 'system-ui, sans-serif',
         fontSize: '16px',
-        color: '#a9b8d3',
+        fontStyle: 'bold',
+        color: '#b8c9e6',
       })
       .setOrigin(0.5, 0)
       .setScrollFactor(0)
-      .setDepth(101);
+      .setDepth(102);
 
     this.overviewButton = this.add
-      .text(0, 0, 'Overview', {
+      .text(0, 0, '✦  Overview', {
         fontFamily: 'system-ui, sans-serif',
         fontSize: '14px',
         fontStyle: 'bold',
-        color: '#d7e4fa',
-        backgroundColor: '#132947',
-        padding: { x: 12, y: 12 },
+        color: '#e8f1ff',
+        backgroundColor: '#132947ee',
+        padding: { x: 14, y: 12 },
       })
       .setOrigin(1, 1)
       .setScrollFactor(0)
-      .setDepth(101)
+      .setDepth(102)
       .setAlpha(0)
       .setInteractive({ useHandCursor: true });
     this.overviewButton.on('pointerdown', () => this.showOverview());
 
     this.enterButton = this.add
-      .text(0, 0, 'Enter place →', {
+      .text(0, 0, 'Explore place  →', {
         fontFamily: 'system-ui, sans-serif',
         fontSize: '15px',
         fontStyle: 'bold',
-        color: '#071426',
-        backgroundColor: '#f5f8ff',
-        padding: { x: 14, y: 12 },
+        color: '#102039',
+        backgroundColor: '#ffd166',
+        padding: { x: 16, y: 13 },
       })
+      .setShadow(0, 4, '#00000055', 6, true, true)
       .setOrigin(0, 1)
       .setScrollFactor(0)
-      .setDepth(101)
+      .setDepth(102)
       .setAlpha(0)
       .setInteractive({ useHandCursor: true });
     this.enterButton.on('pointerdown', () => this.enterSelectedPlace());
@@ -157,72 +190,249 @@ export class PlanetHubScene extends Phaser.Scene {
   private buildBackdrop() {
     if (!this.backdrop) return;
 
-    const stars = [
-      [0.08, 0.2, 1.5, 0.34],
-      [0.17, 0.39, 1, 0.2],
-      [0.26, 0.16, 1, 0.28],
-      [0.38, 0.3, 1.5, 0.18],
-      [0.5, 0.18, 1, 0.25],
-      [0.62, 0.35, 1, 0.2],
-      [0.74, 0.14, 1.5, 0.3],
-      [0.88, 0.29, 1, 0.2],
-      [0.12, 0.66, 1, 0.22],
-      [0.31, 0.78, 1.5, 0.18],
-      [0.56, 0.7, 1, 0.26],
-      [0.79, 0.77, 1.5, 0.2],
-      [0.92, 0.58, 1, 0.28],
-    ] as const;
+    this.backdropPaint = this.add.graphics();
+    this.backdrop.add(this.backdropPaint);
 
-    stars.forEach(([x, y, radius, alpha]) => {
-      const star = this.add.circle(0, 0, radius, 0xd9e8ff, alpha);
+    for (let index = 0; index < 58; index += 1) {
+      const x = (((index * 37) % 97) + 1) / 100;
+      const y = (((index * 53) % 91) + 3) / 100;
+      const radius = index % 11 === 0 ? 2 : index % 4 === 0 ? 1.25 : 0.75;
+      const alpha = index % 7 === 0 ? 0.62 : 0.22 + (index % 5) * 0.055;
+      const star =
+        index % 11 === 0
+          ? this.add.star(0, 0, 4, radius, radius * 2.6, 0xe9f3ff, alpha)
+          : this.add.circle(0, 0, radius, 0xdcecff, alpha);
       star.setData('normalizedX', x);
       star.setData('normalizedY', y);
-      this.backdrop?.add(star);
-    });
+      this.backdrop.add(star);
+    }
   }
 
   private buildPlaces() {
     if (!this.placeLayer) return;
 
-    for (const place of HUB_PLACES) {
-      const card = this.add.container();
-      card.setName(place.id);
+    HUB_PLACES.forEach((place, index) => {
+      const theme = PLACE_VISUALS[place.id] ?? DEFAULT_PLACE_VISUAL;
+      const card = this.add.container().setName(place.id);
+      const visual = this.add.container();
 
-      const glow = this.add.circle(0, 0, 54, place.color, 0.12);
-      const planet = this.add.circle(0, 0, 39, place.color, 0.95);
-      const highlight = this.add.circle(-12, -14, 12, 0xffffff, 0.16);
+      const glow = this.add
+        .circle(0, 0, 70, theme.ring, 0.13)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      const orbit = this.add
+        .ellipse(0, 6, 116, 42, 0xffffff, 0)
+        .setStrokeStyle(2, theme.ring, 0.28)
+        .setAngle(-12);
+      const shadow = this.add.circle(8, 10, 47, theme.shadow, 0.48);
+      const planet = this.add
+        .circle(0, 0, 47, place.color, 1)
+        .setStrokeStyle(2, theme.ring, 0.72);
+      const lowerShade = this.add.ellipse(9, 15, 72, 50, theme.shadow, 0.2);
+      const highlight = this.add.circle(-17, -19, 14, 0xffffff, 0.18);
+      const decoration = this.buildPlaceDecoration(place, theme);
+
+      visual.add([glow, orbit, shadow, planet, lowerShade, highlight, decoration]);
+
+      const labelPanel = this.add
+        .rectangle(0, 72, 144, 32, 0x08172e, 0.88)
+        .setStrokeStyle(1, theme.ring, 0.34);
       const label = this.add
-        .text(0, 56, place.label, {
+        .text(0, 72, place.label, {
           fontFamily: 'system-ui, sans-serif',
           fontSize: '18px',
           fontStyle: 'bold',
-          color: '#f5f8ff',
+          color: '#f8fbff',
         })
-        .setOrigin(0.5, 0);
+        .setShadow(0, 2, '#000000', 4, true, true)
+        .setOrigin(0.5);
       const subtitle = this.add
-        .text(0, 80, place.subtitle, {
+        .text(0, 96, place.subtitle, {
           fontFamily: 'system-ui, sans-serif',
           fontSize: '12px',
-          color: '#91a3c2',
+          fontStyle: 'bold',
+          color: '#a9bedf',
         })
         .setOrigin(0.5, 0);
 
-      planet.setInteractive({ useHandCursor: true });
-      planet.on('pointerover', () => {
-        if (this.selectedPlaceId !== place.id) {
-          card.setScale(this.selectedPlaceId ? 1.02 : 1.06);
-        }
+      const touchTarget = this.add.zone(0, 4, 126, 126).setInteractive({ useHandCursor: true });
+      touchTarget.on('pointerover', () => {
+        if (this.selectedPlaceId === place.id) return;
+        this.tweens.killTweensOf(card);
+        this.tweens.add({
+          targets: card,
+          scale: this.selectedPlaceId ? 1.01 : 1.06,
+          duration: 130,
+          ease: 'Sine.Out',
+        });
       });
-      planet.on('pointerout', () => {
-        if (this.selectedPlaceId !== place.id) {
-          card.setScale(this.selectedPlaceId ? 0.96 : 1);
-        }
+      touchTarget.on('pointerout', () => {
+        if (this.selectedPlaceId === place.id) return;
+        this.tweens.killTweensOf(card);
+        this.tweens.add({
+          targets: card,
+          scale: this.selectedPlaceId ? 0.96 : 1,
+          duration: 130,
+          ease: 'Sine.Out',
+        });
       });
-      planet.on('pointerdown', () => this.selectPlace(place, card));
+      touchTarget.on('pointerdown', () => this.selectPlace(place, card));
 
-      card.add([glow, planet, highlight, label, subtitle]);
-      this.placeLayer.add(card);
+      if (place.subtitle.includes('✓')) {
+        const completionGlow = this.add
+          .circle(37, -37, 16, 0x7ee8a3, 0.25)
+          .setBlendMode(Phaser.BlendModes.ADD);
+        const completionBadge = this.add.circle(37, -37, 12, 0x39c776, 1);
+        const completionMark = this.add
+          .text(37, -38, '✓', {
+            fontFamily: 'system-ui, sans-serif',
+            fontSize: '14px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+          })
+          .setOrigin(0.5);
+        visual.add([completionGlow, completionBadge, completionMark]);
+      }
+
+      card.add([visual, labelPanel, label, subtitle, touchTarget]);
+      card.setData('visual', visual);
+      this.placeLayer?.add(card);
+
+      this.tweens.add({
+        targets: visual,
+        y: -4,
+        duration: 2100 + index * 170,
+        ease: 'Sine.InOut',
+        yoyo: true,
+        repeat: -1,
+      });
+      this.tweens.add({
+        targets: glow,
+        alpha: 0.22,
+        scale: 1.08,
+        duration: 1700 + index * 120,
+        ease: 'Sine.InOut',
+        yoyo: true,
+        repeat: -1,
+      });
+    });
+  }
+
+  private buildPlaceDecoration(place: HubPlace, theme: PlaceVisualTheme) {
+    const decoration = this.add.container();
+    const ink = 0xf8fbff;
+
+    if (place.id === 'english') {
+      const letters = [
+        ['A', -20, 0, 0xffd166],
+        ['B', 0, -5, 0xff8b8b],
+        ['C', 20, 1, 0xbbe2ff],
+      ] as const;
+      letters.forEach(([letter, x, y, color]) => {
+        decoration.add(
+          this.add
+            .text(x, y, letter, {
+              fontFamily: 'system-ui, sans-serif',
+              fontSize: '20px',
+              fontStyle: 'bold',
+              color: `#${color.toString(16).padStart(6, '0')}`,
+              stroke: '#102a50',
+              strokeThickness: 2,
+            })
+            .setOrigin(0.5),
+        );
+      });
+      const flag = this.add.graphics();
+      flag.lineStyle(2, ink, 0.8).lineBetween(-27, -26, -27, -9);
+      flag.fillStyle(0xffd166, 1).fillTriangle(-27, -26, -9, -21, -27, -16);
+      decoration.add(flag);
+      return decoration;
     }
+
+    if (place.id === 'science') {
+      const flask = this.add.graphics();
+      flask.lineStyle(3, ink, 0.88);
+      flask.beginPath();
+      flask.moveTo(-8, -22);
+      flask.lineTo(8, -22);
+      flask.moveTo(-4, -22);
+      flask.lineTo(-4, -5);
+      flask.lineTo(-18, 18);
+      flask.lineTo(18, 18);
+      flask.lineTo(4, -5);
+      flask.lineTo(4, -22);
+      flask.strokePath();
+      flask.fillStyle(theme.glyph, 0.62).fillTriangle(-14, 14, 14, 14, 0, -1);
+      decoration.add([
+        flask,
+        this.add.circle(19, -12, 4, 0xd9fff0, 0.75),
+        this.add.circle(26, -24, 2.5, 0xd9fff0, 0.55),
+      ]);
+      return decoration;
+    }
+
+    if (place.id === 'math') {
+      decoration.add(
+        this.add
+          .text(0, -1, '1 2 3', {
+            fontFamily: 'system-ui, sans-serif',
+            fontSize: '19px',
+            fontStyle: 'bold',
+            color: '#25385f',
+            stroke: '#fff1bf',
+            strokeThickness: 2,
+          })
+          .setOrigin(0.5),
+      );
+      return decoration;
+    }
+
+    if (place.id === 'chess') {
+      const board = this.add.graphics();
+      const cell = 9;
+      for (let row = 0; row < 4; row += 1) {
+        for (let column = 0; column < 4; column += 1) {
+          board.fillStyle((row + column) % 2 === 0 ? 0xe9e4ff : 0x554280, 0.82);
+          board.fillRect((column - 2) * cell, 2 + (row - 2) * cell, cell, cell);
+        }
+      }
+      decoration.add([
+        board,
+        this.add
+          .text(0, -16, '♞', {
+            fontFamily: 'Georgia, serif',
+            fontSize: '26px',
+            color: '#ffffff',
+          })
+          .setOrigin(0.5),
+      ]);
+      return decoration;
+    }
+
+    if (place.id === 'art') {
+      const palette = this.add.graphics();
+      palette.fillStyle(0xffe6ef, 0.92).fillEllipse(0, 0, 48, 34);
+      palette.fillStyle(0x6eb8ff, 1).fillCircle(-12, -5, 4);
+      palette.fillStyle(0xffd166, 1).fillCircle(0, -9, 4);
+      palette.fillStyle(0x80e1b0, 1).fillCircle(12, -4, 4);
+      palette.fillStyle(theme.shadow, 0.55).fillCircle(8, 8, 6);
+      palette.lineStyle(4, 0xf8fbff, 0.88).lineBetween(12, 11, 27, -20);
+      decoration.add(palette);
+      return decoration;
+    }
+
+    decoration.add(
+      this.add
+        .text(0, -2, '♫', {
+          fontFamily: 'Georgia, serif',
+          fontSize: '34px',
+          fontStyle: 'bold',
+          color: '#f7ffff',
+          stroke: '#1b5d66',
+          strokeThickness: 2,
+        })
+        .setOrigin(0.5),
+    );
+    return decoration;
   }
 
   private restoreInitialSelection() {
@@ -245,9 +455,9 @@ export class PlanetHubScene extends Phaser.Scene {
     if (!this.placeLayer || this.transitioning) return;
 
     this.selectedPlaceId = place.id;
-    this.subtitle?.setText(`${place.label}: ${place.subtitle}`);
+    this.subtitle?.setText(`${place.label} · ${place.subtitle}`);
     this.overviewButton?.setAlpha(1);
-    this.enterButton?.setText(`Enter ${place.label} →`).setAlpha(1);
+    this.enterButton?.setText(`Explore ${place.label}  →`).setAlpha(1);
 
     if (animate) {
       this.runActorPlaceSequence(place);
@@ -263,19 +473,19 @@ export class PlanetHubScene extends Phaser.Scene {
       if (animate) {
         this.tweens.add({
           targets: child,
-          scale: selected ? 1.14 : 0.96,
-          alpha: selected ? 1 : 0.58,
-          duration: 180,
+          scale: selected ? 1.13 : 0.94,
+          alpha: selected ? 1 : 0.52,
+          duration: 210,
           ease: 'Sine.Out',
         });
       } else {
-        child.setScale(selected ? 1.14 : 0.96).setAlpha(selected ? 1 : 0.58);
+        child.setScale(selected ? 1.13 : 0.94).setAlpha(selected ? 1 : 0.52);
       }
     });
 
     if (animate) {
-      this.cameras.main.pan(selectedCard.x, selectedCard.y, 280, 'Sine.easeInOut');
-      this.cameras.main.zoomTo(1.08, 280, 'Sine.easeInOut');
+      this.cameras.main.pan(selectedCard.x, selectedCard.y, 320, 'Sine.easeInOut');
+      this.cameras.main.zoomTo(1.08, 320, 'Sine.easeInOut');
     } else {
       this.cameras.main.centerOn(selectedCard.x, selectedCard.y);
       this.cameras.main.setZoom(1.08);
@@ -420,8 +630,8 @@ export class PlanetHubScene extends Phaser.Scene {
     const inverseZoom = 1 / zoom;
     const centerX = width / 2;
     const centerY = height / 2;
-    const titleY = compact ? 54 : 58;
-    const subtitleY = compact ? 94 : 108;
+    const titleY = compact ? 46 : 48;
+    const subtitleY = compact ? 86 : 94;
     const buttonY = height - 18;
 
     this.title
@@ -450,23 +660,28 @@ export class PlanetHubScene extends Phaser.Scene {
       !this.enterButton ||
       !this.placeLayer ||
       !this.backdrop ||
+      !this.backdropPaint ||
       !this.path ||
-      !this.hudBackdrop
+      !this.hudBackdrop ||
+      !this.hudAccent
     )
       return;
 
     const compact = isCompactHubViewport(width);
-    const titleSize = compact ? 28 : 36;
-    const hudHeight = compact ? 126 : 138;
+    const titleSize = compact ? 27 : 38;
+    const hudHeight = compact ? 118 : 126;
     this.hudBackdrop.setPosition(0, 0).setSize(width, hudHeight).setDisplaySize(width, hudHeight);
+    this.hudAccent.setPosition(0, hudHeight - 2).setSize(width, 2).setDisplaySize(width, 2);
     this.title.setFontSize(titleSize);
     this.syncHudToCamera();
 
+    this.paintBackdrop(width, height);
     this.backdrop.each((child: Phaser.GameObjects.GameObject) => {
-      const star = child as Phaser.GameObjects.Arc;
-      const normalizedX = star.getData('normalizedX') as number;
-      const normalizedY = star.getData('normalizedY') as number;
-      star.setPosition(width * normalizedX, height * normalizedY);
+      const normalizedX = child.getData('normalizedX') as number | undefined;
+      const normalizedY = child.getData('normalizedY') as number | undefined;
+      if (normalizedX === undefined || normalizedY === undefined) return;
+      const positioned = child as Phaser.GameObjects.Arc | Phaser.GameObjects.Star;
+      positioned.setPosition(width * normalizedX, height * normalizedY);
     });
 
     const resolvedPositions: Phaser.Math.Vector2[] = [];
@@ -480,14 +695,70 @@ export class PlanetHubScene extends Phaser.Scene {
     });
 
     this.actor?.reflow();
+    this.paintPaths(resolvedPositions, width, height, compact);
+  }
 
-    this.path.clear();
-    this.path.lineStyle(compact ? 2 : 3, 0x6d8fbe, 0.18);
-    this.path.beginPath();
-    resolvedPositions.forEach((position, index) => {
-      if (index === 0) this.path?.moveTo(position.x, position.y);
-      else this.path?.lineTo(position.x, position.y);
+  private paintBackdrop(width: number, height: number) {
+    if (!this.backdropPaint) return;
+
+    const paint = this.backdropPaint;
+    paint.clear();
+    paint.fillGradientStyle(0x061224, 0x0d1a3a, 0x071426, 0x160f33, 1);
+    paint.fillRect(0, 0, width, height);
+
+    paint.fillStyle(0x5e46a6, 0.08);
+    paint.fillEllipse(width * 0.22, height * 0.42, width * 0.72, height * 0.36);
+    paint.fillStyle(0x2f75aa, 0.07);
+    paint.fillEllipse(width * 0.79, height * 0.28, width * 0.52, height * 0.28);
+    paint.fillStyle(0xa35db1, 0.035);
+    paint.fillEllipse(width * 0.54, height * 0.7, width * 0.64, height * 0.22);
+
+    paint.fillStyle(0x133b67, 0.3);
+    paint.fillEllipse(width * 0.5, height * 1.08, width * 1.42, height * 0.62);
+    paint.lineStyle(2, 0x6fbaff, 0.1);
+    paint.strokeEllipse(width * 0.5, height * 1.08, width * 1.25, height * 0.52);
+
+    const mistY = height * 0.88;
+    for (let index = 0; index < 7; index += 1) {
+      paint.fillStyle(0xa8cfff, 0.025 + (index % 2) * 0.012);
+      paint.fillCircle((width / 6) * index, mistY + (index % 3) * 18, 78 + (index % 3) * 14);
+    }
+  }
+
+  private paintPaths(
+    positions: Phaser.Math.Vector2[],
+    width: number,
+    height: number,
+    compact: boolean,
+  ) {
+    if (!this.path) return;
+
+    const path = this.path;
+    path.clear();
+    path.lineStyle(compact ? 1 : 2, 0x7eb9ff, 0.09);
+    path.strokeEllipse(width / 2, height * 0.55, width * (compact ? 0.86 : 0.76), height * 0.53);
+    path.lineStyle(compact ? 1 : 2, 0xbc8dff, 0.06);
+    path.strokeEllipse(width / 2, height * 0.56, width * (compact ? 0.68 : 0.55), height * 0.36);
+
+    const drawRoute = (lineWidth: number, alpha: number) => {
+      path.lineStyle(lineWidth, 0x74b9ff, alpha);
+      path.beginPath();
+      positions.forEach((position, index) => {
+        if (index === 0) path.moveTo(position.x, position.y);
+        else path.lineTo(position.x, position.y);
+      });
+      path.strokePath();
+    };
+
+    drawRoute(compact ? 7 : 9, 0.035);
+    drawRoute(compact ? 2 : 3, 0.18);
+
+    positions.slice(0, -1).forEach((position, index) => {
+      const next = positions[index + 1];
+      const x = (position.x + next.x) / 2;
+      const y = (position.y + next.y) / 2;
+      path.fillStyle(0xcfe4ff, 0.44).fillCircle(x, y, compact ? 2.2 : 2.8);
+      path.fillStyle(0x74b9ff, 0.1).fillCircle(x, y, compact ? 7 : 9);
     });
-    this.path.strokePath();
   }
 }
