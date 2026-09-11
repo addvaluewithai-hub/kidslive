@@ -22,6 +22,10 @@ async function waitForRuntime(
     .toBe(true);
 }
 
+async function waitForTutorSettled(page: import('@playwright/test').Page) {
+  await waitForRuntime(page, (snapshot) => snapshot.detail.includes('busy=no'));
+}
+
 async function enterEnglish(page: import('@playwright/test').Page) {
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
@@ -84,6 +88,7 @@ test('English lesson shows authoritative wrong, hint, retry and correct states',
     else await page.keyboard.press('2');
   };
   await repeatUntil(page, wrong, (snapshot) => snapshot.detail.includes('attempts=1'));
+  await waitForTutorSettled(page);
   await testInfo.attach(`a6-d2-wrong-retry-${testInfo.project.name}`, {
     body: await page.screenshot({ animations: 'disabled' }),
     contentType: 'image/png',
@@ -94,6 +99,7 @@ test('English lesson shows authoritative wrong, hint, retry and correct states',
     else await page.keyboard.press('h');
   };
   await repeatUntil(page, hint, (snapshot) => snapshot.detail.includes('hint=used'));
+  await waitForTutorSettled(page);
   await testInfo.attach(`a6-d2-hint-${testInfo.project.name}`, {
     body: await page.screenshot({ animations: 'disabled' }),
     contentType: 'image/png',
@@ -104,6 +110,7 @@ test('English lesson shows authoritative wrong, hint, retry and correct states',
     else await page.keyboard.press('1');
   };
   await repeatUntil(page, correct, (snapshot) => snapshot.mode === 'lesson:celebrate');
+  await waitForTutorSettled(page);
   await testInfo.attach(`a6-d2-correct-${testInfo.project.name}`, {
     body: await page.screenshot({ animations: 'disabled' }),
     contentType: 'image/png',
