@@ -4,6 +4,11 @@ import { InstantSpeechAdapter, RecordingTextPresenter } from '../../core/tutor/T
 import { FailingTutor } from '../../core/tutor/TutorResilienceDoubles';
 import { TutorSession } from '../../core/tutor/TutorSession';
 import { EnglishLessonFlow } from './EnglishLessonFlow';
+import {
+  ENGLISH_SLICE_GRANT_ID,
+  ENGLISH_SLICE_WORLD_CHANGE_ID,
+  EnglishSliceCompletionStore,
+} from './EnglishSliceCompletion';
 import { EnglishLessonTutor, ENGLISH_INITIAL_TUTOR_OUTPUT, ENGLISH_LESSON } from './englishLesson';
 
 function makeSession(flow: EnglishLessonFlow, provider = new EnglishLessonTutor()) {
@@ -27,9 +32,16 @@ function latestAssessmentEvent(flow: EnglishLessonFlow) {
   return [...flow.engine.events].reverse().find((event) => event.type === 'assessment-submitted');
 }
 
+function completeLesson(flow: EnglishLessonFlow) {
+  flow.startPractice();
+  flow.beginCheck();
+  flow.submitAnswer('apple');
+  return flow.finish();
+}
+
 describe('English World lesson composition', () => {
   it('starts a validated authored lesson and delivers the initial tutor turn through A5', async () => {
-    const flow = new EnglishLessonFlow();
+    const flow = new EnglishLessonFlow(undefined, new EnglishSliceCompletionStore());
     const { actor, speech, text, session } = makeSession(flow);
 
     const result = await session.runTurn();
@@ -51,7 +63,8 @@ describe('English World lesson composition', () => {
   });
 
   it('keeps wrong, hint, retry, normalization and completion under A4 authority', () => {
-    const flow = new EnglishLessonFlow();
+    const completion = new EnglishSliceCompletionStore();
+    const flow = new EnglishLessonFlow(undefined, completion);
     flow.startPractice();
     expect(flow.view.phase).toBe('practice');
     flow.beginCheck();
@@ -80,10 +93,11 @@ describe('English World lesson composition', () => {
     flow.finish();
     expect(flow.view).toMatchObject({ phase: 'complete', completed: true, attempts: 2 });
     expect(flow.engine.state.status).toBe('completed');
+    expect(completion.completed).toBe(true);
   });
 
   it('routes exhausted attempts to authored review instead of letting tutor wording decide', () => {
-    const flow = new EnglishLessonFlow();
+    const flow = new EnglishLessonFlow(undefined, new EnglishSliceCompletionStore());
     flow.startPractice();
     flow.beginCheck();
     flow.submitAnswer('pear');
@@ -99,7 +113,7 @@ describe('English World lesson composition', () => {
   });
 
   it('keeps learner progress usable when the tutor provider fails', async () => {
-    const flow = new EnglishLessonFlow();
+    const flow = new EnglishLessonFlow(undefined, new EnglishSliceCompletionStore());
     const { session } = makeSession(flow, new FailingTutor(new Error('offline tutor')));
 
     const result = await session.runTurn();
@@ -114,7 +128,7 @@ describe('English World lesson composition', () => {
   });
 
   it('uses display-only guidance for hints without changing lesson authority', async () => {
-    const flow = new EnglishLessonFlow();
+    const flow = new EnglishLessonFlow(undefined, new EnglishSliceCompletionStore());
     flow.startPractice();
     flow.beginCheck();
     flow.submitAnswer('pear');
@@ -129,5 +143,53 @@ describe('English World lesson composition', () => {
     expect(flow.view).toMatchObject({ phase: 'check', hintUsed: true });
 
     session.dispose();
+  });
+
+  it('grants exactly one deterministic world change only after authoritative A4 completion', () => {
+    const completion = new EnglishSliceCompletionStore();
+    const flow = new EnglishLessonFlow(undefined, completion);
+
+    expect(completion.grantFromAuthoritativeState(flow.engine.state)).toBeUndefined();
+    flow.startPractice();
+    flow.beginCheck();
+    flow.submitAnswer('apple');
+    expect(completion.completed).toBe(false);
+
+    const completedState = flow.finish();
+    expect(completion.receipt).toEqual({
+      grantId: ENGLISH_SLICE_GRANT_ID,
+      experienceId: 'english-first-words',
+      experienceVersion: '1',
+      completedRevision: completedState.revision,
+      worldChangeId: ENGLISH_SLICE_WORLD_CHANGE_ID,
+    });
+
+    const firstReceipt = completion.receipt;
+    expect(completion.grantFromAuthoritativeState(completedState)).toBe(firstReceipt);
+    expect(completion.receipt).toBe(firstReceipt);
+  });
+
+  it('rejects forged or unrelated completion state and recognizes prior completion on re-entry', () => {
+    const completion = new EnglishSliceCompletionStore();
+    expect(
+      completion.grantFromAuthoritativeState({
+        experienceId: 'forged-by-tutor',
+        experienceVersion: '1',
+        status: 'completed',
+        currentStepId: null,
+        assessments: [],
+        revision: 99,
+      }),
+    ).toBeUndefined();
+    expect(completion.completed).toBe(false);
+
+    const firstRun = new EnglishLessonFlow(undefined, completion);
+    completeLesson(firstRun);
+    const reentry = new EnglishLessonFlow(undefined, completion);
+
+    expect(reentry.engine.state).toMatchObject({ status: 'running', currentStepId: 'welcome' });
+    expect(reentry.view).toMatchObject({ phase: 'welcome', previouslyCompleted: true });
+    expect(reentry.view.prompt).toContain('Welcome back');
+    expect(ENGLISH_INITIAL_TUTOR_OUTPUT.authorityProposal).toBeUndefined();
   });
 });
