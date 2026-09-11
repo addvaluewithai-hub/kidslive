@@ -36,11 +36,13 @@ async function waitForTutorSettled(page: import('@playwright/test').Page) {
 
 async function browserA6State(page: import('@playwright/test').Page): Promise<A6BrowserState> {
   return page.evaluate(async () => {
-    const completion = await import('/src/game/english/EnglishSliceCompletion.ts');
-    const places = await import('/src/game/places.ts');
+    const completionModulePath = '/src/game/english/EnglishSliceCompletion.ts';
+    const placesModulePath = '/src/game/places.ts';
+    const completion = await import(/* @vite-ignore */ completionModulePath);
+    const places = await import(/* @vite-ignore */ placesModulePath);
     return {
-      completed: completion.englishSliceCompletion.completed,
-      subtitle: places.getHubPlace('english')?.subtitle,
+      completed: completion.englishSliceCompletion.completed as boolean,
+      subtitle: places.getHubPlace('english')?.subtitle as string | undefined,
     };
   });
 }
