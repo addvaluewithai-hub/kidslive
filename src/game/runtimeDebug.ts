@@ -12,6 +12,11 @@ export type RuntimeDebugSnapshot = {
   metrics?: Record<string, RuntimeDebugMetric>;
 };
 
+export type RuntimeDebugOptions = {
+  enabled: boolean;
+  overlay: boolean;
+};
+
 declare global {
   interface Window {
     __KIDSLIVE_RUNTIME_DEBUG__?: RuntimeDebugSnapshot;
@@ -38,9 +43,19 @@ export function formatRuntimeDebugSnapshot(snapshot: RuntimeDebugSnapshot): stri
   return lines.join('\n');
 }
 
-function isRuntimeDebugEnabled(): boolean {
-  if (!import.meta.env.DEV || typeof window === 'undefined') return false;
-  return new URLSearchParams(window.location.search).get('runtimeDebug') === '1';
+export function parseRuntimeDebugOptions(search: string, isDev: boolean): RuntimeDebugOptions {
+  if (!isDev) return { enabled: false, overlay: false };
+  const params = new URLSearchParams(search);
+  const enabled = params.get('runtimeDebug') === '1';
+  return {
+    enabled,
+    overlay: enabled && params.get('runtimeDebugOverlay') === '1',
+  };
+}
+
+function runtimeDebugOptions(): RuntimeDebugOptions {
+  if (typeof window === 'undefined') return { enabled: false, overlay: false };
+  return parseRuntimeDebugOptions(window.location.search, import.meta.env.DEV);
 }
 
 export class RuntimeDebugOverlay {
@@ -54,21 +69,24 @@ export class RuntimeDebugOverlay {
     scene: Phaser.Scene,
     readSnapshot: () => RuntimeDebugSnapshot,
   ) {
-    this.enabled = isRuntimeDebugEnabled();
+    const options = runtimeDebugOptions();
+    this.enabled = options.enabled;
     if (!this.enabled) return;
 
-    this.label = scene.add
-      .text(scene.scale.width - 12, 12, '', {
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-        fontSize: '11px',
-        color: '#d7e4fa',
-        backgroundColor: '#071426dd',
-        padding: { x: 8, y: 6 },
-        lineSpacing: 2,
-      })
-      .setOrigin(1, 0)
-      .setScrollFactor(0)
-      .setDepth(10_000);
+    if (options.overlay) {
+      this.label = scene.add
+        .text(scene.scale.width - 12, 12, '', {
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontSize: '11px',
+          color: '#d7e4fa',
+          backgroundColor: '#071426dd',
+          padding: { x: 8, y: 6 },
+          lineSpacing: 2,
+        })
+        .setOrigin(1, 0)
+        .setScrollFactor(0)
+        .setDepth(10_000);
+    }
 
     const refresh = () => {
       this.label?.setX(scene.scale.width - 12);
@@ -87,10 +105,12 @@ export class RuntimeDebugOverlay {
       };
       this.lastScene = snapshot.scene;
       window.__KIDSLIVE_RUNTIME_DEBUG__ = snapshot;
+
+      if (!this.label) return;
       const text = formatRuntimeDebugSnapshot(snapshot);
       if (text === this.lastText) return;
       this.lastText = text;
-      this.label?.setText(text);
+      this.label.setText(text);
     };
 
     // Publish only after the scene has finished synchronous create() wiring so lifecycle
