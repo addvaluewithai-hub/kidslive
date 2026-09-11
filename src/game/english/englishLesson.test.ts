@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FakeActor } from '../../core/actors/FakeActor';
-import { FailingTutor } from '../../core/tutor/TutorProviderDoubles';
 import { InstantSpeechAdapter, RecordingTextPresenter } from '../../core/tutor/TutorDeliveryDoubles';
+import { FailingTutor } from '../../core/tutor/TutorResilienceDoubles';
 import { TutorSession } from '../../core/tutor/TutorSession';
 import { EnglishLessonFlow } from './EnglishLessonFlow';
 import { EnglishLessonTutor, ENGLISH_INITIAL_TUTOR_OUTPUT, ENGLISH_LESSON } from './englishLesson';
