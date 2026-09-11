@@ -1,5 +1,9 @@
 import type { ExperienceState } from '../../core/experience/ExperienceDefinition';
 import { ExperienceEngine } from '../../core/experience/ExperienceEngine';
+import {
+  EnglishSliceCompletionStore,
+  englishSliceCompletion,
+} from './EnglishSliceCompletion';
 import { ENGLISH_LESSON } from './englishLesson';
 
 export type EnglishLessonPhase =
@@ -18,12 +22,16 @@ export interface EnglishLessonView {
   readonly hintAvailable: boolean;
   readonly hintUsed: boolean;
   readonly completed: boolean;
+  readonly previouslyCompleted: boolean;
 }
 
 export class EnglishLessonFlow {
   readonly engine: ExperienceEngine;
 
-  constructor(engine = ExperienceEngine.start(ENGLISH_LESSON)) {
+  constructor(
+    engine = ExperienceEngine.start(ENGLISH_LESSON),
+    private readonly completion = englishSliceCompletion,
+  ) {
     this.engine = engine;
   }
 
@@ -38,12 +46,22 @@ export class EnglishLessonFlow {
         hintAvailable: false,
         hintUsed: this.hintUsed(state),
         completed: true,
+        previouslyCompleted: this.completion.completed,
       };
     }
 
     switch (state.currentStepId) {
       case 'welcome':
-        return this.baseView('welcome', 'Ready to learn your first English word?', 'Tap Start practice to begin.', state);
+        return this.baseView(
+          'welcome',
+          this.completion.completed
+            ? 'Welcome back! Your first English word is already shining on the planet.'
+            : 'Ready to learn your first English word?',
+          this.completion.completed
+            ? 'Practice APPLE again whenever you like.'
+            : 'Tap Start practice to begin.',
+          state,
+        );
       case 'word-practice':
         return this.baseView('practice', 'Look and say: APPLE', 'When you are ready, start the word check.', state);
       case 'word-check': {
@@ -57,6 +75,7 @@ export class EnglishLessonFlow {
           hintAvailable: attempts >= 1 && !usedHint,
           hintUsed: usedHint,
           completed: false,
+          previouslyCompleted: this.completion.completed,
         };
       }
       case 'celebrate':
@@ -101,12 +120,14 @@ export class EnglishLessonFlow {
     if (state.currentStepId !== 'celebrate' && state.currentStepId !== 'review') {
       throw new Error(`Cannot finish English lesson from ${state.currentStepId ?? state.status}`);
     }
-    return this.engine.dispatch({
+    const completedState = this.engine.dispatch({
       type: 'submit-outcome',
       stepId: state.currentStepId,
       expectedRevision: state.revision,
       outcomeId: 'finish',
     });
+    this.completion.grantFromAuthoritativeState(completedState);
+    return completedState;
   }
 
   private submitOutcome(stepId: string, outcomeId: string): ExperienceState {
@@ -141,6 +162,11 @@ export class EnglishLessonFlow {
       hintAvailable: false,
       hintUsed: this.hintUsed(state),
       completed: false,
+      previouslyCompleted: this.completion.completed,
     };
   }
+}
+
+export function createIsolatedEnglishLessonFlow(): EnglishLessonFlow {
+  return new EnglishLessonFlow(undefined, new EnglishSliceCompletionStore());
 }
