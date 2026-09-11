@@ -131,14 +131,16 @@ Replace the English placeholder path with a production English-world scene/compo
 **Evidence:** `EnglishWorldScene` now owns the validated `english-first-words` A4 graph and an offline scripted A5 `TutorSession` using the production `PhaserActor`; English Hub entry routes to this scene while non-English places retain `PlaceholderPlaceScene`; scene shutdown disposes tutor/actor work and releases scene-owned assets; deterministic authored-art fallback remains usable. Unit composition evidence plus dedicated Playwright desktop/mobile entry/fallback captures were added, and legacy A3/generic-place smoke coverage was kept intact by moving generic placeholder lifecycle assertions to Science. CI `34546844143` passed format/lint/typecheck-equivalent quality checks, unit/integration tests, production build, browser stage-gate, and Android debug APK on implementation head `420fb040`.
 
 ### A6-D2 — Learner interaction + tutor-guided lesson loop
-**Status: NEXT**
+**Status: DONE**
 
 Build the slice's actual learner interaction flow around the authored English lesson: present the minimum touch/keyboard-accessible interaction needed by this lesson, route learner actions through guarded A4 commands, reflect wrong/correct/hint/retry states visibly, and let A5 narration/speech/actor cues respond without owning educational truth. Keep the interaction slice-specific rather than prematurely generalizing A7.
 
 **Done when:** a learner can complete the lesson's teaching/practice path from visible prompts and interactions; wrong answers, retry limits, hints, and normalized correct answers are determined by A4 and represented coherently in the world/UI; interruption or tutor/provider failure does not block learner progress or mutate correctness; touch targets/readability work at desktop and mobile sizes; deterministic tests plus representative visual evidence cover happy path, wrong/retry/hint, and tutor-failure/display-only behavior.
 
+**Evidence:** the slice-specific `EnglishLessonFlow` routes learner progression, assessment answers, hint use, retry exhaustion, normalization, and completion through the authoritative A4 `ExperienceEngine`; `EnglishWorldScene` now presents touch and keyboard controls, visible prompt/feedback/hint/retry/correct states, bounded busy/interruption behavior, and responsive desktop/mobile layout while A5 `EnglishLessonTutor` only supplies narration/display/actor cues. Deterministic tests cover wrong → hint → normalized correct → completion, exhausted retries, provider failure with continued learner progress, and display-only hint guidance with no speech. Dedicated Playwright evidence covers desktop/mobile wrong/retry, hint, correct, and completion states. Hosted timing waits were bounded after an initial evidence race; current-main CI `34551433348` passed quality (format, lint/typecheck-equivalent checks, unit/integration tests, production build), browser stage-gate, and Android debug APK on head `d932874c`.
+
 ### A6-D3 — Deterministic completion reward + visible changed-world return
-**Status: PLANNED**
+**Status: NEXT**
 
 Complete the product loop by translating authoritative lesson completion into one minimal deterministic A6 completion/reward receipt and one visible Hub/world change on return. The change may be a specific English-place upgrade/marker/decoration/unlock state for this slice, but must be stored outside Phaser display objects and must not become a generalized XP/currency/economy system ahead of A8 or backend sync ahead of A11.
 
