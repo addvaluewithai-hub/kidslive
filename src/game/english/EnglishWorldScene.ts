@@ -254,7 +254,7 @@ export class EnglishWorldScene extends Phaser.Scene {
         ? 'returning'
         : `lesson:${this.lesson?.engine.state.currentStepId ?? this.lesson?.engine.state.status ?? 'none'}`,
       objects: this.children.length,
-      detail: `assets=${this.assetLoadState} cached=${this.queuedAssets?.cachedKeys.length ?? 0} failed=${this.failedAssetKeys.size} tutor=${this.tutorSession?.sessionStatus ?? 'none'} phase=${this.lesson?.view.phase ?? 'none'} attempts=${this.lesson?.view.attempts ?? 0} hint=${this.lesson?.view.hintUsed ? 'used' : 'unused'}`,
+      detail: `assets=${this.assetLoadState} cached=${this.queuedAssets?.cachedKeys.length ?? 0} failed=${this.failedAssetKeys.size} tutor=${this.tutorSession?.sessionStatus ?? 'none'} phase=${this.lesson?.view.phase ?? 'none'} attempts=${this.lesson?.view.attempts ?? 0} hint=${this.lesson?.view.hintUsed ? 'used' : 'unused'} busy=${this.learnerActionBusy ? 'yes' : 'no'}`,
     }));
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
@@ -449,13 +449,23 @@ export class EnglishWorldScene extends Phaser.Scene {
       this.primaryButton?.setPosition(centerX, centerY + 52);
     }
 
-    this.tutorText
-      ?.setPosition(centerX, compact ? height - 111 : centerY + 190)
-      .setFontSize(compact ? 15 : 17)
-      .setWordWrapWidth(Math.min(650, width - 54));
-    this.shortcutLabel?.setPosition(centerX, compact ? height - 76 : height - 28).setWordWrapWidth(width - 48);
-    if (compact) this.backButton?.setOrigin(0, 1).setPosition(18, height - 18);
-    else this.backButton?.setOrigin(0, 0).setPosition(20, 58);
+    if (compact) {
+      this.tutorText
+        ?.setPosition(centerX - 38, height - 155)
+        .setFontSize(15)
+        .setWordWrapWidth(Math.min(250, width - 120));
+      this.shortcutLabel
+        ?.setPosition(centerX - 42, height - 76)
+        .setWordWrapWidth(Math.min(235, width - 135));
+      this.backButton?.setOrigin(0, 1).setPosition(18, height - 18);
+    } else {
+      this.tutorText
+        ?.setPosition(centerX, centerY + 190)
+        .setFontSize(17)
+        .setWordWrapWidth(Math.min(650, width - 54));
+      this.shortcutLabel?.setPosition(centerX, height - 28).setWordWrapWidth(width - 48);
+      this.backButton?.setOrigin(0, 0).setPosition(20, 58);
+    }
   }
 
   private resolveActorAnchor(anchor: ActorAnchor) {
