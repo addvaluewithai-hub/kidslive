@@ -122,14 +122,16 @@ Non-blocking A5 follow-ups:
 - because A6 materially changes rendering density and user-visible flow, delivery sessions that change those surfaces require representative desktop/mobile visual evidence, and the phase gate must consider physical Android frame pacing per `PERFORMANCE.md`/D-006.
 
 ### A6-D1 — English World runtime + authored lesson entry end-to-end
-**Status: NEXT**
+**Status: DONE**
 
 Replace the English placeholder path with a production English-world scene/composition that is entered from the existing Planet Hub and owns one small validated A4 `ExperienceDefinition`. Wire scene lifecycle to one A4 engine plus A5 `TutorSession`, reuse the production companion actor, and establish deterministic world anchors/assets/loading/fallback behavior for the lesson without introducing curriculum breadth.
 
 **Done when:** selecting English on the Hub enters a real lesson environment rather than the generic placeholder; one authored lesson graph starts through A4 and produces an initial A5 tutor turn/actor behavior through production seams; leaving/re-entering does not leak scene/tutor/actor work; asset/load failure has deterministic fallback behavior; existing non-English places still use their prior lifecycle; focused typecheck/tests/build pass; desktop and mobile visual evidence covers Hub → English entry, initial lesson state, and fallback/loading state where applicable.
 
+**Evidence:** `EnglishWorldScene` now owns the validated `english-first-words` A4 graph and an offline scripted A5 `TutorSession` using the production `PhaserActor`; English Hub entry routes to this scene while non-English places retain `PlaceholderPlaceScene`; scene shutdown disposes tutor/actor work and releases scene-owned assets; deterministic authored-art fallback remains usable. Unit composition evidence plus dedicated Playwright desktop/mobile entry/fallback captures were added, and legacy A3/generic-place smoke coverage was kept intact by moving generic placeholder lifecycle assertions to Science. CI `34546844143` passed format/lint/typecheck-equivalent quality checks, unit/integration tests, production build, browser stage-gate, and Android debug APK on implementation head `420fb040`.
+
 ### A6-D2 — Learner interaction + tutor-guided lesson loop
-**Status: PLANNED**
+**Status: NEXT**
 
 Build the slice's actual learner interaction flow around the authored English lesson: present the minimum touch/keyboard-accessible interaction needed by this lesson, route learner actions through guarded A4 commands, reflect wrong/correct/hint/retry states visibly, and let A5 narration/speech/actor cues respond without owning educational truth. Keep the interaction slice-specific rather than prematurely generalizing A7.
 
