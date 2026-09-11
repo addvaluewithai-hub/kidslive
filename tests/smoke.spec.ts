@@ -64,7 +64,7 @@ test('all authored places enter and return without breaking the hub', async ({ p
     await pressCanvas(position);
     await waitForRuntime('planet-hub', place.id);
     await pressCanvas(enterButton);
-    await waitForRuntime('placeholder-place');
+    await waitForRuntime(place.id === 'english' ? 'english-world' : 'placeholder-place');
 
     if (index === 0 || index === HUB_PLACES.length - 1) {
       const placeScreenshot = await page.screenshot({ animations: 'disabled' });
@@ -144,7 +144,7 @@ test('failed authored place art falls back and still returns safely', async ({ p
   await pressCanvas(resolveHubPlacePosition(english, viewport.width, viewport.height));
   await waitForRuntime('planet-hub', english.id);
   await pressCanvas({ x: 92, y: viewport.height - 36 });
-  await waitForRuntime('placeholder-place');
+  await waitForRuntime('english-world', 'lesson:welcome');
 
   expect(failedMarkerRequest).toBe(true);
   const failureState = await page.screenshot({ animations: 'disabled' });
@@ -283,10 +283,11 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
   const initialResizeListeners = initialHub.metrics?.resizeListeners;
   expect(typeof initialResizeListeners).toBe('number');
 
+  const lifecyclePlace = HUB_PLACES[1];
   let viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected a configured browser viewport');
-  await pressCanvas(resolveHubPlacePosition(HUB_PLACES[0], viewport.width, viewport.height));
-  await waitForRuntime('planet-hub', HUB_PLACES[0].id);
+  await pressCanvas(resolveHubPlacePosition(lifecyclePlace, viewport.width, viewport.height));
+  await waitForRuntime('planet-hub', lifecyclePlace.id);
   await page.waitForTimeout(100);
 
   const compact = isCompactHubViewport(viewport.width);
@@ -299,8 +300,8 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
 
   viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected resized browser viewport');
-  await pressCanvas(resolveHubPlacePosition(HUB_PLACES[0], viewport.width, viewport.height));
-  await waitForRuntime('planet-hub', HUB_PLACES[0].id);
+  await pressCanvas(resolveHubPlacePosition(lifecyclePlace, viewport.width, viewport.height));
+  await waitForRuntime('planet-hub', lifecyclePlace.id);
   await page.waitForTimeout(1_050);
 
   const activeSequence = await readSnapshot();
@@ -326,7 +327,7 @@ test('cohesive actor flow stays bounded through resize and repeated scene owners
     resizeListenerCounts.push(Number(placeSnapshot.metrics?.resizeListeners));
 
     await pressCanvas(placeBack);
-    const hubSnapshot = await waitForRuntime('planet-hub', HUB_PLACES[0].id);
+    const hubSnapshot = await waitForRuntime('planet-hub', lifecyclePlace.id);
     expectSettledActorRuntime(hubSnapshot);
     expect(hubSnapshot.detail).toContain('actor=nova');
     hubObjectCounts.push(hubSnapshot.objects);
