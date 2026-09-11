@@ -23,6 +23,10 @@ function makeSession(flow: EnglishLessonFlow, provider = new EnglishLessonTutor(
   return { actor, speech, text, session };
 }
 
+function latestAssessmentEvent(flow: EnglishLessonFlow) {
+  return [...flow.engine.events].reverse().find((event) => event.type === 'assessment-submitted');
+}
+
 describe('English World lesson composition', () => {
   it('starts a validated authored lesson and delivers the initial tutor turn through A5', async () => {
     const flow = new EnglishLessonFlow();
@@ -66,7 +70,7 @@ describe('English World lesson composition', () => {
 
     flow.submitAnswer('  APPLE  ');
     expect(flow.view.phase).toBe('celebrate');
-    expect(flow.engine.events.findLast((event) => event.type === 'assessment-submitted')).toMatchObject({
+    expect(latestAssessmentEvent(flow)).toMatchObject({
       type: 'assessment-submitted',
       normalizedAnswer: 'apple',
       correct: true,
@@ -87,7 +91,7 @@ describe('English World lesson composition', () => {
     flow.submitAnswer('pear');
 
     expect(flow.view).toMatchObject({ phase: 'review', attempts: 3 });
-    expect(flow.engine.events.findLast((event) => event.type === 'assessment-submitted')).toMatchObject({
+    expect(latestAssessmentEvent(flow)).toMatchObject({
       correct: false,
       result: 'exhausted',
     });
