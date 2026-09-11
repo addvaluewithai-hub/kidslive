@@ -20,10 +20,15 @@ import { KIDSLIVE_COMPANION } from '../characterDefinitions';
 import { PhaserActor } from '../PhaserActor';
 import { RuntimeDebugOverlay } from '../runtimeDebug';
 import { EnglishLessonFlow } from './EnglishLessonFlow';
-import { EnglishLessonTutor } from './englishLesson';
+import {
+  createEnglishTutorProvider,
+  resolveEnglishSpeechFixture,
+  resolveEnglishTutorFixture,
+  type EnglishSpeechFixture,
+  type EnglishTutorFixture,
+} from './EnglishResilienceFixtures';
 
 type AssetLoadState = 'idle' | 'loading' | 'ready' | 'error';
-
 type Choice = { readonly label: string; readonly answer: string; readonly key: string };
 
 const ACTOR_HOME: ActorAnchor = { kind: 'anchor', id: 'english-companion-home' };
@@ -35,10 +40,19 @@ const CHOICES: readonly Choice[] = Object.freeze([
 ]);
 
 class PhaserActorSpeechAdapter implements TutorSpeechAdapter {
-  constructor(private readonly actor: PhaserActor) {}
+  private failed = false;
+
+  constructor(
+    private readonly actor: PhaserActor,
+    private readonly fixture: EnglishSpeechFixture,
+  ) {}
 
   async speak(request: TutorSpeechRequest, cancellation: TutorCancellationToken): Promise<void> {
     if (cancellation.cancelled) return;
+    if (this.fixture === 'fail-once' && !this.failed) {
+      this.failed = true;
+      throw new Error('Deterministic English speech failure');
+    }
     await this.actor.speak(request.text);
   }
 
@@ -51,11 +65,11 @@ class SceneTutorTextPresenter implements TutorTextPresenter {
   constructor(private readonly label: Phaser.GameObjects.Text) {}
 
   present(presentation: TutorTextPresentation): void {
-    this.label.setText(presentation.text);
+    if (this.label.active) this.label.setText(presentation.text);
   }
 
   clear(): void {
-    this.label.setText('');
+    if (this.label.active) this.label.setText('');
   }
 }
 
@@ -86,18 +100,24 @@ export class EnglishWorldScene extends Phaser.Scene {
   private debugOverlay?: RuntimeDebugOverlay;
   private returning = false;
   private learnerActionBusy = false;
+  private lifecycleRevision = 0;
+  private tutorFixture: EnglishTutorFixture = 'normal';
+  private speechFixture: EnglishSpeechFixture = 'normal';
 
   constructor() {
     super('english-world');
   }
 
   init() {
+    this.lifecycleRevision += 1;
     this.assetPack = getPlaceAssetPack('english');
     this.queuedAssets = undefined;
     this.assetLoadState = 'idle';
     this.failedAssetKeys.clear();
     this.returning = false;
     this.learnerActionBusy = false;
+    this.tutorFixture = resolveEnglishTutorFixture();
+    this.speechFixture = resolveEnglishSpeechFixture();
   }
 
   preload() {
@@ -175,7 +195,6 @@ export class EnglishWorldScene extends Phaser.Scene {
         align: 'center',
       })
       .setOrigin(0.5);
-
     this.tutorText = this.add
       .text(0, 0, 'Your companion is getting the lesson ready…', {
         fontFamily: 'system-ui, sans-serif',
@@ -184,7 +203,6 @@ export class EnglishWorldScene extends Phaser.Scene {
         align: 'center',
       })
       .setOrigin(0.5);
-
     this.statusLabel = this.add
       .text(0, 0, '', {
         fontFamily: 'system-ui, sans-serif',
@@ -206,7 +224,6 @@ export class EnglishWorldScene extends Phaser.Scene {
         align: 'center',
       })
       .setOrigin(0.5);
-
     this.backButton = this.add
       .text(20, 58, '← Back to planet', {
         fontFamily: 'system-ui, sans-serif',
@@ -229,9 +246,9 @@ export class EnglishWorldScene extends Phaser.Scene {
       sessionId: 'english-world:lesson-1',
       engine: this.lesson.engine,
       persona: { personaId: 'kidslive-companion', toneId: 'warm-guide', locale: 'en' },
-      provider: new EnglishLessonTutor(),
+      provider: createEnglishTutorProvider(this.tutorFixture),
       actor: this.actor,
-      speech: new PhaserActorSpeechAdapter(this.actor),
+      speech: new PhaserActorSpeechAdapter(this.actor, this.speechFixture),
       text: new SceneTutorTextPresenter(this.tutorText),
       voice: { voiceId: 'companion-default', locale: 'en' },
     });
@@ -254,7 +271,7 @@ export class EnglishWorldScene extends Phaser.Scene {
         ? 'returning'
         : `lesson:${this.lesson?.engine.state.currentStepId ?? this.lesson?.engine.state.status ?? 'none'}`,
       objects: this.children.length,
-      detail: `assets=${this.assetLoadState} cached=${this.queuedAssets?.cachedKeys.length ?? 0} failed=${this.failedAssetKeys.size} tutor=${this.tutorSession?.sessionStatus ?? 'none'} phase=${this.lesson?.view.phase ?? 'none'} attempts=${this.lesson?.view.attempts ?? 0} hint=${this.lesson?.view.hintUsed ? 'used' : 'unused'} busy=${this.learnerActionBusy ? 'yes' : 'no'}`,
+      detail: `assets=${this.assetLoadState} cached=${this.queuedAssets?.cachedKeys.length ?? 0} failed=${this.failedAssetKeys.size} tutor=${this.tutorSession?.sessionStatus ?? 'none'} phase=${this.lesson?.view.phase ?? 'none'} attempts=${this.lesson?.view.attempts ?? 0} hint=${this.lesson?.view.hintUsed ? 'used' : 'unused'} busy=${this.learnerActionBusy ? 'yes' : 'no'} fixture=${this.tutorFixture}/${this.speechFixture}`,
     }));
 
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleResize, this);
@@ -284,6 +301,8 @@ export class EnglishWorldScene extends Phaser.Scene {
   }
 
   private handleShutdown() {
+    this.lifecycleRevision += 1;
+    this.returning = true;
     this.scale.off(Phaser.Scale.Events.RESIZE, this.handleResize, this);
     this.input.keyboard?.off('keydown-ENTER', this.handlePrimaryAction, this);
     this.input.keyboard?.off('keydown-ONE', this.handleChoiceOne, this);
@@ -359,21 +378,41 @@ export class EnglishWorldScene extends Phaser.Scene {
 
   private async runTutorTurn() {
     const tutorSession = this.tutorSession;
-    if (!tutorSession || tutorSession.sessionStatus !== 'active') return;
+    const lifecycleRevision = this.lifecycleRevision;
+    if (!tutorSession || tutorSession.sessionStatus !== 'active' || this.returning) return;
+
     this.learnerActionBusy = true;
     this.setInteractionEnabled(false);
-    const result = await tutorSession.runTurn();
-    this.learnerActionBusy = false;
-    this.setInteractionEnabled(true);
-    if (result.status === 'failed') {
-      this.tutorText?.setText('You can keep learning even while your companion is quiet.');
+    try {
+      const result = await tutorSession.runTurn();
+      if (!this.isCurrentTutorTurn(lifecycleRevision, tutorSession)) return;
+      if (result.status === 'failed') {
+        this.tutorText?.setText('Your companion is quiet for a moment. You can keep learning.');
+      }
+    } catch {
+      if (!this.isCurrentTutorTurn(lifecycleRevision, tutorSession)) return;
+      this.tutorText?.setText('Your companion is quiet for a moment. You can keep learning.');
+    } finally {
+      if (this.isCurrentTutorTurn(lifecycleRevision, tutorSession)) {
+        this.learnerActionBusy = false;
+        this.setInteractionEnabled(true);
+      }
     }
+  }
+
+  private isCurrentTutorTurn(lifecycleRevision: number, tutorSession: TutorSession): boolean {
+    return (
+      lifecycleRevision === this.lifecycleRevision &&
+      tutorSession === this.tutorSession &&
+      !this.returning &&
+      this.scene.isActive()
+    );
   }
 
   private setInteractionEnabled(enabled: boolean) {
     const buttons = [this.primaryButton, this.hintButton, ...this.choiceButtons];
     for (const button of buttons) {
-      if (!button || !button.visible) continue;
+      if (!button?.active || !button.visible) continue;
       if (enabled) button.setInteractive({ useHandCursor: true });
       else button.disableInteractive();
     }
@@ -387,8 +426,7 @@ export class EnglishWorldScene extends Phaser.Scene {
     this.feedbackLabel?.setText(view.feedback);
     this.lessonWord?.setText('APPLE');
 
-    const assetStatus =
-      this.assetLoadState === 'ready' ? 'Lesson 1 · First words' : 'Safe art fallback · Lesson 1';
+    const assetStatus = this.assetLoadState === 'ready' ? 'Lesson 1 · First words' : 'Safe art fallback · Lesson 1';
     const attemptStatus = view.phase === 'check' ? ` · Try ${Math.min(view.attempts + 1, 3)} of 3` : '';
     this.statusLabel?.setText(`${assetStatus}${attemptStatus}`);
 
@@ -415,33 +453,38 @@ export class EnglishWorldScene extends Phaser.Scene {
   }
 
   private layout(width: number, height: number) {
-    const compact = width < 700;
+    const compact = width < 700 || height < 620;
+    const short = height < 560;
     const centerX = width / 2;
     const centerY = height / 2;
     const artSize = Math.min(width, height) * (compact ? 0.5 : 0.58);
     const cardWidth = Math.min(compact ? width - 34 : 520, 520);
-    const cardHeight = compact ? 330 : 300;
+    const cardHeight = compact ? Math.min(330, height - 150) : 300;
 
     this.portalImage?.setPosition(centerX, centerY).setDisplaySize(artSize, artSize);
     this.markerImage?.setPosition(centerX, centerY).setDisplaySize(artSize * 0.48, artSize * 0.48);
     this.fallbackCircle?.setPosition(centerX, centerY).setRadius(Math.min(width, height) * 0.2);
-    this.title?.setPosition(centerX, compact ? 48 : 58).setFontSize(compact ? 30 : 40);
-    this.statusLabel?.setPosition(centerX, compact ? 84 : 101);
+    this.title?.setPosition(centerX, short ? 34 : compact ? 48 : 58).setFontSize(short ? 25 : compact ? 30 : 40);
+    this.statusLabel?.setPosition(centerX, short ? 64 : compact ? 84 : 101);
     this.lessonCard?.setPosition(centerX, centerY - (compact ? 6 : 8)).setSize(cardWidth, cardHeight);
-    this.lessonWord?.setPosition(centerX, centerY - (compact ? 110 : 105)).setFontSize(compact ? 31 : 38);
+    this.lessonWord?.setPosition(centerX, centerY - (compact ? 110 : 105)).setFontSize(short ? 27 : compact ? 31 : 38);
     this.promptLabel
       ?.setPosition(centerX, centerY - (compact ? 66 : 56))
-      .setFontSize(compact ? 18 : 20)
+      .setFontSize(short ? 16 : compact ? 18 : 20)
       .setWordWrapWidth(cardWidth - 44);
     this.feedbackLabel
       ?.setPosition(centerX, centerY - (compact ? 28 : 19))
+      .setFontSize(short ? 13 : 15)
       .setWordWrapWidth(cardWidth - 44);
 
     const choiceY = centerY + (compact ? 25 : 37);
     if (compact) {
-      this.choiceButtons.forEach((button, index) => button.setPosition(centerX, choiceY + index * 48).setFontSize(15));
-      this.hintButton?.setPosition(centerX, choiceY + 150).setFontSize(15);
-      this.primaryButton?.setPosition(centerX, centerY + 55).setFontSize(15);
+      const spacing = short ? 42 : 48;
+      this.choiceButtons.forEach((button, index) =>
+        button.setPosition(centerX, choiceY + index * spacing).setFontSize(short ? 13 : 15),
+      );
+      this.hintButton?.setPosition(centerX, choiceY + spacing * 3 + 6).setFontSize(short ? 13 : 15);
+      this.primaryButton?.setPosition(centerX, centerY + 55).setFontSize(short ? 13 : 15);
     } else {
       const offsets = [-128, 0, 128];
       this.choiceButtons.forEach((button, index) => button.setPosition(centerX + offsets[index], choiceY));
@@ -451,11 +494,12 @@ export class EnglishWorldScene extends Phaser.Scene {
 
     if (compact) {
       this.tutorText
-        ?.setPosition(centerX - 38, height - 155)
-        .setFontSize(15)
-        .setWordWrapWidth(Math.min(250, width - 120));
+        ?.setPosition(centerX - (short ? 0 : 38), height - (short ? 118 : 155))
+        .setFontSize(short ? 13 : 15)
+        .setWordWrapWidth(Math.min(short ? width - 48 : 250, width - 80));
       this.shortcutLabel
-        ?.setPosition(centerX - 42, height - 76)
+        ?.setVisible(!short)
+        .setPosition(centerX - 42, height - 76)
         .setWordWrapWidth(Math.min(235, width - 135));
       this.backButton?.setOrigin(0, 1).setPosition(18, height - 18);
     } else {
@@ -463,17 +507,18 @@ export class EnglishWorldScene extends Phaser.Scene {
         ?.setPosition(centerX, centerY + 190)
         .setFontSize(17)
         .setWordWrapWidth(Math.min(650, width - 54));
-      this.shortcutLabel?.setPosition(centerX, height - 28).setWordWrapWidth(width - 48);
+      this.shortcutLabel?.setVisible(true).setPosition(centerX, height - 28).setWordWrapWidth(width - 48);
       this.backButton?.setOrigin(0, 0).setPosition(20, 58);
     }
   }
 
   private resolveActorAnchor(anchor: ActorAnchor) {
-    const compact = this.scale.width < 700;
+    const compact = this.scale.width < 700 || this.scale.height < 620;
+    const short = this.scale.height < 560;
     if (anchor.id === ACTOR_HOME.id) {
       return {
-        x: compact ? this.scale.width - 58 : this.scale.width - 105,
-        y: compact ? this.scale.height - 148 : this.scale.height - 108,
+        x: compact ? this.scale.width - (short ? 48 : 58) : this.scale.width - 105,
+        y: compact ? this.scale.height - (short ? 88 : 148) : this.scale.height - 108,
       };
     }
     if (anchor.id === LESSON_FOCUS.id) {
@@ -485,7 +530,10 @@ export class EnglishWorldScene extends Phaser.Scene {
   private returnToHub() {
     if (this.returning) return;
     this.returning = true;
+    this.learnerActionBusy = true;
+    this.setInteractionEnabled(false);
     this.tutorSession?.cancelActiveTurn('Leaving English World');
+    this.actor?.interrupt('Leaving English World');
     this.backButton?.disableInteractive().setText('Returning…');
     this.cameras.main.fadeOut(180, 7, 20, 38);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
