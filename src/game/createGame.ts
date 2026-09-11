@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BootScene } from './BootScene';
+import { EnglishWorldScene } from './english/EnglishWorldScene';
 import { PlaceholderPlaceScene } from './PlaceholderPlaceScene';
 import { PlanetHubScene } from './PlanetHubScene';
 
@@ -15,6 +16,6 @@ export function createGame(parent: HTMLElement) {
       mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [BootScene, PlanetHubScene, PlaceholderPlaceScene],
+    scene: [BootScene, PlanetHubScene, EnglishWorldScene, PlaceholderPlaceScene],
   });
 }
