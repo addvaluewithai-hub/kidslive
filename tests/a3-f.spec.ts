@@ -93,13 +93,13 @@ test('companion art failure keeps fallback actor usable across hub place and ret
 
   let viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected a configured browser viewport');
-  const english = HUB_PLACES[0];
+  const genericPlace = HUB_PLACES[1];
   await pressCanvas(
     page,
     canvas,
-    resolveHubPlacePosition(english, viewport.width, viewport.height),
+    resolveHubPlacePosition(genericPlace, viewport.width, viewport.height),
   );
-  await waitForRuntime(page, 'planet-hub', english.id);
+  await waitForRuntime(page, 'planet-hub', genericPlace.id);
   await page.waitForTimeout(1_050);
 
   viewport = page.viewportSize();
@@ -122,7 +122,7 @@ test('companion art failure keeps fallback actor usable across hub place and ret
     ? { x: 92, y: viewport.height - 40 }
     : { x: 92, y: 76 };
   await pressCanvas(page, canvas, back);
-  const returnedHub = await waitForRuntime(page, 'planet-hub', english.id);
+  const returnedHub = await waitForRuntime(page, 'planet-hub', genericPlace.id);
   expect(returnedHub.metrics?.actors).toBe(1);
   expect(returnedHub.metrics?.tweens).toBe(0);
   expect(pageErrors).toEqual([]);
@@ -169,13 +169,13 @@ test('resize and repeated ownership settle back to one stable listener footprint
 
   let viewport = page.viewportSize();
   if (!viewport) throw new Error('Expected resized browser viewport');
-  const english = HUB_PLACES[0];
+  const genericPlace = HUB_PLACES[1];
   await pressCanvas(
     page,
     canvas,
-    resolveHubPlacePosition(english, viewport.width, viewport.height),
+    resolveHubPlacePosition(genericPlace, viewport.width, viewport.height),
   );
-  await waitForRuntime(page, 'planet-hub', english.id);
+  await waitForRuntime(page, 'planet-hub', genericPlace.id);
 
   const enter = { x: 92, y: viewport.height - 36 };
   const back = isCompactHubViewport(viewport.width)
@@ -217,7 +217,7 @@ test('resize and repeated ownership settle back to one stable listener footprint
           snapshot.metrics?.resizeListeners === expectedListeners
         );
       },
-      { expectedListeners: baselineListeners, expectedMode: english.id },
+      { expectedListeners: baselineListeners, expectedMode: genericPlace.id },
     );
   }
 
