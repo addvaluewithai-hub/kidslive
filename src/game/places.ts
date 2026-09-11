@@ -1,3 +1,5 @@
+import { englishSliceCompletion } from './english/EnglishSliceCompletion';
+
 export type HubNormalizedPosition = {
   x: number;
   y: number;
@@ -14,14 +16,18 @@ export type HubPlace = {
   };
 };
 
-export const HUB_PLACES: readonly HubPlace[] = [
-  {
-    id: 'english',
-    label: 'English',
-    subtitle: 'Words & stories',
-    color: 0x68b8ff,
-    layout: { desktop: { x: -0.34, y: -0.2 }, compact: { x: -0.23, y: -0.28 } },
+const ENGLISH_PLACE: HubPlace = {
+  id: 'english',
+  label: 'English',
+  get subtitle() {
+    return englishSliceCompletion.completed ? 'First word learned ✓' : 'Words & stories';
   },
+  color: 0x68b8ff,
+  layout: { desktop: { x: -0.34, y: -0.2 }, compact: { x: -0.23, y: -0.28 } },
+};
+
+export const HUB_PLACES: readonly HubPlace[] = [
+  ENGLISH_PLACE,
   {
     id: 'science',
     label: 'Science',
