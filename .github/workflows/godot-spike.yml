@@ -52,11 +52,20 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          if ! command -v xvfb-run >/dev/null 2>&1; then
-            apt-get update
-            apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri
-          fi
-          LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a godot --path "$PROJECT_PATH" --rendering-method gl_compatibility res://capture.tscn
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            xvfb \
+            libgl1-mesa-dri \
+            libxcursor1 \
+            libxinerama1 \
+            libxi6 \
+            libfontconfig1 \
+            fonts-dejavu-core
+          LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a godot \
+            --display-driver x11 \
+            --path "$PROJECT_PATH" \
+            --rendering-method gl_compatibility \
+            res://capture.tscn
           test -s /tmp/habit-home-capture.png
           cp /tmp/habit-home-capture.png build/godot-habit-home-preview.png
 
