@@ -1,0 +1,57 @@
+name: Godot Habit Home Spike
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prototypes/godot-habit-home/**'
+      - '.github/workflows/godot-spike.yml'
+  workflow_dispatch:
+
+jobs:
+  validate-and-export:
+    runs-on: ubuntu-24.04
+    container:
+      image: barichello/godot-ci:4.7.2
+    env:
+      GODOT_VERSION: '4.7.2'
+      PROJECT_PATH: prototypes/godot-habit-home
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Prepare export templates
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p ~/.local/share/godot/export_templates/
+          if [ -d "/root/.local/share/godot/export_templates/${GODOT_VERSION}.stable" ] && [ "$HOME" != "/root" ]; then
+            mv "/root/.local/share/godot/export_templates/${GODOT_VERSION}.stable" ~/.local/share/godot/export_templates/
+          fi
+          godot --version
+
+      - name: Validate project and scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --editor --path "$PROJECT_PATH" --quit 2>&1 | tee /tmp/godot-validate.log
+          if grep -E "SCRIPT ERROR|Parse Error|ERROR:.*GDScript" /tmp/godot-validate.log; then
+            echo "Godot reported script errors"
+            exit 1
+          fi
+
+      - name: Export Web build
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p build/godot-habit-home
+          EXPORT_DIR="$(readlink -f build/godot-habit-home)"
+          godot --headless --path "$PROJECT_PATH" --export-release "Web" "$EXPORT_DIR/index.html"
+
+      - name: Upload Web prototype
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-habit-home-web-${{ github.run_id }}
+          path: build/godot-habit-home
+          if-no-files-found: error
+          retention-days: 14
