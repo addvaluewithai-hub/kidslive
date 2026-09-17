@@ -48,10 +48,30 @@ jobs:
           EXPORT_DIR="$(readlink -f build/godot-habit-home)"
           godot --headless --path "$PROJECT_PATH" --export-release "Web" "$EXPORT_DIR/index.html"
 
+      - name: Capture production visual
+        shell: bash
+        run: |
+          set -euxo pipefail
+          if ! command -v xvfb-run >/dev/null 2>&1; then
+            apt-get update
+            apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri
+          fi
+          LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a godot --path "$PROJECT_PATH" --rendering-method gl_compatibility res://capture.tscn
+          test -s /tmp/habit-home-capture.png
+          cp /tmp/habit-home-capture.png build/godot-habit-home-preview.png
+
       - name: Upload Web prototype
         uses: actions/upload-artifact@v4
         with:
           name: godot-habit-home-web-${{ github.run_id }}
           path: build/godot-habit-home
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload visual preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-habit-home-preview-${{ github.run_id }}
+          path: build/godot-habit-home-preview.png
           if-no-files-found: error
           retention-days: 14
