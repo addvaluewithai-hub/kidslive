@@ -12,6 +12,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start('planet-hub');
+    const params = new URLSearchParams(window.location.search);
+    this.scene.start(params.get('prototype') === 'habit-home' ? 'habit-home' : 'planet-hub');
   }
 }
