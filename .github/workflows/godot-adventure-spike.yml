@@ -1,0 +1,86 @@
+name: Godot Adventure World Spike
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prototypes/godot-adventure-world/**'
+      - '.github/workflows/godot-adventure-spike.yml'
+  workflow_dispatch:
+
+jobs:
+  validate-and-export:
+    runs-on: ubuntu-24.04
+    container:
+      image: barichello/godot-ci:4.7.2
+    env:
+      GODOT_VERSION: '4.7.2'
+      PROJECT_PATH: prototypes/godot-adventure-world
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Prepare export templates
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p ~/.local/share/godot/export_templates/
+          if [ -d "/root/.local/share/godot/export_templates/${GODOT_VERSION}.stable" ] && [ "$HOME" != "/root" ]; then
+            mv "/root/.local/share/godot/export_templates/${GODOT_VERSION}.stable" ~/.local/share/godot/export_templates/
+          fi
+          godot --version
+
+      - name: Validate project and scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot --headless --editor --path "$PROJECT_PATH" --quit 2>&1 | tee /tmp/godot-adventure-validate.log
+          if grep -E "SCRIPT ERROR|Parse Error|ERROR:.*GDScript" /tmp/godot-adventure-validate.log; then
+            echo "Godot reported script errors"
+            exit 1
+          fi
+
+      - name: Export Web build
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p build/godot-adventure-world
+          EXPORT_DIR="$(readlink -f build/godot-adventure-world)"
+          godot --headless --path "$PROJECT_PATH" --export-release "Web" "$EXPORT_DIR/index.html"
+
+      - name: Capture adventure visual
+        shell: bash
+        run: |
+          set -euxo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            xvfb \
+            libgl1-mesa-dri \
+            libxcursor1 \
+            libxinerama1 \
+            libxi6 \
+            libfontconfig1 \
+            fonts-dejavu-core
+          LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a godot \
+            --display-driver x11 \
+            --path "$PROJECT_PATH" \
+            --rendering-method gl_compatibility \
+            res://capture.tscn
+          test -s /tmp/adventure-world-capture.png
+          cp /tmp/adventure-world-capture.png build/godot-adventure-world-preview.png
+
+      - name: Upload Web prototype
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-adventure-world-web-${{ github.run_id }}
+          path: build/godot-adventure-world
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload visual preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-adventure-world-preview-${{ github.run_id }}
+          path: build/godot-adventure-world-preview.png
+          if-no-files-found: error
+          retention-days: 14
