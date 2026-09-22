@@ -1,7 +1,7 @@
 # KidsLive — New Product Direction
 
-**Status:** Current product direction / handoff source of truth  
-**Date fixed:** 2026-09-19  
+**Status:** Current product direction / handoff source of truth
+**Date fixed:** 2026-09-19
 **Supersedes:** the previous "educational worlds / curriculum-first" product direction for new product decisions.
 
 > Existing educational architecture, roadmap, and prototypes remain in the repository as useful technical history. They should **not** be treated as the active product brief unless this document explicitly reuses a piece of them.

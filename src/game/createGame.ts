@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BootScene } from './BootScene';
 import { EnglishWorldScene } from './english/EnglishWorldScene';
 import { HabitHomeScene } from './habits/HabitHomeScene';
+import { HabitIslandScene } from './habits/HabitIslandScene';
 import { PlaceholderPlaceScene } from './PlaceholderPlaceScene';
 import { PlanetHubScene } from './PlanetHubScene';
 
@@ -17,6 +18,13 @@ export function createGame(parent: HTMLElement) {
       mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [BootScene, HabitHomeScene, PlanetHubScene, EnglishWorldScene, PlaceholderPlaceScene],
+    scene: [
+      BootScene,
+      HabitIslandScene,
+      HabitHomeScene,
+      PlanetHubScene,
+      EnglishWorldScene,
+      PlaceholderPlaceScene,
+    ],
   });
 }
