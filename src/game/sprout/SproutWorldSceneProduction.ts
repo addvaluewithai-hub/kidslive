@@ -39,7 +39,14 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
     this.hidePrototypeChrome();
     this.buildProductionHud();
     this.applyProductionState(sproutStoryStore.getState());
-    this.productionUnsubscribe = sproutStoryStore.subscribe((state) => this.applyProductionState(state));
+    this.lockPortraitVerticalFrame();
+    this.productionUnsubscribe = sproutStoryStore.subscribe((state) => {
+      this.applyProductionState(state);
+      this.lockPortraitVerticalFrame();
+      // Story transitions can tween the camera for ~1.35s. Re-lock only the
+      // vertical axis afterwards while preserving the horizontal exploration.
+      this.time.delayedCall(1550, () => this.lockPortraitVerticalFrame());
+    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.productionUnsubscribe?.();
       this.productionUnsubscribe = undefined;
@@ -48,6 +55,10 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
 
   private baseOverlays() {
     return this as unknown as BaseOverlayAccess;
+  }
+
+  private lockPortraitVerticalFrame() {
+    this.cameras.main.scrollY = 0;
   }
 
   private hidePrototypeChrome() {
@@ -70,22 +81,22 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
     const hud = this.add.container(0, 0).setScrollFactor(0).setDepth(HUD_DEPTH);
 
     const top = this.add.graphics();
-    top.fillStyle(0x163a31, 0.88).fillRoundedRect(24, 24, 672, 108, 28);
-    top.lineStyle(1, 0xffffff, 0.1).strokeRoundedRect(24, 24, 672, 108, 28);
-    const eyebrow = this.add.text(48, 43, 'SPROUT PLANET', {
+    top.fillStyle(0x163a31, 0.88).fillRoundedRect(24, 52, 672, 108, 28);
+    top.lineStyle(1, 0xffffff, 0.1).strokeRoundedRect(24, 52, 672, 108, 28);
+    const eyebrow = this.add.text(48, 70, 'SPROUT PLANET', {
       fontFamily: 'system-ui, sans-serif',
       fontSize: '12px',
       fontStyle: 'bold',
       color: '#a9c8b5',
       letterSpacing: 1.8,
     });
-    this.productionDay = this.add.text(48, 66, '', {
+    this.productionDay = this.add.text(48, 93, '', {
       fontFamily: 'system-ui, sans-serif',
       fontSize: '25px',
       fontStyle: 'bold',
       color: '#f7fbf3',
     });
-    this.productionHint = this.add.text(48, 98, '', {
+    this.productionHint = this.add.text(48, 125, '', {
       fontFamily: 'system-ui, sans-serif',
       fontSize: '12px',
       color: '#c9dbce',
@@ -94,19 +105,19 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
       align: 'right',
     });
     hud.add([top, eyebrow, this.productionDay, this.productionHint]);
-    hud.add(addRoundedButton(this, 540, 52, 66, 54, 'خريطة', () => this.openOverlay('mapOverlay'), { fill: 0x2d5549, fontSize: 11 }));
-    hud.add(addRoundedButton(this, 614, 52, 58, 54, 'أهل', () => this.openOverlay('parentOverlay'), { fill: 0x2d5549, fontSize: 11 }));
+    hud.add(addRoundedButton(this, 540, 80, 66, 54, 'خريطة', () => this.openOverlay('mapOverlay'), { fill: 0x2d5549, fontSize: 11 }));
+    hud.add(addRoundedButton(this, 614, 80, 58, 54, 'أهل', () => this.openOverlay('parentOverlay'), { fill: 0x2d5549, fontSize: 11 }));
 
     const storyCard = this.add.graphics();
-    storyCard.fillStyle(0xf4f1e7, 0.92).fillRoundedRect(50, 154, 620, 88, 24);
-    storyCard.lineStyle(1, 0x26483d, 0.08).strokeRoundedRect(50, 154, 620, 88, 24);
-    const novaMark = this.add.circle(84, 198, 22, 0x756cbe, 0.98);
-    const novaSpark = this.add.text(84, 196, '✦', {
+    storyCard.fillStyle(0xf4f1e7, 0.92).fillRoundedRect(50, 180, 620, 88, 24);
+    storyCard.lineStyle(1, 0x26483d, 0.08).strokeRoundedRect(50, 180, 620, 88, 24);
+    const novaMark = this.add.circle(84, 224, 22, 0x756cbe, 0.98);
+    const novaSpark = this.add.text(84, 222, '✦', {
       fontFamily: 'system-ui, sans-serif',
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5);
-    this.productionStory = this.add.text(118, 174, '', {
+    this.productionStory = this.add.text(118, 200, '', {
       fontFamily: 'system-ui, sans-serif',
       fontSize: '15px',
       fontStyle: 'bold',
