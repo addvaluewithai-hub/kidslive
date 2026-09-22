@@ -43,3 +43,7 @@ body {
   letter-spacing: 0.02em;
   pointer-events: none;
 }
+
+.app-title--immersive {
+  opacity: 0;
+}
