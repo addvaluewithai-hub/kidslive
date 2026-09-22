@@ -4,12 +4,13 @@ import { EnglishWorldScene } from './english/EnglishWorldScene';
 import { HabitHomeScene } from './habits/HabitHomeScene';
 import { PlaceholderPlaceScene } from './PlaceholderPlaceScene';
 import { PlanetHubScene } from './PlanetHubScene';
+import { SproutWorldScene } from './sprout/SproutWorldScene';
 
 export function createGame(parent: HTMLElement) {
   return new Phaser.Game({
     type: Phaser.WEBGL,
     parent,
-    backgroundColor: '#071426',
+    backgroundColor: '#dfe8e2',
     antialias: true,
     pixelArt: false,
     roundPixels: false,
@@ -17,6 +18,6 @@ export function createGame(parent: HTMLElement) {
       mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [BootScene, HabitHomeScene, PlanetHubScene, EnglishWorldScene, PlaceholderPlaceScene],
+    scene: [BootScene, SproutWorldScene, HabitHomeScene, PlanetHubScene, EnglishWorldScene, PlaceholderPlaceScene],
   });
 }
