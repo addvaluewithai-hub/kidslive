@@ -28,7 +28,7 @@ export function visibleNovaContext(state: SproutStoryState): NovaStoryContext {
 export class MockNovaProvider implements NovaConversationProvider {
   readonly id = 'mock' as const;
 
-  async ask(message: string, context: NovaStoryContext) {
+  async ask(message: string, context: NovaStoryContext): Promise<string> {
     const normalized = message.toLowerCase();
     if (normalized.includes('lumi') && context.lumiDiscovered) {
       return 'Lumi صغير وشجاع جدًا. لسه بنتعرف عليه، بس واضح إنه بيسمع حاجات في الكوكب إحنا مش سامعينها.';
@@ -47,7 +47,7 @@ export class MockNovaProvider implements NovaConversationProvider {
 export class LiveNovaProvider implements NovaConversationProvider {
   readonly id = 'live' as const;
 
-  async ask(_message: string, _context: NovaStoryContext) {
+  async ask(_message: string, _context: NovaStoryContext): Promise<string> {
     throw new Error('Nova Live backend is not configured in this repository yet.');
   }
 }
