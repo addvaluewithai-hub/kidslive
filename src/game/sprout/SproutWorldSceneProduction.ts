@@ -1,0 +1,240 @@
+import Phaser from 'phaser';
+import { getSproutDay, SPROUT_HABITS } from '../../story/sproutStory';
+import { sproutStoryStore } from '../../story/storyStore';
+import type { HabitId, SproutStoryState } from '../../story/types';
+import { addRoundedButton } from './SproutSceneKit';
+import { SproutWorldScene } from './SproutWorldScene';
+
+type HabitChip = {
+  background: Phaser.GameObjects.Graphics;
+  dot: Phaser.GameObjects.Arc;
+  status: Phaser.GameObjects.Text;
+};
+
+type BaseOverlayAccess = {
+  mapOverlay?: Phaser.GameObjects.Container;
+  parentOverlay?: Phaser.GameObjects.Container;
+  novaOverlay?: Phaser.GameObjects.Container;
+  debugOverlay?: Phaser.GameObjects.Container;
+};
+
+const HUD_DEPTH = 104;
+
+/**
+ * Production-facing portrait presentation for the Sprout vertical slice.
+ * The base scene owns the reusable world, transitions, audio, and story state;
+ * this layer keeps the always-visible mobile chrome deliberately compact.
+ */
+export class SproutWorldSceneProduction extends SproutWorldScene {
+  private productionUnsubscribe?: () => void;
+  private productionDay?: Phaser.GameObjects.Text;
+  private productionHint?: Phaser.GameObjects.Text;
+  private productionStory?: Phaser.GameObjects.Text;
+  private productionProgress?: Phaser.GameObjects.Text;
+  private productionFooter?: Phaser.GameObjects.Text;
+  private readonly productionHabits = new Map<HabitId, HabitChip>();
+
+  create() {
+    super.create();
+    this.hidePrototypeChrome();
+    this.buildProductionHud();
+    this.applyProductionState(sproutStoryStore.getState());
+    this.lockPortraitVerticalFrame();
+    this.productionUnsubscribe = sproutStoryStore.subscribe((state) => {
+      this.applyProductionState(state);
+      this.lockPortraitVerticalFrame();
+      this.time.delayedCall(1550, () => this.lockPortraitVerticalFrame());
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.productionUnsubscribe?.();
+      this.productionUnsubscribe = undefined;
+    });
+  }
+
+  private baseOverlays() {
+    return this as unknown as BaseOverlayAccess;
+  }
+
+  private lockPortraitVerticalFrame() {
+    this.cameras.main.scrollY = 0;
+  }
+
+  private hidePrototypeChrome() {
+    for (const child of this.children.list) {
+      if (!(child instanceof Phaser.GameObjects.Container)) continue;
+      if (child.depth >= 100 && child.depth <= 102) child.setVisible(false);
+    }
+    this.baseOverlays().debugOverlay?.setVisible(false);
+  }
+
+  private openOverlay(name: 'mapOverlay' | 'parentOverlay' | 'novaOverlay') {
+    const overlays = this.baseOverlays();
+    overlays.mapOverlay?.setVisible(false);
+    overlays.parentOverlay?.setVisible(false);
+    overlays.novaOverlay?.setVisible(false);
+    overlays[name]?.setVisible(true);
+  }
+
+  private buildProductionHud() {
+    const hud = this.add.container(0, 0).setScrollFactor(0).setDepth(HUD_DEPTH);
+
+    const top = this.add.graphics();
+    top.fillStyle(0x163a31, 0.88).fillRoundedRect(24, 52, 672, 108, 28);
+    top.lineStyle(1, 0xffffff, 0.1).strokeRoundedRect(24, 52, 672, 108, 28);
+    const eyebrow = this.add.text(48, 70, 'KIDSLIVE · SPROUT PLANET', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '12px',
+      fontStyle: 'bold',
+      color: '#a9c8b5',
+      letterSpacing: 1.5,
+    });
+    this.productionDay = this.add.text(48, 93, '', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '25px',
+      fontStyle: 'bold',
+      color: '#f7fbf3',
+    });
+    this.productionHint = this.add.text(48, 125, '', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '12px',
+      color: '#c9dbce',
+      wordWrap: { width: 420 },
+      maxLines: 1,
+      align: 'right',
+    });
+    hud.add([top, eyebrow, this.productionDay, this.productionHint]);
+    hud.add(addRoundedButton(this, 540, 80, 66, 54, 'خريطة', () => this.openOverlay('mapOverlay'), { fill: 0x2d5549, fontSize: 11 }));
+    hud.add(addRoundedButton(this, 614, 80, 58, 54, 'أهل', () => this.openOverlay('parentOverlay'), { fill: 0x2d5549, fontSize: 11 }));
+
+    const storyCard = this.add.graphics();
+    storyCard.fillStyle(0xf4f1e7, 0.92).fillRoundedRect(50, 180, 620, 88, 24);
+    storyCard.lineStyle(1, 0x26483d, 0.08).strokeRoundedRect(50, 180, 620, 88, 24);
+    const novaMark = this.add.circle(84, 224, 22, 0x756cbe, 0.98);
+    const novaSpark = this.add.text(84, 222, '✦', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '18px',
+      color: '#ffffff',
+    }).setOrigin(0.5);
+    this.productionStory = this.add.text(118, 200, '', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '15px',
+      fontStyle: 'bold',
+      color: '#27463b',
+      wordWrap: { width: 520 },
+      maxLines: 2,
+      lineSpacing: 3,
+      align: 'right',
+    });
+    hud.add([storyCard, novaMark, novaSpark, this.productionStory]);
+
+    const bottom = this.add.graphics();
+    bottom.fillStyle(0x102f28, 0.93).fillRoundedRect(24, 1032, 672, 220, 30);
+    bottom.lineStyle(1, 0xffffff, 0.08).strokeRoundedRect(24, 1032, 672, 220, 30);
+    const habitsTitle = this.add.text(48, 1053, 'عادات النهارده', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '18px',
+      fontStyle: 'bold',
+      color: '#f3f7ef',
+    });
+    this.productionProgress = this.add.text(670, 1057, '', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '12px',
+      fontStyle: 'bold',
+      color: '#aecbb7',
+    }).setOrigin(1, 0);
+    hud.add([bottom, habitsTitle, this.productionProgress]);
+
+    SPROUT_HABITS.forEach((habit, index) => {
+      const x = 48 + index * 207;
+      const y = 1092;
+      const background = this.add.graphics();
+      background.fillStyle(0x1c4439, 0.92).fillRoundedRect(x, y, 190, 84, 20);
+      const dot = this.add.circle(x + 22, y + 23, 8, 0x47685f, 1).setStrokeStyle(1, 0xb2c9b9, 0.55);
+      const label = this.add.text(x + 38, y + 12, habit.label, {
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '12px',
+        fontStyle: 'bold',
+        color: '#f2f7ef',
+        wordWrap: { width: 136 },
+        maxLines: 1,
+        align: 'right',
+      });
+      const status = this.add.text(x + 14, y + 52, '', {
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: '#b7cabd',
+        wordWrap: { width: 160 },
+        maxLines: 1,
+        align: 'right',
+      });
+      const hit = this.add.zone(x + 95, y + 42, 190, 84).setInteractive({ useHandCursor: true });
+      hit.on('pointerdown', () => sproutStoryStore.toggleHabit(habit.id));
+      hud.add([background, dot, label, status, hit]);
+      this.productionHabits.set(habit.id, { background, dot, status });
+    });
+
+    this.productionFooter = this.add.text(48, 1201, '', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '12px',
+      fontStyle: 'bold',
+      color: '#bed3c3',
+      wordWrap: { width: 455 },
+      maxLines: 1,
+      align: 'right',
+    });
+    hud.add(this.productionFooter);
+    hud.add(addRoundedButton(this, 540, 1190, 132, 42, 'Nova ✦', () => this.openOverlay('novaOverlay'), { fill: 0x625baa, fontSize: 12 }));
+
+    if (new URLSearchParams(window.location.search).has('dev')) {
+      hud.add(addRoundedButton(this, 28, 954, 68, 42, 'DEV', () => {
+        const overlay = this.baseOverlays().debugOverlay;
+        overlay?.setVisible(!overlay.visible);
+      }, { fill: 0x263c36, fontSize: 11 }));
+    }
+  }
+
+  private applyProductionState(state: SproutStoryState) {
+    const day = getSproutDay(state.currentDay);
+    const completeCount = Object.values(state.habits).filter((value) => value === 'done').length;
+
+    this.productionDay?.setText(`Day ${state.currentDay}  ·  30`);
+    this.productionHint?.setText(day.hint);
+
+    const storyLine = state.dayResolved
+      ? state.currentDay === 7
+        ? 'لومي لقى طريق! غابة الهمس ظهرت لأول مرة.'
+        : day.resolvedLine
+      : day.intro;
+    this.productionStory?.setText(storyLine);
+
+    this.productionProgress?.setText(`${completeCount} / ${day.requiredHabits} لفتح حدث اليوم`);
+    this.productionFooter?.setText(
+      state.dayResolved
+        ? state.currentDay === 7
+          ? 'غابة الهمس ظهرت… الحكاية تكمل بكرة ✦'
+          : 'العالم اتغيّر. ارجع بكرة عشان نكمل.'
+        : 'كل عادة مكتملة بتحرّك الحكاية نفسها.',
+    );
+
+    for (const habit of SPROUT_HABITS) {
+      const chip = this.productionHabits.get(habit.id);
+      if (!chip) continue;
+      const status = state.habits[habit.id];
+      chip.background.clear();
+      const fill = status === 'done' ? 0x315f48 : status === 'pending' ? 0x65543a : 0x1c4439;
+      const x = 48 + SPROUT_HABITS.findIndex((entry) => entry.id === habit.id) * 207;
+      chip.background.fillStyle(fill, 0.94).fillRoundedRect(x, 1092, 190, 84, 20);
+      chip.dot.setFillStyle(status === 'done' ? 0x9fd796 : status === 'pending' ? 0xe2ba73 : 0x47685f, 1);
+      chip.status.setText(
+        status === 'done'
+          ? 'تم ✓'
+          : status === 'pending'
+            ? 'مستني موافقة الأهل'
+            : habit.verification === 'parent_approval'
+              ? 'موافقة ولي الأمر'
+              : 'اضغط لما تخلص',
+      );
+    }
+  }
+}

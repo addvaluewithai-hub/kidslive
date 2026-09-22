@@ -13,6 +13,17 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     const params = new URLSearchParams(window.location.search);
-    this.scene.start(params.get('prototype') === 'habit-home' ? 'habit-home' : 'planet-hub');
+    if (params.get('prototype') === 'habit-home') {
+      this.scene.start('habit-home');
+      return;
+    }
+
+    // Preserve the legacy acceptance harness while making Sprout the real default product slice.
+    if (params.has('runtimeDebug') || params.get('prototype') === 'legacy') {
+      this.scene.start('planet-hub');
+      return;
+    }
+
+    this.scene.start('sprout-world');
   }
 }
