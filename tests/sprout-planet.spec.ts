@@ -45,6 +45,9 @@ async function currentStoryState(page: import('@playwright/test').Page): Promise
 
 test('Sprout 7-day state machine keeps approval, choice, Lumi and cliffhanger persistent', async ({ page }, testInfo) => {
   test.setTimeout(55_000);
+  // The product brief targets 9:16. Keep the visual QA evidence at that exact
+  // aspect ratio even though the generic mobile Playwright project is taller.
+  await page.setViewportSize({ width: 390, height: 693 });
   await page.goto('/?dev=1');
   const canvas = page.locator('.game-root > canvas').first();
   await expect(canvas).toBeVisible();
