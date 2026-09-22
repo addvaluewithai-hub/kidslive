@@ -1,0 +1,15 @@
+interface:
+  display_name: text and bitmaptext
+  short_description: 'Use this skill when displaying text in Phaser 4. Covers Text
+    game objects, BitmapText, web fonts, text styling, word wrap, alignment, padding,
+    and dynamic text content. Triggers on: Text, BitmapText, this.add.text, font,
+    word wrap, text style.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

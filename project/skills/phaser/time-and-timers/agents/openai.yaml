@@ -1,0 +1,14 @@
+interface:
+  display_name: time and timers
+  short_description: 'Use this skill when using timers and time-based events in Phaser
+    4. Covers TimerEvent, delayed calls, looping timers, the Clock plugin, and time
+    scaling. Triggers on: timer, delay, delayedCall, TimerEvent, Clock, time event.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

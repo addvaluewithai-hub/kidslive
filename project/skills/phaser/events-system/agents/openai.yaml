@@ -1,0 +1,14 @@
+interface:
+  display_name: events system
+  short_description: 'Use this skill when working with the Phaser 4 event system.
+    Covers EventEmitter, scene events, game events, custom events, and event-driven
+    communication. Triggers on: events, on, emit, EventEmitter, scene events, listeners.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

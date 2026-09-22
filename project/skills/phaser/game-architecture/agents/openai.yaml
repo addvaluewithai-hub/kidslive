@@ -1,0 +1,14 @@
+interface:
+  display_name: game architecture
+  short_description: Game architecture patterns and best practices for browser games.
+    Use when designing game systems, planning architecture, structuring a game project,
+    or making architectural decisions about game code.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

@@ -1,0 +1,14 @@
+interface:
+  display_name: curves and paths
+  short_description: 'Use this skill when working with curves and paths in Phaser
+    4. Covers splines, bezier curves, lines, ellipses, path followers, and mathematical
+    curve types. Triggers on: curve, path, spline, bezier, path follower.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

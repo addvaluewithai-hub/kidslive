@@ -1,0 +1,15 @@
+interface:
+  display_name: animations
+  short_description: 'Use this skill when creating or controlling sprite animations
+    in Phaser 4. Covers spritesheets, atlases, AnimationManager, AnimationState, play/stop/chain,
+    frame callbacks, and animation events. Triggers on: sprite animation, spritesheet,
+    play animation, animation frames.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

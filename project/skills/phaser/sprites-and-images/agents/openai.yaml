@@ -1,0 +1,15 @@
+interface:
+  display_name: sprites and images
+  short_description: 'Use this skill when creating Sprites or Images in Phaser 4.
+    Covers factory methods, texture/frame selection, position, scale, rotation, tint,
+    flip, alpha, origin, depth, and the component mixin system. Triggers on: Sprite,
+    Image, this.add.sprite, this.add.image, texture, setTint, setAlpha.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

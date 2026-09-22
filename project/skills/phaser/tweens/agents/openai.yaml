@@ -1,0 +1,15 @@
+interface:
+  display_name: tweens
+  short_description: 'Use this skill when animating properties over time in Phaser
+    4. Covers tweens, tween chains, easing functions, stagger, yoyo, repeat, callbacks,
+    number tweens, and the TweenManager. Triggers on: tween, ease, animate, this.tweens.add,
+    tween chain, stagger.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

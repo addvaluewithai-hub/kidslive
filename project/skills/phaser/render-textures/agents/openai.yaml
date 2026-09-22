@@ -1,0 +1,15 @@
+interface:
+  display_name: render textures
+  short_description: 'Use this skill when using RenderTexture or DynamicTexture in
+    Phaser 4. Covers drawing game objects to textures, dynamic texture creation, snapshot/screenshot,
+    stamps, and off-screen rendering. Triggers on: RenderTexture, DynamicTexture,
+    snapshot, draw to texture, stamp.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

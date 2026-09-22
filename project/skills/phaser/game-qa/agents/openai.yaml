@@ -1,0 +1,15 @@
+interface:
+  display_name: game qa
+  short_description: Game QA testing with Playwright — visual regression, gameplay
+    verification, performance, and accessibility for browser games. Use when writing
+    or running game tests, debugging test failures, or building QA infrastructure.
+    This is the reference skill — use qa-game for the user-facing command.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

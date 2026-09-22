@@ -1,0 +1,15 @@
+interface:
+  display_name: game object components
+  short_description: 'Use this skill when working with Phaser 4 game object components
+    and the mixin system. Covers Transform, Alpha, Tint, Origin, Depth, Flip, Mask,
+    GetBounds, Lighting, and other shared component behaviors. Triggers on: component,
+    mixin, transform, mask, bounds, lighting.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

@@ -1,0 +1,15 @@
+interface:
+  display_name: scenes
+  short_description: 'Use this skill when working with Phaser 4 scenes. Covers scene
+    lifecycle methods, scene transitions, parallel scenes, scene communication, sleeping,
+    pausing, restarting, and the SceneManager. Triggers on: Scene, scene lifecycle,
+    preload, create, update, scene transition, SceneManager.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

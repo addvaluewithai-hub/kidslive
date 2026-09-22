@@ -1,0 +1,15 @@
+interface:
+  display_name: game setup and config
+  short_description: 'Use this skill when creating a new Phaser 4 game instance or
+    configuring GameConfig options. Covers renderer selection, canvas setup, scaling,
+    pixel art, FPS settings, boot sequence, and all config sub-objects. Triggers on:
+    new Phaser.Game, GameConfig, game setup, renderer, pixel art, FPS.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

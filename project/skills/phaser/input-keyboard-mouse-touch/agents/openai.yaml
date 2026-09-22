@@ -1,0 +1,15 @@
+interface:
+  display_name: input keyboard mouse touch
+  short_description: 'Use this skill when handling user input in Phaser 4. Covers
+    keyboard keys, mouse clicks and movement, touch events, pointer handling, drag
+    and drop, hit areas, interactive objects, and gamepad support. Triggers on: keyboard,
+    mouse, touch, pointer, drag, drop, click, input, gamepad, cursor keys.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

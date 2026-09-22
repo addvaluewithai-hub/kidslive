@@ -1,0 +1,15 @@
+interface:
+  display_name: filters and postfx
+  short_description: 'Use this skill when applying visual filters or post-processing
+    effects in Phaser 4. Covers bloom, blur, glow, color matrix, barrel distortion,
+    displacement, custom shaders, and the filter pipeline. Triggers on: filter, post-processing,
+    shader, bloom, blur, glow, color effects.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

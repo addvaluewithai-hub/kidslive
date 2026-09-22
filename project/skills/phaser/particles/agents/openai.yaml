@@ -1,0 +1,15 @@
+interface:
+  display_name: particles
+  short_description: 'Use this skill when creating particle effects in Phaser 4. Covers
+    ParticleEmitter, emission zones, death zones, particle properties, textures, gravity
+    wells, and particle movement. Triggers on: particles, emitter, particle effect,
+    explosion, fire, smoke.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

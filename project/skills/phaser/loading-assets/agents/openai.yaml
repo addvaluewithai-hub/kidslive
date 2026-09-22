@@ -1,0 +1,15 @@
+interface:
+  display_name: loading assets
+  short_description: 'Use this skill when loading assets in Phaser 4. Covers the Loader
+    plugin, loading images, spritesheets, atlases, audio, JSON, tilemaps, bitmap fonts,
+    and tracking load progress. Triggers on: preload, this.load, asset loading, spritesheet,
+    atlas, load progress.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
