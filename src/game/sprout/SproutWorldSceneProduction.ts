@@ -21,15 +21,11 @@ type BaseOverlayAccess = {
 const HUD_DEPTH = 104;
 
 /**
- * Presentation pass for the production-style portrait slice.
- *
- * The base scene owns world rendering, transitions, audio, story effects, and
- * the large functional prototype UI. This subclass deliberately keeps that
- * behavior intact while replacing the always-visible prototype HUD with a much
- * smaller mobile composition so the living world remains the hero.
+ * Production-facing portrait presentation for the Sprout vertical slice.
+ * The base scene owns the reusable world, transitions, audio, and story state;
+ * this layer keeps the always-visible mobile chrome deliberately compact.
  */
 export class SproutWorldSceneProduction extends SproutWorldScene {
-  private productionHud?: Phaser.GameObjects.Container;
   private productionUnsubscribe?: () => void;
   private productionDay?: Phaser.GameObjects.Text;
   private productionHint?: Phaser.GameObjects.Text;
@@ -59,10 +55,6 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
       if (!(child instanceof Phaser.GameObjects.Container)) continue;
       if (child.depth >= 100 && child.depth <= 102) child.setVisible(false);
     }
-
-    // Developer controls are intentionally hidden until the small DEV chip is
-    // tapped. This keeps ?dev=1 useful without turning QA screenshots into a
-    // picture of the debug console.
     this.baseOverlays().debugOverlay?.setVisible(false);
   }
 
@@ -76,7 +68,6 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
 
   private buildProductionHud() {
     const hud = this.add.container(0, 0).setScrollFactor(0).setDepth(HUD_DEPTH);
-    this.productionHud = hud;
 
     const top = this.add.graphics();
     top.fillStyle(0x163a31, 0.88).fillRoundedRect(24, 24, 672, 108, 28);
@@ -96,34 +87,33 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
     });
     this.productionHint = this.add.text(48, 98, '', {
       fontFamily: 'system-ui, sans-serif',
-      fontSize: '13px',
+      fontSize: '12px',
       color: '#c9dbce',
-      wordWrap: { width: 405 },
+      wordWrap: { width: 420 },
       maxLines: 1,
-      rtl: true,
+      align: 'right',
     });
     hud.add([top, eyebrow, this.productionDay, this.productionHint]);
     hud.add(addRoundedButton(this, 540, 52, 66, 54, 'خريطة', () => this.openOverlay('mapOverlay'), { fill: 0x2d5549, fontSize: 11 }));
     hud.add(addRoundedButton(this, 614, 52, 58, 54, 'أهل', () => this.openOverlay('parentOverlay'), { fill: 0x2d5549, fontSize: 11 }));
 
     const storyCard = this.add.graphics();
-    storyCard.fillStyle(0xf4f1e7, 0.92).fillRoundedRect(50, 154, 620, 92, 24);
-    storyCard.lineStyle(1, 0x26483d, 0.08).strokeRoundedRect(50, 154, 620, 92, 24);
-    const novaMark = this.add.circle(84, 200, 22, 0x756cbe, 0.98);
-    const novaSpark = this.add.text(84, 198, '✦', {
+    storyCard.fillStyle(0xf4f1e7, 0.92).fillRoundedRect(50, 154, 620, 88, 24);
+    storyCard.lineStyle(1, 0x26483d, 0.08).strokeRoundedRect(50, 154, 620, 88, 24);
+    const novaMark = this.add.circle(84, 198, 22, 0x756cbe, 0.98);
+    const novaSpark = this.add.text(84, 196, '✦', {
       fontFamily: 'system-ui, sans-serif',
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5);
-    this.productionStory = this.add.text(118, 173, '', {
+    this.productionStory = this.add.text(118, 174, '', {
       fontFamily: 'system-ui, sans-serif',
-      fontSize: '16px',
+      fontSize: '15px',
       fontStyle: 'bold',
       color: '#27463b',
       wordWrap: { width: 520 },
       maxLines: 2,
-      lineSpacing: 4,
-      rtl: true,
+      lineSpacing: 3,
       align: 'right',
     });
     hud.add([storyCard, novaMark, novaSpark, this.productionStory]);
@@ -153,12 +143,12 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
       const dot = this.add.circle(x + 22, y + 23, 8, 0x47685f, 1).setStrokeStyle(1, 0xb2c9b9, 0.55);
       const label = this.add.text(x + 38, y + 12, habit.label, {
         fontFamily: 'system-ui, sans-serif',
-        fontSize: '13px',
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#f2f7ef',
         wordWrap: { width: 136 },
         maxLines: 1,
-        rtl: true,
+        align: 'right',
       });
       const status = this.add.text(x + 14, y + 52, '', {
         fontFamily: 'system-ui, sans-serif',
@@ -167,6 +157,7 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
         color: '#b7cabd',
         wordWrap: { width: 160 },
         maxLines: 1,
+        align: 'right',
       });
       const hit = this.add.zone(x + 95, y + 42, 190, 84).setInteractive({ useHandCursor: true });
       hit.on('pointerdown', () => sproutStoryStore.toggleHabit(habit.id));
@@ -181,17 +172,16 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
       color: '#bed3c3',
       wordWrap: { width: 455 },
       maxLines: 1,
-      rtl: true,
+      align: 'right',
     });
     hud.add(this.productionFooter);
     hud.add(addRoundedButton(this, 540, 1190, 132, 42, 'Nova ✦', () => this.openOverlay('novaOverlay'), { fill: 0x625baa, fontSize: 12 }));
 
     if (new URLSearchParams(window.location.search).has('dev')) {
-      const dev = addRoundedButton(this, 28, 954, 68, 42, 'DEV', () => {
+      hud.add(addRoundedButton(this, 28, 954, 68, 42, 'DEV', () => {
         const overlay = this.baseOverlays().debugOverlay;
         overlay?.setVisible(!overlay.visible);
-      }, { fill: 0x263c36, fontSize: 11 });
-      hud.add(dev);
+      }, { fill: 0x263c36, fontSize: 11 }));
     }
   }
 
@@ -201,7 +191,14 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
 
     this.productionDay?.setText(`Day ${state.currentDay}  ·  30`);
     this.productionHint?.setText(day.hint);
-    this.productionStory?.setText(state.dayResolved ? `${day.resolvedLine}  ${day.hook}` : day.intro);
+
+    const storyLine = state.dayResolved
+      ? state.currentDay === 7
+        ? 'Lumi لقى طريق! Whisper Woods ظهر لأول مرة.'
+        : day.resolvedLine
+      : day.intro;
+    this.productionStory?.setText(storyLine);
+
     this.productionProgress?.setText(`${completeCount} / ${day.requiredHabits} لفتح حدث اليوم`);
     this.productionFooter?.setText(
       state.dayResolved
