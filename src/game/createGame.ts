@@ -4,7 +4,7 @@ import { EnglishWorldScene } from './english/EnglishWorldScene';
 import { HabitHomeScene } from './habits/HabitHomeScene';
 import { PlaceholderPlaceScene } from './PlaceholderPlaceScene';
 import { PlanetHubScene } from './PlanetHubScene';
-import { SproutWorldScene } from './sprout/SproutWorldScene';
+import { SproutWorldSceneProduction } from './sprout/SproutWorldSceneProduction';
 
 export function createGame(parent: HTMLElement) {
   return new Phaser.Game({
@@ -18,6 +18,6 @@ export function createGame(parent: HTMLElement) {
       mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [BootScene, SproutWorldScene, HabitHomeScene, PlanetHubScene, EnglishWorldScene, PlaceholderPlaceScene],
+    scene: [BootScene, SproutWorldSceneProduction, HabitHomeScene, PlanetHubScene, EnglishWorldScene, PlaceholderPlaceScene],
   });
 }
