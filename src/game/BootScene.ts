@@ -13,6 +13,18 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     const params = new URLSearchParams(window.location.search);
-    this.scene.start(params.get('prototype') === 'habit-home' ? 'habit-home' : 'planet-hub');
+    const prototype = params.get('prototype');
+
+    if (prototype === 'habit-home') {
+      this.scene.start('habit-home');
+      return;
+    }
+
+    if (prototype === 'planet-hub') {
+      this.scene.start('planet-hub');
+      return;
+    }
+
+    this.scene.start('habit-island');
   }
 }
