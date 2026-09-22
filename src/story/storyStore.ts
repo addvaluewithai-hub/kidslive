@@ -88,6 +88,31 @@ function resolveDayIfReady() {
   persist();
 }
 
+function debugSnapshotForDay(day: number): SproutStoryState {
+  const currentDay = Math.max(1, Math.min(7, day));
+  const previousChoice = state.seedChoice ?? 'water';
+  const events: StoryEventId[] = [];
+  if (currentDay >= 2) events.push('light_strengthens');
+  if (currentDay >= 3) events.push('path_opens');
+  if (currentDay >= 4) events.push('seed_discovered');
+  if (currentDay >= 5) events.push('flower_blooms');
+  if (currentDay >= 6) events.push('lumi_emerges');
+  if (currentDay >= 7) events.push('shelter_step_1');
+
+  return {
+    ...initialSproutState(),
+    currentDay,
+    currentLocation: currentDay >= 3 ? 'river' : 'meadow',
+    seedDiscovered: currentDay >= 4,
+    seedChoice: currentDay >= 4 ? previousChoice : null,
+    flowerType: currentDay >= 4 ? (previousChoice === 'water' ? 'water' : 'moon') : null,
+    lumiDiscovered: currentDay >= 6,
+    shelterProgress: currentDay >= 7 ? 1 : 0,
+    storyEventsSeen: events,
+    novaMode: state.novaMode,
+  };
+}
+
 export const sproutStoryStore = {
   getState() {
     return state;
@@ -126,15 +151,7 @@ export const sproutStoryStore = {
     persist();
   },
   jumpToDay(day: number) {
-    const currentDay = Math.max(1, Math.min(7, day));
-    state = {
-      ...state,
-      currentDay,
-      currentLocation: currentDay >= 3 ? 'river' : 'meadow',
-      habits: { ...blankHabits() },
-      dayResolved: false,
-      lastResolvedDate: null,
-    };
+    state = debugSnapshotForDay(day);
     persist();
   },
   completeTrustedHabits() {
