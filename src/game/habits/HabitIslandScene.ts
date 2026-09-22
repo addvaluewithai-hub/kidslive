@@ -171,7 +171,7 @@ export class HabitIslandScene extends Phaser.Scene {
     towerArt.fillStyle(0x56517c, 1).fillRoundedRect(-28, -55, 56, 112, 8);
     towerArt.fillStyle(0x736da1, 1).fillTriangle(-42, -51, 0, -92, 42, -51);
     towerArt.fillStyle(0xe8c980, 0.92).fillRoundedRect(-7, -18, 14, 23, 6);
-    tower.add(towerArt, this.add.circle(0, -96, 8, 0xffe5a6, 0.96));
+    tower.add([towerArt, this.add.circle(0, -96, 8, 0xffe5a6, 0.96)]);
     this.world.add(tower);
     this.revealTargets.push({ day: 14, target: tower });
 
