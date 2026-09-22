@@ -1,0 +1,52 @@
+name: Import Phaser Skills Reference
+
+on:
+  push:
+    branches:
+      - chore/phaser-skills-library
+    paths:
+      - .github/workflows/import-phaser-skills.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-skills:
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip skill import]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: chore/phaser-skills-library
+
+      - name: Download uploaded skill bundle
+        run: |
+          curl -fL 'https://res.cloudinary.com/as9o12al/raw/upload/v1790092035/all-phaser-skills-2026-09-22' -o /tmp/all-phaser-skills.zip
+
+      - name: Expand all skill packages
+        run: |
+          rm -rf /tmp/phaser-skill-zips
+          mkdir -p /tmp/phaser-skill-zips project/skills/phaser
+          unzip -q /tmp/all-phaser-skills.zip -d /tmp/phaser-skill-zips
+          for skill_zip in /tmp/phaser-skill-zips/*.zip; do
+            unzip -oq "$skill_zip" -d project/skills/phaser
+          done
+
+      - name: Verify import
+        run: |
+          test "$(find project/skills/phaser -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l)" -eq 25
+          echo 'Imported 25 Phaser skills.'
+
+      - name: Commit imported skill sources
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add project/skills/phaser
+          if git diff --cached --quiet; then
+            echo 'No skill changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Import full Phaser skill library [skip skill import]'
+          git push origin HEAD:chore/phaser-skills-library
