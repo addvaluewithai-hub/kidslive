@@ -46,7 +46,7 @@ async function currentStoryState(page: import('@playwright/test').Page): Promise
 test('Sprout 7-day state machine keeps approval, choice, Lumi and cliffhanger persistent', async ({ page }, testInfo) => {
   test.setTimeout(55_000);
   await page.goto('/?dev=1');
-  const canvas = page.locator('canvas');
+  const canvas = page.locator('.game-root > canvas').first();
   await expect(canvas).toBeVisible();
 
   await storyAction(page, 'reset');
@@ -95,7 +95,7 @@ test('Sprout 7-day state machine keeps approval, choice, Lumi and cliffhanger pe
     contentType: 'image/png',
   });
 
-  await page.reload();
+  await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(canvas).toBeVisible();
   const persisted = await currentStoryState(page);
   expect(persisted.currentDay).toBe(7);
