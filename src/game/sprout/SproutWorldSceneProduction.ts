@@ -43,8 +43,6 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
     this.productionUnsubscribe = sproutStoryStore.subscribe((state) => {
       this.applyProductionState(state);
       this.lockPortraitVerticalFrame();
-      // Story transitions can tween the camera for ~1.35s. Re-lock only the
-      // vertical axis afterwards while preserving the horizontal exploration.
       this.time.delayedCall(1550, () => this.lockPortraitVerticalFrame());
     });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -83,12 +81,12 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
     const top = this.add.graphics();
     top.fillStyle(0x163a31, 0.88).fillRoundedRect(24, 52, 672, 108, 28);
     top.lineStyle(1, 0xffffff, 0.1).strokeRoundedRect(24, 52, 672, 108, 28);
-    const eyebrow = this.add.text(48, 70, 'SPROUT PLANET', {
+    const eyebrow = this.add.text(48, 70, 'KIDSLIVE · SPROUT PLANET', {
       fontFamily: 'system-ui, sans-serif',
       fontSize: '12px',
       fontStyle: 'bold',
       color: '#a9c8b5',
-      letterSpacing: 1.8,
+      letterSpacing: 1.5,
     });
     this.productionDay = this.add.text(48, 93, '', {
       fontFamily: 'system-ui, sans-serif',
@@ -205,7 +203,7 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
 
     const storyLine = state.dayResolved
       ? state.currentDay === 7
-        ? 'Lumi لقى طريق! Whisper Woods ظهر لأول مرة.'
+        ? 'لومي لقى طريق! غابة الهمس ظهرت لأول مرة.'
         : day.resolvedLine
       : day.intro;
     this.productionStory?.setText(storyLine);
@@ -214,7 +212,7 @@ export class SproutWorldSceneProduction extends SproutWorldScene {
     this.productionFooter?.setText(
       state.dayResolved
         ? state.currentDay === 7
-          ? 'Whisper Woods ظهر… الحكاية تكمل بكرة ✦'
+          ? 'غابة الهمس ظهرت… الحكاية تكمل بكرة ✦'
           : 'العالم اتغيّر. ارجع بكرة عشان نكمل.'
         : 'كل عادة مكتملة بتحرّك الحكاية نفسها.',
     );
